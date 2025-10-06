@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /resources/
+Disallow: /fonts/
+
+Sitemap: https://anifox-search.vercel.app/sitemap.xml
