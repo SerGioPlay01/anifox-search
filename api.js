@@ -951,6 +951,15 @@ async function renderWeekly(loadMore = false) {
   }
 }
 
+/* ---------- ФУНКЦИЯ ДЛЯ ОЧИСТКИ ПОЛЯ ПОИСКА ПОСЛЕ УСПЕШНОГО ПОИСКА ---------- */
+function clearSearchInputAfterSuccess() {
+  const input = $("searchInput");
+  if (input) {
+    input.value = "";
+  }
+}
+
+/* ---------- ОБНОВЛЕННАЯ ФУНКЦИЯ search ---------- */
 async function search(loadMore = false) {
   const input = $("searchInput");
   const q = input?.value.trim() || "";
@@ -1075,6 +1084,9 @@ async function search(loadMore = false) {
 
     if (!loadMore) {
       history.replaceState(null, null, "?q=" + encodeURIComponent(q));
+      
+      // ОЧИСТКА ПОЛЯ ПОИСКА ПОСЛЕ УСПЕШНОГО ВЫПОЛНЕНИЯ ПОИСКА
+      clearSearchInputAfterSuccess();
     }
   } catch (e) {
     console.error("Search error:", e);
