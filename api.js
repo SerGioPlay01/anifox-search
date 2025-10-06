@@ -10,7 +10,6 @@ const DB_VERSION = 1;
 const STORE_SEARCH_HISTORY = 'search_history';
 const STORE_FAVORITES = 'favorites';
 const STORE_SEARCH_RESULTS = 'search_results';
-const STORE_ANIME_INFO = 'anime_info';
 
 // Лимиты для пагинации
 const SEARCH_LIMIT = 50;
@@ -117,11 +116,6 @@ async function initDB() {
       
       if (!database.objectStoreNames.contains(STORE_SEARCH_RESULTS)) {
         const store = database.createObjectStore(STORE_SEARCH_RESULTS, { keyPath: 'query' });
-        store.createIndex('timestamp', 't', { unique: false });
-      }
-      
-      if (!database.objectStoreNames.contains(STORE_ANIME_INFO)) {
-        const store = database.createObjectStore(STORE_ANIME_INFO, { keyPath: 'id' });
         store.createIndex('timestamp', 't', { unique: false });
       }
     };
@@ -419,98 +413,89 @@ async function clearSearchHistory() {
   }
 }
 
-// Быстрая загрузка базовой информации с Shikimori
-async function fetchShikimoriBasicInfo(title) {
-  try {
-    const cacheKey = title.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const cached = await dbGet(STORE_ANIME_INFO, cacheKey);
-    if (cached && Date.now() - cached.t < 24 * 60 * 60 * 1000) {
-      return cached.data;
-    }
-
-    const searchUrl = `https://shikimori.one/api/animes?search=${encodeURIComponent(title)}&limit=1`;
-    const response = await fetch(searchUrl, {
-      signal: AbortSignal.timeout(3000)
-    });
-    
-    if (!response.ok) return null;
-    const data = await response.json();
-    
-    if (data && data.length > 0) {
-      const basicInfo = {
-        id: data[0].id,
-        score: data[0].score,
-        episodes: data[0].episodes,
-        status: data[0].status,
-        name: data[0].name,
-        russian: data[0].russian,
-        image: data[0].image
-      };
-      
-      await dbPut(STORE_ANIME_INFO, {
-        id: cacheKey,
-        data: basicInfo,
-        t: Date.now()
-      });
-      
-      return basicInfo;
-    }
-    return null;
-  } catch (e) {
-    console.log('Shikimori basic info not available:', e);
-    return null;
+// Функция для получения качественного названия из данных Kodik
+function getAnimeTitle(item) {
+  // Используем material_data из Kodik для получения лучшего названия
+  if (item.material_data) {
+    return item.material_data.title || 
+           item.material_data.anime_title || 
+           item.title;
   }
+  return item.title;
 }
 
-function createAnimeCard(item, shikimoriData = null) {
-  const score = shikimoriData ? shikimoriData.score : null;
-  const episodes = shikimoriData ? shikimoriData.episodes : null;
-  const status = shikimoriData ? shikimoriData.status : null;
-  const animeTitle = shikimoriData?.russian || shikimoriData?.name || item.title;
+// Функция для получения дополнительной информации из Kodik
+function getAnimeInfo(item) {
+  if (!item.material_data) return null;
+  
+  const material = item.material_data;
+  return {
+    title: material.title || material.anime_title,
+    year: material.year,
+    episodes: material.episodes_count,
+    type: material.anime_type,
+    genres: material.anime_genres || [],
+    description: material.anime_description
+  };
+}
+
+function createAnimeCard(item) {
+  const animeInfo = getAnimeInfo(item);
+  const displayTitle = animeInfo ? animeInfo.title : item.title;
   
   return `
     <div class="card fade-in">
       <div class="card-header">
-        <h3 class="h2_name">${animeTitle}</h3>
-        ${shikimoriData ? `
-          <div class="info-links">
-            <a href="https://shikimori.one/animes/${shikimoriData.id}" target="_blank" class="info-link" title="Shikimori">
-              <i class="fas fa-external-link-alt"></i>
-            </a>
-            <a href="https://anilist.co/search/anime?search=${encodeURIComponent(animeTitle)}" target="_blank" class="info-link" title="AniList">
-              <i class="fas fa-external-link-alt"></i>
-            </a>
-            <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(animeTitle)}" target="_blank" class="info-link" title="MyAnimeList">
-              <i class="fas fa-external-link-alt"></i>
-            </a>
-          </div>
-        ` : ''}
+        <h3 class="h2_name">${displayTitle}</h3>
+        <div class="info-links">
+          <a href="https://shikimori.one/animes?search=${encodeURIComponent(displayTitle)}" target="_blank" class="info-link" title="Поиск в Shikimori">
+            <i class="fas fa-external-link-alt"></i>
+          </a>
+          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(displayTitle)}" target="_blank" class="info-link" title="Поиск в AniList">
+            <i class="fas fa-external-link-alt"></i>
+          </a>
+          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(displayTitle)}" target="_blank" class="info-link" title="Поиск в MyAnimeList">
+            <i class="fas fa-external-link-alt"></i>
+          </a>
+        </div>
       </div>
       
-      ${shikimoriData ? `
+      ${animeInfo ? `
         <div class="anime-meta">
-          ${score ? `<span class="anime-rating"><i class="fas fa-star"></i> ${score}</span>` : ''}
-          ${episodes ? `<span class="anime-episodes"><i class="fas fa-play-circle"></i> ${episodes} эп.</span>` : ''}
-          ${status ? `<span class="anime-status">${getStatusText(status)}</span>` : ''}
+          ${animeInfo.year ? `<span class="anime-year"><i class="fas fa-calendar"></i> ${animeInfo.year}</span>` : ''}
+          ${animeInfo.episodes ? `<span class="anime-episodes"><i class="fas fa-play-circle"></i> ${animeInfo.episodes} эп.</span>` : ''}
+          ${animeInfo.type ? `<span class="anime-type">${animeInfo.type}</span>` : ''}
         </div>
+        ${animeInfo.genres && animeInfo.genres.length ? `
+          <div class="anime-genres">
+            ${animeInfo.genres.slice(0, 3).map(genre => 
+              `<span class="genre-tag">${genre}</span>`
+            ).join('')}
+          </div>
+        ` : ''}
       ` : ''}
       
       <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy"
-              title="Плеер: ${animeTitle}"></iframe>
+              title="Плеер: ${displayTitle}"></iframe>
               
       <div class="card-actions">
-        <button class="action-btn favorite-btn" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}', '${item.link}', ${shikimoriData ? shikimoriData.id : 'null'})" title="Добавить в избранное">
+        <button class="action-btn favorite-btn" onclick="toggleFavorite('${displayTitle.replace(/'/g, "\\'")}', '${item.link}')" title="Добавить в избранное">
           <i class="far fa-heart"></i>
         </button>
-        <button class="action-btn" onclick="shareAnime('${item.title.replace(/'/g, "\\'")}', '${item.link}')" title="Поделиться">
+        <button class="action-btn" onclick="shareAnime('${displayTitle.replace(/'/g, "\\'")}', '${item.link}')" title="Поделиться">
           <i class="fas fa-share"></i>
         </button>
+        ${animeInfo && animeInfo.description ? `
+          <button class="action-btn" onclick="showDescription('${displayTitle.replace(/'/g, "\\'")}', '${animeInfo.description.replace(/'/g, "\\'")}')" title="Описание">
+            <i class="fas fa-info"></i>
+          </button>
+        ` : ''}
       </div>
     </div>
   `;
 }
 
-async function toggleFavorite(title, link, shikimoriId = null) {
+async function toggleFavorite(title, link) {
   try {
     const favorites = await dbGetAll(STORE_FAVORITES);
     const existing = favorites.find(fav => fav.link === link);
@@ -524,7 +509,6 @@ async function toggleFavorite(title, link, shikimoriId = null) {
         id: Date.now(),
         title: title,
         link: link,
-        shikimoriId: shikimoriId,
         t: Date.now()
       });
       showNotification(`"${title}" добавлено в избранное`, 'success');
@@ -549,15 +533,6 @@ function updateFavoriteButton(link, isFavorite) {
   });
 }
 
-function getStatusText(status) {
-  const statusMap = {
-    'released': 'Вышло',
-    'ongoing': 'Онгоинг',
-    'anons': 'Анонс'
-  };
-  return statusMap[status] || status;
-}
-
 function shareAnime(title, link) {
   if (navigator.share) {
     navigator.share({
@@ -569,6 +544,32 @@ function shareAnime(title, link) {
     navigator.clipboard.writeText(window.location.origin + '?q=' + encodeURIComponent(title));
     showNotification('Ссылка скопирована в буфер обмена', 'success');
   }
+}
+
+function showDescription(title, description) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3><i class="fas fa-info-circle"></i> ${title}</h3>
+      <div class="description-content">
+        <p>${description}</p>
+      </div>
+      <div class="modal-actions">
+        <button onclick="this.closest('.modal-overlay').remove()" class="modal-close-btn">
+          <i class="fas fa-times"></i> Закрыть
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
 }
 
 function showNotification(message, type = 'info') {
@@ -673,18 +674,10 @@ async function renderFavoritesPage(loadMore = false) {
       `;
     }
 
-    // Загружаем базовую информацию для текущей страницы избранного
-    const cards = await Promise.all(
-      pageFavorites.map(async (fav) => {
-        let shikimoriData = null;
-        if (fav.shikimoriId) {
-          shikimoriData = await fetchShikimoriBasicInfo(fav.title);
-        }
-        
-        return createAnimeCard({
-          title: fav.title,
-          link: fav.link
-        }, shikimoriData);
+    const cards = pageFavorites.map(fav => 
+      createAnimeCard({
+        title: fav.title,
+        link: fav.link
       })
     );
     
@@ -784,17 +777,7 @@ async function loadMoreSearch() {
       // Ограничиваем загрузку до 6 плееров для последующих страниц
       const limitedResults = data.results.slice(0, INITIAL_LOAD_COUNT);
       
-      const basicInfoPromises = limitedResults.map(item => 
-        fetchShikimoriBasicInfo(item.title)
-      );
-      const basicInfoResults = await Promise.allSettled(basicInfoPromises);
-      
-      const cards = limitedResults.map((item, index) => {
-        const shikimoriData = basicInfoResults[index].status === 'fulfilled' 
-          ? basicInfoResults[index].value 
-          : null;
-        return createAnimeCard(item, shikimoriData);
-      });
+      const cards = limitedResults.map(item => createAnimeCard(item));
       
       const grid = document.querySelector('#searchResultsGrid');
       if (grid) {
@@ -839,17 +822,7 @@ async function loadMoreWeekly() {
       // Ограничиваем загрузку до 6 плееров для последующих страниц
       const limitedResults = data.results.slice(0, INITIAL_LOAD_COUNT);
       
-      const basicInfoPromises = limitedResults.map(item => 
-        fetchShikimoriBasicInfo(item.title)
-      );
-      const basicInfoResults = await Promise.allSettled(basicInfoPromises);
-      
-      const cards = limitedResults.map((item, index) => {
-        const shikimoriData = basicInfoResults[index].status === 'fulfilled' 
-          ? basicInfoResults[index].value 
-          : null;
-        return createAnimeCard(item, shikimoriData);
-      });
+      const cards = limitedResults.map(item => createAnimeCard(item));
       
       const grid = document.querySelector('#weeklyGrid');
       if (grid) {
@@ -979,18 +952,7 @@ async function renderWeekly(loadMore = false) {
         }
       }
 
-      // Загружаем базовую информацию параллельно для скорости
-      const basicInfoPromises = limitedResults.map(item => 
-        fetchShikimoriBasicInfo(item.title)
-      );
-      const basicInfoResults = await Promise.allSettled(basicInfoPromises);
-      
-      const cards = limitedResults.map((item, index) => {
-        const shikimoriData = basicInfoResults[index].status === 'fulfilled' 
-          ? basicInfoResults[index].value 
-          : null;
-        return createAnimeCard(item, shikimoriData);
-      });
+      const cards = limitedResults.map(item => createAnimeCard(item));
       
       if (loadMore) {
         html = cards.join('');
@@ -1146,18 +1108,7 @@ async function search(loadMore = false) {
       `;
     }
 
-    // Параллельная загрузка базовой информации
-    const basicInfoPromises = limitedResults.map(item => 
-      fetchShikimoriBasicInfo(item.title)
-    );
-    const basicInfoResults = await Promise.allSettled(basicInfoPromises);
-    
-    const cards = limitedResults.map((item, index) => {
-      const shikimoriData = basicInfoResults[index].status === 'fulfilled' 
-        ? basicInfoResults[index].value 
-        : null;
-      return createAnimeCard(item, shikimoriData);
-    });
+    const cards = limitedResults.map(item => createAnimeCard(item));
     
     if (loadMore) {
       html = cards.join('');
@@ -1311,6 +1262,7 @@ window.removeFromHistory = removeFromHistory;
 window.clearSearchHistory = clearSearchHistory;
 window.toggleFavorite = toggleFavorite;
 window.shareAnime = shareAnime;
+window.showDescription = showDescription;
 window.renderFavoritesPage = renderFavoritesPage;
 window.renderWeekly = renderWeekly;
 window.navigateToHome = navigateToHome;
