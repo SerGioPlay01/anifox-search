@@ -463,24 +463,37 @@ async function fetchShikimoriBasicInfo(title) {
 }
 
 function createAnimeCard(item, shikimoriData = null) {
+  // Всегда используем название из Kodik как основное
+  const kodikTitle = item.title;
+  
+  // Если есть данные из Shikimori, используем русское название как основное
+  const mainTitle = shikimoriData?.russian || shikimoriData?.name || kodikTitle;
+  
+  // Дополнительное название (оригинальное)
+  const secondaryTitle = shikimoriData && !shikimoriData.russian ? 
+    shikimoriData.name : 
+    (shikimoriData?.russian && shikimoriData.name !== kodikTitle ? kodikTitle : null);
+  
   const score = shikimoriData ? shikimoriData.score : null;
   const episodes = shikimoriData ? shikimoriData.episodes : null;
   const status = shikimoriData ? shikimoriData.status : null;
-  const animeTitle = shikimoriData?.russian || shikimoriData?.name || item.title;
-  
+
   return `
     <div class="card fade-in">
       <div class="card-header">
-        <h3 class="h2_name">${animeTitle}</h3>
+        <h3 class="h2_name">${mainTitle}</h3>
+        ${secondaryTitle ? `
+          <p class="original-title">${secondaryTitle}</p>
+        ` : ''}
         ${shikimoriData ? `
           <div class="info-links">
             <a href="https://shikimori.one/animes/${shikimoriData.id}" target="_blank" class="info-link" title="Shikimori">
               <i class="fas fa-external-link-alt"></i>
             </a>
-            <a href="https://anilist.co/search/anime?search=${encodeURIComponent(animeTitle)}" target="_blank" class="info-link" title="AniList">
+            <a href="https://anilist.co/search/anime?search=${encodeURIComponent(mainTitle)}" target="_blank" class="info-link" title="AniList">
               <i class="fas fa-external-link-alt"></i>
             </a>
-            <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(animeTitle)}" target="_blank" class="info-link" title="MyAnimeList">
+            <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(mainTitle)}" target="_blank" class="info-link" title="MyAnimeList">
               <i class="fas fa-external-link-alt"></i>
             </a>
           </div>
@@ -496,13 +509,13 @@ function createAnimeCard(item, shikimoriData = null) {
       ` : ''}
       
       <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy"
-              title="Плеер: ${animeTitle}"></iframe>
+              title="Плеер: ${mainTitle}"></iframe>
               
       <div class="card-actions">
-        <button class="action-btn favorite-btn" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}', '${item.link}', ${shikimoriData ? shikimoriData.id : 'null'})" title="Добавить в избранное">
+        <button class="action-btn favorite-btn" onclick="toggleFavorite('${mainTitle.replace(/'/g, "\\'")}', '${item.link}', ${shikimoriData ? shikimoriData.id : 'null'})" title="Добавить в избранное">
           <i class="far fa-heart"></i>
         </button>
-        <button class="action-btn" onclick="shareAnime('${item.title.replace(/'/g, "\\'")}', '${item.link}')" title="Поделиться">
+        <button class="action-btn" onclick="shareAnime('${mainTitle.replace(/'/g, "\\'")}', '${item.link}')" title="Поделиться">
           <i class="fas fa-share"></i>
         </button>
       </div>
