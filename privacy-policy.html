@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Политика конфиденциальности - AniFox</title>
+    <meta name="description" content="Политика конфиденциальности AniFox. Узнайте, как мы собираем, используем и защищаем ваши данные.">
+    
+    <!-- Styles -->
+    <style>
+        :root {
+            --red: #e30613;
+            --black: #0a0a0a;
+            --white: #f2f2f2;
+            --gray: #666;
+            --dark-gray: #333;
+            --radius: 12px;
+            --transition: .3s;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--black) url('/resources/bg.webp') center/cover fixed;
+            color: var(--white);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--white);
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+        
+        .logo-link:hover {
+            color: var(--red);
+        }
+        
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--white);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .nav-btn:hover {
+            background: var(--red);
+            border-color: var(--red);
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .policy-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius);
+            padding: 3rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .policy-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .policy-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--white);
+        }
+        
+        .policy-header p {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+        
+        .last-updated {
+            text-align: center;
+            color: var(--gray);
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+        
+        /* Policy Sections */
+        .policy-section {
+            margin-bottom: 2.5rem;
+        }
+        
+        .policy-section h2 {
+            color: var(--red);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--red);
+        }
+        
+        .policy-section h3 {
+            color: var(--white);
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        
+        .policy-section p {
+            margin-bottom: 1rem;
+            color: var(--gray);
+        }
+        
+        .policy-section ul, .policy-section ol {
+            margin: 1rem 0;
+            padding-left: 2rem;
+            color: var(--gray);
+        }
+        
+        .policy-section li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .highlight {
+            background: rgba(227, 6, 19, 0.1);
+            border-left: 4px solid var(--red);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+        
+        .contact-info {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .contact-info h3 {
+            color: var(--red);
+            margin-bottom: 1rem;
+        }
+        
+        /* Footer */
+        .footer {
+            background: rgba(10, 10, 10, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: auto;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+        
+        .footer p {
+            color: var(--gray);
+            margin-bottom: 0.5rem;
+        }
+        
+        .back-to-top {
+            display: inline-block;
+            background: var(--red);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            text-decoration: none;
+            margin-top: 1rem;
+            transition: var(--transition);
+        }
+        
+        .back-to-top:hover {
+            background: #ff1a2e;
+            transform: translateY(-2px);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+            
+            .policy-container {
+                padding: 2rem 1.5rem;
+            }
+            
+            .policy-header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .policy-container {
+                padding: 1.5rem 1rem;
+            }
+            
+            .policy-header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .policy-section h2 {
+                font-size: 1.3rem;
+            }
+        }
+        
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            
+            .header, .footer, .nav-btn, .back-to-top {
+                display: none;
+            }
+            
+            .policy-container {
+                background: white;
+                border: none;
+                padding: 0;
+            }
+        }
+    </style>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo-link">
+                <i class="fas fa-fox"></i>
+                <span>AniFox</span>
+            </a>
+            <a href="/" class="nav-btn">
+                <i class="fas fa-arrow-left"></i>
+                Вернуться на главную
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="policy-container">
+            <div class="policy-header">
+                <h1>Политика конфиденциальности</h1>
+                <p>Узнайте, как мы собираем, используем и защищаем вашу информацию</p>
+            </div>
+            
+            <div class="last-updated">
+                Последнее обновление: 7  октября 2025
+            </div>
+
+            <div class="policy-section">
+                <h2>1. Общие положения</h2>
+                <p>Настоящая Политика конфиденциальности (далее — «Политика») применяется ко всей информации, которую сайт <strong id="domainName"></strong> (далее — «Сайт») может получить о Пользователе во время использования им Сайта.</p>
+                
+                <div class="highlight">
+                    <p><strong>Используя Сайт, Вы выражаете свое полное согласие с условиями данной Политики конфиденциальности.</strong> Если Вы не согласны с этими условиями, пожалуйста, не используйте Сайт.</p>
+                </div>
+            </div>
+
+            <div class="policy-section">
+                <h2>2. Собираемая информация</h2>
+                
+                <h3>2.1. Автоматически собираемая информация</h3>
+                <p>При посещении Сайта мы автоматически собираем и сохраняем следующую информацию:</p>
+                <ul>
+                    <li>IP-адрес и географическое местоположение</li>
+                    <li>Тип браузера и операционной системы</li>
+                    <li>Время и дата посещения</li>
+                    <li>Страницы, которые Вы посещаете</li>
+                    <li>Источник перехода на Сайт</li>
+                    <li>Данные, собираемые с помощью файлов cookie</li>
+                </ul>
+
+                <h3>2.2. Информация, предоставляемая Пользователем</h3>
+                <p>Мы можем собирать информацию, которую Вы предоставляете добровольно:</p>
+                <ul>
+                    <li>Поисковые запросы</li>
+                    <li>История просмотров (сохраняется локально)</li>
+                    <li>Избранное (сохраняется локально)</li>
+                    <li>Настройки интерфейса</li>
+                </ul>
+            </div>
+
+            <div class="policy-section">
+                <h2>3. Использование информации</h2>
+                <p>Собранная информация используется для следующих целей:</p>
+                <ol>
+                    <li>Предоставления доступа к функционалу Сайта</li>
+                    <li>Улучшения пользовательского опыта</li>
+                    <li>Анализа статистики использования Сайта</li>
+                    <li>Обеспечения безопасности Сайта</li>
+                    <li>Персонализации контента и рекомендаций</li>
+                    <li>Технической поддержки Пользователей</li>
+                </ol>
+            </div>
+
+            <div class="policy-section">
+                <h2>4. Файлы cookie</h2>
+                <p>Сайт использует файлы cookie и аналогичные технологии для:</p>
+                <ul>
+                    <li>Сохранения пользовательских предпочтений</li>
+                    <li>Анализа поведения Пользователей на Сайте</li>
+                    <li>Предоставления персонализированного контента</li>
+                    <li>Обеспечения безопасности</li>
+                </ul>
+                
+                <div class="highlight">
+                    <p>Вы можете отключить использование файлов cookie в настройках Вашего браузера. Однако это может ограничить функциональность Сайта.</p>
+                </div>
+            </div>
+
+            <div class="policy-section">
+                <h2>5. Локальное хранение данных</h2>
+                <p>Сайт использует технологии локального хранения данных:</p>
+                
+                <h3>5.1. LocalStorage</h3>
+                <p>Используется для хранения:</p>
+                <ul>
+                    <li>Истории поисковых запросов</li>
+                    <li>Списка избранного контента</li>
+                    <li>Пользовательских настроек интерфейса</li>
+                    <li>Кэша данных для ускорения загрузки</li>
+                </ul>
+
+                <h3>5.2. IndexedDB</h3>
+                <p>Используется для хранения:</p>
+                <ul>
+                    <li>Кэшированных результатов поиска</li>
+                    <li>Информации об аниме</li>
+                    <li>Больших объемов пользовательских данных</li>
+                </ul>
+
+                <p>Все данные хранятся локально в Вашем браузере и не передаются на наши серверы.</p>
+            </div>
+
+            <div class="policy-section">
+                <h2>6. Защита информации</h2>
+                <p>Мы принимаем необходимые организационные и технические меры для защиты информации от:</p>
+                <ul>
+                    <li>Неавторизованного доступа</li>
+                    <li>Изменения</li>
+                    <li>Раскрытия</li>
+                    <li>Уничтожения</li>
+                </ul>
+                
+                <p>Защита данных обеспечивается с помощью:</p>
+                <ul>
+                    <li>HTTPS-шифрования</li>
+                    <li>Регулярного обновления программного обеспечения</li>
+                    <li>Систем мониторинга безопасности</li>
+                    <li>Ограничения доступа к данным</li>
+                </ul>
+            </div>
+
+            <div class="policy-section">
+                <h2>7. Третьи стороны</h2>
+                <p>Сайт может содержать ссылки на сторонние ресурсы и сервисы:</p>
+                
+                <h3>7.1. Внешние API</h3>
+                <p>Мы используем следующие сторонние API:</p>
+                <ul>
+                    <li>Kodik API - для получения информации о видео-контенте</li>
+                    <li>Shikimori API - для получения информации об аниме</li>
+                    <li>Font Awesome - для иконок</li>
+                </ul>
+
+                <h3>7.2. Аналитика</h3>
+                <p>Мы можем использовать сервисы аналитики для сбора анонимной статистики.</p>
+
+                <div class="highlight">
+                    <p>Мы не несем ответственности за политику конфиденциальности сторонних сайтов и сервисов. Рекомендуем ознакомиться с их политиками конфиденциальности.</p>
+                </div>
+            </div>
+
+            <div class="policy-section">
+                <h2>8. Права Пользователей</h2>
+                <p>Вы имеете право:</p>
+                <ol>
+                    <li>Знать о сборе и использовании Ваших данных</li>
+                    <li>Получать доступ к своим данным</li>
+                    <li>Удалять свои данные</li>
+                    <li>Ограничивать обработку данных</li>
+                    <li>Отзывать согласие на обработку данных</li>
+                </ol>
+                
+                <p>Для реализации своих прав Вы можете:</p>
+                <ul>
+                    <li>Очистить историю и кэш в настройках браузера</li>
+                    <li>Удалить данные LocalStorage и IndexedDB</li>
+                    <li>Отключить файлы cookie</li>
+                    <li>Связаться с нами для получения помощи</li>
+                </ul>
+            </div>
+
+            <div class="policy-section">
+                <h2>9. Изменения в Политике</h2>
+                <p>Мы оставляем за собой право вносить изменения в настоящую Политику конфиденциальности. При внесении изменений в актуальной редакции указывается дата последнего обновления.</p>
+                
+                <div class="highlight">
+                    <p>Новая редакция Политики вступает в силу с момента ее размещения на Сайте, если иное не предусмотрено новой редакцией Политики.</p>
+                </div>
+            </div>
+
+            <div class="policy-section">
+                <h2>10. Контактная информация</h2>
+                <div class="contact-info">
+                    <h3>По вопросам, связанным с Политикой конфиденциальности</h3>
+                    <p>Если у Вас есть вопросы или предложения относительно нашей Политики конфиденциальности, пожалуйста, свяжитесь с нами:</p>
+                    <ul>
+                        <li>Электронная почта: <strong>sklarovs441@gmail.com</strong></li> 
+                        <!-- <span id="domainEmail"></span> -->
+                        <li>Через форму обратной связи на Сайте</li>
+                        <li>Через официальные социальные сети</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="policy-section">
+                <h2>11. Юридическая информация</h2>
+                <p>Сайт <strong id="domainName2"></strong> не хранит видеофайлы на своих серверах, а предоставляет ссылки на видео-контент, размещенный на сторонних платформах.</p>
+                
+                <p>Весь представленный контент предназначен только для ознакомительного просмотра. После просмотра Вы обязаны удалить скачанные файлы и приобрести лицензионную продукцию.</p>
+                
+                <div class="highlight">
+                    <p>Администрация Сайта не несет ответственности за содержание рекламных материалов и сторонних ресурсов, на которые могут вести ссылки с Сайта.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 AniFox. </p>
+            <p>Политика конфиденциальности</p>
+            <a href="#" class="back-to-top" onclick="scrollToTop()">
+                <i class="fas fa-arrow-up"></i>
+                Наверх
+            </a>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Автоподстановка домена и даты
+        document.addEventListener('DOMContentLoaded', function() {
+            // Получаем текущий домен
+            const currentDomain = window.location.hostname;
+            
+            // Подставляем домен во все нужные места
+            document.querySelectorAll('#domainName, #domainName2').forEach(element => {
+                element.textContent = currentDomain;
+            });
+            
+            // Подставляем домен в email
+            document.getElementById('domainEmail').textContent = currentDomain;
+            
+            // Устанавливаем текущую дату
+            const currentDate = new Date();
+            const formattedDate = currentDate.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('currentDate').textContent = formattedDate;
+            
+            // Добавляем год в футер
+            document.querySelector('.footer p:first-child').innerHTML = `&copy; ${currentDate.getFullYear()} AniFox. Все права защищены.`;
+        });
+
+        // Плавная прокрутка наверх
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Динамическое обновление года в футере
+        function updateFooterYear() {
+            const currentYear = new Date().getFullYear();
+            const footerYear = document.querySelector('.footer p:first-child');
+            if (footerYear) {
+                footerYear.innerHTML = `&copy; ${currentYear} AniFox. Все права защищены.`;
+            }
+        }
+
+        // Обработка якорных ссылок
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Сохранение позиции прокрутки при переходе назад
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) {
+                window.scrollTo(0, parseInt(sessionStorage.getItem('scrollPosition') || '0'));
+            }
+        });
+
+        window.addEventListener('beforeunload', function() {
+            sessionStorage.setItem('scrollPosition', window.scrollY.toString());
+        });
+
+        // Интерактивное оглавление (опционально)
+        function createTableOfContents() {
+            const sections = document.querySelectorAll('.policy-section h2');
+            if (sections.length > 0) {
+                const toc = document.createElement('div');
+                toc.className = 'table-of-contents';
+                toc.innerHTML = '<h3>Содержание</h3><ul></ul>';
+                
+                sections.forEach((section, index) => {
+                    const id = `section-${index + 1}`;
+                    section.id = id;
+                    
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<a href="#${id}">${section.textContent}</a>`;
+                    toc.querySelector('ul').appendChild(listItem);
+                });
+                
+                document.querySelector('.policy-header').after(toc);
+            }
+        }
+
+        // Инициализация
+        updateFooterYear();
+        // createTableOfContents(); // Раскомментируйте, если нужно оглавление
+    </script>
+</body>
+</html>

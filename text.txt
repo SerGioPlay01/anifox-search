@@ -1,0 +1,3 @@
+https://kodikapi.com/list?token=a036c8a4c59b43e72e212e4d0388ef7d&year=2024&updated_at=updated_at&types=anime&types=anime-serial&with_page_links=true
+
+улучши адаптивность и стили сайта и  seo ткги плюс оптимизируй скорость загрузки плееров и поиск
