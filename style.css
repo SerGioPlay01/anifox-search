@@ -7,7 +7,7 @@
     --radius: 16px;
     --transition: .3s;
     --accent: #9115ea;
-    --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow: 0 8px 32px rgba(101, 19, 178, 0.4);
     --gradient: linear-gradient(135deg, var(--red) 0%, #a31aff 100%);
 }
 
