@@ -329,6 +329,7 @@ body.ab-scroll-lock {
 @media (max-width: 768px) {
   .ab-banner {
     padding: 1.5rem 1rem 50px;
+    padding-top: 100px;
   }
 
   .ab-info-grid {
