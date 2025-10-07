@@ -48,7 +48,8 @@
     <!-- Service Worker Registration -->
     <script src="/sw-register.js" defer></script>
 
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/style.css" id="theme-style">
+    <link rel="stylesheet" href="/theme-btn.css">
     <link rel="stylesheet" href="/cookie-banner.css">
     <link rel="stylesheet" href="/adblock-banner.css">
 
@@ -146,6 +147,22 @@
                     <li><a href="/search/death-note">Тетрадь смерти</a></li>
                 </ul>
             </div> -->
+
+                <div class="footer-section">
+                    <h4>Тема сайта</h4>
+                    <p>Вы можете изменить тему оформления с помощью переключателя вверху страницы.</p>
+                    <div class="theme-switcher">
+                        <button class="theme-btn" data-theme="light" title="Светлая тема">
+                            <i class="fas fa-sun"></i>
+                        </button>
+                        <button class="theme-btn" data-theme="auto" title="Автоматически">
+                            <i class="fas fa-adjust"></i>
+                        </button>
+                        <button class="theme-btn active" data-theme="dark" title="Темная тема">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </div>
+                </div>
 
             </div>
 
@@ -278,6 +295,7 @@
     <script src="/seo.js"></script>
     <script src="/cookie-banner.js"></script>
     <script src="/adblock-banner.js"></script>
+    <script src="/switcher-theme.js"></script>
 
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
