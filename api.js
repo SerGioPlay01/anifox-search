@@ -202,9 +202,10 @@ function updateSEOMeta(apiData) {
     potentialAction: {
       '@type': 'SearchAction',
       target: `${location.origin}/?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
+      'query-input': 'required name=search_term_string'
+    }
   };
+
   if (results.length) {
     jsonLd.mainEntity = results.slice(0, 10).map(r => ({
       '@type': 'TVSeries',
@@ -212,9 +213,10 @@ function updateSEOMeta(apiData) {
       datePublished: r.year,
       genre: r.genres,
       image: r.material_data?.poster_url || ogImage,
-      url: `${location.origin}/?q=${encodeURIComponent(r.title)}`,
+      url: `${location.origin}/?q=${encodeURIComponent(r.title)}`
     }));
   }
+
   const script = document.createElement('script');
   script.type = 'application/ld+json';
   script.textContent = JSON.stringify(jsonLd);
