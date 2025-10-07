@@ -12,6 +12,7 @@ const STORE_SEARCH_RESULTS = 'search_results';
 
 let db = null;
 async function initDB() {
+  if (db) return db;
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onerror = () => reject(req.error);
@@ -28,12 +29,12 @@ async function initDB() {
     };
   });
 }
-async function dbAdd(s, d)   { if (!db) await initDB(); return db.transaction([s], 'readwrite').objectStore(s).add(d); }
-async function dbPut(s, d)   { if (!db) await initDB(); return db.transaction([s], 'readwrite').objectStore(s).put(d); }
-async function dbGet(s, k)   { if (!db) await initDB(); return db.transaction([s], 'readonly').objectStore(s).get(k); }
-async function dbGetAll(s, i){ if (!db) await initDB(); return (i ? db.transaction([s], 'readonly').objectStore(s).index(i) : db.transaction([s], 'readonly').objectStore(s)).getAll(); }
-async function dbDel(s, k)   { if (!db) await initDB(); return db.transaction([s], 'readwrite').objectStore(s).delete(k); }
-async function dbClear(s)    { if (!db) await initDB(); return db.transaction([s], 'readwrite').objectStore(s).clear(); }
+async function dbAdd(s, d)   { await initDB(); return db.transaction([s], 'readwrite').objectStore(s).add(d); }
+async function dbPut(s, d)   { await initDB(); return db.transaction([s], 'readwrite').objectStore(s).put(d); }
+async function dbGet(s, k)   { await initDB(); return db.transaction([s], 'readonly').objectStore(s).get(k); }
+async function dbGetAll(s, i){ await initDB(); return (i ? db.transaction([s], 'readonly').objectStore(s).index(i) : db.transaction([s], 'readonly').objectStore(s)).getAll(); }
+async function dbDel(s, k)   { await initDB(); return db.transaction([s], 'readwrite').objectStore(s).delete(k); }
+async function dbClear(s)    { await initDB(); return db.transaction([s], 'readwrite').objectStore(s).clear(); }
 
 /* ---------- FETCH ---------- */
 async function fetchKodik(url, attempt = 1) {
@@ -160,6 +161,7 @@ window.clearSearchHistory = async () => { if (confirm('Очистить исто
 async function renderFavoritesPage() {
   const box = $('resultsBox');
   if (!box) return;
+  await initDB(); // ← обязательно!
   box.innerHTML = '<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка избранного...</p></div>';
   try {
     const favs = (await dbGetAll(STORE_FAVORITES, 'timestamp')).sort((a, b) => b.t - a.t);
@@ -211,7 +213,6 @@ async function renderWeekly() {
   } catch { if (!hasHist) box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки</h2><p>Попробуйте перезагрузить страницу</p></div>`; }
 }
 
-/* ---------- SEARCH ---------- */
 async function search() {
   const input = $('searchInput');
   const q = input?.value.trim() || '';
