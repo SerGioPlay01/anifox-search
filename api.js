@@ -112,10 +112,16 @@ function toSlug(str) {
     'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
     'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
     'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '',
-    'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya', ' ': '-',
-    '!': '', '?': '', '.': '', ',': '', '"': '', '\'': '', '[': '', ']': '', '(': '', ')': ''
+    'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya', ' ': '-', '_': '-'
   };
-  return str.toLowerCase().split('').map(ch => map[ch] || ch).join('').replace(/--+/g, '-').replace(/^-|-$/g, '');
+  return str
+    .toLowerCase()
+    .split('')
+    .map(ch => map[ch] || ch)
+    .join('')
+    .replace(/[^a-z0-9\-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 function buildKeywords(title, genres, year) {
@@ -493,18 +499,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (form) form.addEventListener('submit', e => { e.preventDefault(); search(); });
 
     if (input) {
-      const p = new URLSearchParams(location.search);
-      const q = p.get('q'), page = p.get('page');
-
-      // Поддержка старых ?q=...
-      if (p.get('q')) {
-        const oldQ = p.get('q');
-        const slug = toSlug(oldQ);
-        const newUrl = `/search/${slug}`;
-        history.replaceState(null, null, newUrl);
-        input.value = oldQ;
+      // ✅ Поддержка прямого захода на /search/ataka-titanov
+      const path = location.pathname;
+      if (path.startsWith('/search/')) {
+        const slug = path.replace('/search/', '');
+        const query = slug.replace(/-/g, ' ');
+        input.value = query;
         search();
-      } else if (page === 'favorites') {
+      } else if (location.search.includes('page=favorites')) {
         renderFavoritesPage();
       } else {
         renderWeekly();
