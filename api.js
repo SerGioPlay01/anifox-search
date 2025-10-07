@@ -12,22 +12,13 @@ const STORE_FAVORITES = 'favorites';
 const STORE_SEARCH_RESULTS = 'search_results';
 const STORE_ANIME_INFO = 'anime_info';
 
-// Лимиты для пагинации
-const SEARCH_LIMIT = 50;
-const WEEKLY_LIMIT = 30;
-const INITIAL_LOAD_COUNT = 6;
+// Увеличиваем лимиты для загрузки всех результатов
+const SEARCH_LIMIT = 100; // Увеличили лимит для поиска
+const WEEKLY_LIMIT = 100; // Увеличили лимит для новинок
 
-// Глобальные переменные для пагинации
-let currentSearchPage = 1;
-let currentWeeklyPage = 1;
-let currentFavoritesOffset = 0;
-const FAVORITES_PAGE_SIZE = 20;
-
-// Флаги для отслеживания загрузки
-let isLoadingMore = false;
-let hasMoreSearch = true;
-let hasMoreWeekly = true;
-let hasMoreFavorites = true;
+// Глобальные переменные (убраны пагинационные переменные)
+let currentSearchResults = [];
+let currentWeeklyResults = [];
 
 /* ---------- UTILS ---------- */
 const $ = (id) => document.getElementById(id);
@@ -64,28 +55,6 @@ function showSectionPreloader(section) {
       <p class="preloader-text">Загрузка ${section}...</p>
     </div>
   `;
-}
-
-function showLoadMorePreloader(container) {
-  const loadMoreBtn = container.querySelector('.load-more-btn');
-  if (loadMoreBtn) {
-    loadMoreBtn.innerHTML = `
-      <div class="loading-small"></div>
-      Загрузка...
-    `;
-    loadMoreBtn.disabled = true;
-  }
-}
-
-function hideLoadMorePreloader(container) {
-  const loadMoreBtn = container.querySelector('.load-more-btn');
-  if (loadMoreBtn) {
-    loadMoreBtn.innerHTML = `
-      <i class="fas fa-plus"></i>
-      Загрузить еще
-    `;
-    loadMoreBtn.disabled = false;
-  }
 }
 
 /* ---------- INDEXEDDB ---------- */
@@ -219,11 +188,11 @@ async function fetchKodik(url, attempt = 1) {
 }
 
 /* ---------- API + КЭШ ---------- */
-async function apiSearch(q, page = 1) {
+async function apiSearch(q) {
   q = q.trim().toLowerCase();
   if (!q) return { results: [] };
 
-  const cacheKey = `${q}_page_${page}`;
+  const cacheKey = `${q}_all_results`;
   
   try {
     const cached = await dbGet(STORE_SEARCH_RESULTS, cacheKey);
@@ -234,6 +203,7 @@ async function apiSearch(q, page = 1) {
     console.log('Cache miss:', e);
   }
 
+  // Загружаем все результаты сразу с увеличенным лимитом
   const url = `${BASE}?token=${TOKEN}&title=${encodeURIComponent(
     q
   )}&types=anime,anime-serial&limit=${SEARCH_LIMIT}&with_material_data=true`;
@@ -253,8 +223,8 @@ async function apiSearch(q, page = 1) {
   return data;
 }
 
-async function apiWeekly(page = 1) {
-  const cacheKey = `weekly_page_${page}`;
+async function apiWeekly() {
+  const cacheKey = `weekly_all_results`;
   
   try {
     const cached = await dbGet(STORE_SEARCH_RESULTS, cacheKey);
@@ -265,6 +235,7 @@ async function apiWeekly(page = 1) {
     console.log('Weekly cache miss:', e);
   }
 
+  // Загружаем все новинки сразу с увеличенным лимитом
   const url = `${BASE.replace(
     "/search",
     "/list"
@@ -295,31 +266,6 @@ function showLoading() {
       <p class="loading-text">Поиск аниме...</p>
     </div>
   `;
-}
-
-function showLoadMoreButton(section, onClick, isLoading = false) {
-  const buttonId = `loadMore${section.charAt(0).toUpperCase() + section.slice(1)}`;
-  return `
-    <div class="load-more-container">
-      <button id="${buttonId}" class="load-more-btn" onclick="${onClick}" ${isLoading ? 'disabled' : ''}>
-        ${isLoading ? `
-          <div class="loading-small"></div>
-          Загрузка...
-        ` : `
-          <i class="fas fa-plus"></i>
-          Загрузить еще
-        `}
-      </button>
-    </div>
-  `;
-}
-
-function removeLoadMoreButton(section) {
-  const buttonId = `loadMore${section.charAt(0).toUpperCase() + section.slice(1)}`;
-  const button = document.getElementById(buttonId);
-  if (button) {
-    button.parentElement.remove();
-  }
 }
 
 async function addToSearchHistory(query) {
@@ -421,6 +367,10 @@ async function clearSearchHistory() {
 
 function createAnimeCard(item) {
   const animeTitle = item.title;
+  const materialData = item.material_data || {};
+  
+  // Формируем meta-теги для SEO
+  updateMetaTags(animeTitle, materialData);
   
   return `
     <div class="card fade-in">
@@ -452,6 +402,64 @@ function createAnimeCard(item) {
       </div>
     </div>
   `;
+}
+
+// Функция для обновления meta-тегов
+function updateMetaTags(title, materialData = {}) {
+  const description = materialData.description || `Смотрите аниме "${title}" онлайн в высоком качестве на AniFox`;
+  const year = materialData.year || '';
+  const genres = materialData.anime_genres ? materialData.anime_genres.join(', ') : 'аниме';
+  
+  let metaDescription = document.querySelector('meta[name="description"]');
+  if (!metaDescription) {
+    metaDescription = document.createElement('meta');
+    metaDescription.name = 'description';
+    document.head.appendChild(metaDescription);
+  }
+  metaDescription.content = description;
+  
+  let metaKeywords = document.querySelector('meta[name="keywords"]');
+  if (!metaKeywords) {
+    metaKeywords = document.createElement('meta');
+    metaKeywords.name = 'keywords';
+    document.head.appendChild(metaKeywords);
+  }
+  metaKeywords.content = `${title}, аниме, смотреть онлайн, ${genres}${year ? ', ' + year : ''}`;
+  
+  // Open Graph теги
+  const ogTags = [
+    { property: 'og:title', content: `${title} - AniFox` },
+    { property: 'og:description', content: description },
+    { property: 'og:type', content: 'video.tv_show' },
+    { property: 'og:site_name', content: 'AniFox' }
+  ];
+  
+  ogTags.forEach(tag => {
+    let metaTag = document.querySelector(`meta[property="${tag.property}"]`);
+    if (!metaTag) {
+      metaTag = document.createElement('meta');
+      metaTag.setAttribute('property', tag.property);
+      document.head.appendChild(metaTag);
+    }
+    metaTag.content = tag.content;
+  });
+  
+  // Twitter Card теги
+  const twitterTags = [
+    { name: 'twitter:card', content: 'summary' },
+    { name: 'twitter:title', content: `${title} - AniFox` },
+    { name: 'twitter:description', content: description }
+  ];
+  
+  twitterTags.forEach(tag => {
+    let metaTag = document.querySelector(`meta[name="${tag.name}"]`);
+    if (!metaTag) {
+      metaTag = document.createElement('meta');
+      metaTag.name = tag.name;
+      document.head.appendChild(metaTag);
+    }
+    metaTag.content = tag.content;
+  });
 }
 
 async function toggleFavorite(title, link) {
@@ -524,29 +532,27 @@ function showNotification(message, type = 'info') {
 }
 
 // Функция для обновления счетчика найденных аниме
-function updateSearchCounter(query, currentCount) {
+function updateSearchCounter(query, count) {
   const statsElement = document.querySelector('.search-header .stats-info .stats-text');
   if (statsElement) {
     statsElement.innerHTML = `
-      <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${currentCount}+ аниме</span> по запросу "${query}"
+      <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${count} аниме</span> по запросу "${query}"
     `;
   }
 }
 
-// Страница избранного с пагинацией
-async function renderFavoritesPage(loadMore = false) {
+// Страница избранного (все элементы сразу)
+async function renderFavoritesPage() {
   const box = $("resultsBox");
   if (!box) return;
 
-  if (!loadMore) {
-    showSectionPreloader('избранного');
-  }
+  showSectionPreloader('избранного');
 
   try {
     const allFavorites = await dbGetAll(STORE_FAVORITES, 'timestamp');
     const sortedFavorites = allFavorites.sort((a, b) => b.t - a.t);
     
-    if (!sortedFavorites.length && !loadMore) {
+    if (!sortedFavorites.length) {
       box.innerHTML = `
         <div class="no-results fade-in">
           <i class="fas fa-heart fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
@@ -560,224 +566,71 @@ async function renderFavoritesPage(loadMore = false) {
       return;
     }
 
-    if (!loadMore) {
-      currentFavoritesOffset = 0;
-      hasMoreFavorites = true;
-    }
-
-    const pageFavorites = sortedFavorites.slice(currentFavoritesOffset, currentFavoritesOffset + FAVORITES_PAGE_SIZE);
-    hasMoreFavorites = currentFavoritesOffset + FAVORITES_PAGE_SIZE < sortedFavorites.length;
-
-    let html = '';
-    
-    if (!loadMore) {
-      html = `
-        <section class="favorites-section">
-          <div class="section-header">
-            <h2 class="section-title">
-              <i class="fas fa-heart"></i> Избранное
-            </h2>
-            <div class="stats-info">
-              <span class="stats-text">
-                <i class="fas fa-film"></i> Всего: <span class="stats-highlight">${sortedFavorites.length} аниме</span>
-              </span>
-            </div>
+    let html = `
+      <section class="favorites-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <i class="fas fa-heart"></i> Избранное
+          </h2>
+          <div class="stats-info">
+            <span class="stats-text">
+              <i class="fas fa-film"></i> Всего: <span class="stats-highlight">${sortedFavorites.length} аниме</span>
+            </span>
           </div>
-          <div class="databases-info">
-            <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
-            <div class="database-links">
-              <a href="https://shikimori.one" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> Shikimori
-              </a>
-              <a href="https://anilist.co" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> AniList
-              </a>
-              <a href="https://myanimelist.net" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> MyAnimeList
-              </a>
-              <a href="https://anidb.net" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> AniDB
-              </a>
-              <a href="https://kitsu.io" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> Kitsu
-              </a>
-            </div>
+        </div>
+        <div class="databases-info">
+          <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
+          <div class="database-links">
+            <a href="https://shikimori.one" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> Shikimori
+            </a>
+            <a href="https://anilist.co" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> AniList
+            </a>
+            <a href="https://myanimelist.net" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> MyAnimeList
+            </a>
+            <a href="https://anidb.net" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> AniDB
+            </a>
+            <a href="https://kitsu.io" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> Kitsu
+            </a>
           </div>
-          <div class="results-grid" id="favoritesGrid">
-      `;
-    }
+        </div>
+        <div class="results-grid" id="favoritesGrid">
+    `;
 
-    const cards = pageFavorites.map(fav => 
+    const cards = sortedFavorites.map(fav => 
       createAnimeCard({
         title: fav.title,
         link: fav.link
       })
     );
     
-    if (loadMore) {
-      html = cards.join('');
-    } else {
-      html += cards.join('') + `
-          </div>
-        </section>
-      `;
-    }
+    html += cards.join('') + `
+        </div>
+        <div class="favorites-actions">
+          <button onclick="clearFavorites()" class="clear-history-btn">
+            <i class="fas fa-trash"></i> Очистить избранное
+          </button>
+          <button onclick="navigateToHome()" class="clear-history-btn secondary">
+            <i class="fas fa-arrow-left"></i> Вернуться к поиску
+          </button>
+        </div>
+      </section>
+    `;
 
-    if (loadMore) {
-      const grid = box.querySelector('#favoritesGrid');
-      if (grid) {
-        grid.innerHTML += html;
-      }
-    } else {
-      box.innerHTML = html;
-    }
-
-    // Добавляем кнопку "Загрузить еще" если есть еще элементы
-    if (hasMoreFavorites) {
-      const loadMoreHtml = showLoadMoreButton('favorites', 'loadMoreFavorites()');
-      if (loadMore) {
-        const existingLoadMore = box.querySelector('.load-more-container');
-        if (existingLoadMore) {
-          existingLoadMore.outerHTML = loadMoreHtml;
-        } else {
-          box.querySelector('.favorites-section').innerHTML += loadMoreHtml;
-        }
-      } else {
-        box.querySelector('.favorites-section').innerHTML += loadMoreHtml;
-      }
-    } else {
-      removeLoadMoreButton('favorites');
-      if (!loadMore) {
-        box.querySelector('.favorites-section').innerHTML += `
-          <div class="favorites-actions">
-            <button onclick="clearFavorites()" class="clear-history-btn">
-              <i class="fas fa-trash"></i> Очистить избранное
-            </button>
-            <button onclick="navigateToHome()" class="clear-history-btn secondary">
-              <i class="fas fa-arrow-left"></i> Вернуться к поиску
-            </button>
-          </div>
-        `;
-      }
-    }
-
-    if (loadMore) {
-      currentFavoritesOffset += FAVORITES_PAGE_SIZE;
-    }
+    box.innerHTML = html;
   } catch (e) {
     console.log('Failed to load favorites:', e);
-    if (!loadMore) {
-      box.innerHTML = `
-        <div class="no-results fade-in">
-          <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
-          <h2>Ошибка загрузки избранного</h2>
-          <p>Попробуйте перезагрузить страницу</p>
-        </div>
-      `;
-    }
-  }
-}
-
-// Функции для пагинации
-async function loadMoreFavorites() {
-  if (isLoadingMore || !hasMoreFavorites) return;
-  
-  isLoadingMore = true;
-  const loadMoreContainer = document.querySelector('.load-more-container');
-  showLoadMorePreloader(loadMoreContainer);
-  
-  try {
-    await renderFavoritesPage(true);
-  } finally {
-    isLoadingMore = false;
-  }
-}
-
-async function loadMoreSearch() {
-  if (isLoadingMore || !hasMoreSearch) return;
-  
-  isLoadingMore = true;
-  const loadMoreContainer = document.querySelector('.load-more-container');
-  showLoadMorePreloader(loadMoreContainer);
-  
-  try {
-    currentSearchPage++;
-    const input = $("searchInput");
-    const q = input?.value.trim() || "";
-    
-    const data = await apiSearch(q, currentSearchPage);
-    if (data.results && data.results.length) {
-      // Ограничиваем загрузку до 6 плееров для последующих страниц
-      const limitedResults = data.results.slice(0, INITIAL_LOAD_COUNT);
-      
-      const cards = limitedResults.map(item => createAnimeCard(item));
-      
-      const grid = document.querySelector('#searchResultsGrid');
-      if (grid) {
-        grid.innerHTML += cards.join('');
-      }
-      
-      // Обновляем счетчик
-      const totalCards = grid.children.length;
-      updateSearchCounter(q, totalCards);
-      
-      // Проверяем, есть ли еще результаты
-      hasMoreSearch = data.results.length >= SEARCH_LIMIT;
-      
-      if (!hasMoreSearch) {
-        removeLoadMoreButton('search');
-      }
-    } else {
-      hasMoreSearch = false;
-      removeLoadMoreButton('search');
-    }
-  } catch (e) {
-    console.error("Search pagination error:", e);
-    hasMoreSearch = false;
-    removeLoadMoreButton('search');
-  } finally {
-    isLoadingMore = false;
-  }
-}
-
-async function loadMoreWeekly() {
-  if (isLoadingMore || !hasMoreWeekly) return;
-  
-  isLoadingMore = true;
-  const loadMoreContainer = document.querySelector('.load-more-container');
-  showLoadMorePreloader(loadMoreContainer);
-  
-  try {
-    currentWeeklyPage++;
-    
-    const data = await apiWeekly(currentWeeklyPage);
-    if (data.results && data.results.length) {
-      // Ограничиваем загрузку до 6 плееров для последующих страниц
-      const limitedResults = data.results.slice(0, INITIAL_LOAD_COUNT);
-      
-      const cards = limitedResults.map(item => createAnimeCard(item));
-      
-      const grid = document.querySelector('#weeklyGrid');
-      if (grid) {
-        grid.innerHTML += cards.join('');
-      }
-      
-      // Проверяем, есть ли еще результаты
-      hasMoreWeekly = data.results.length >= WEEKLY_LIMIT;
-      
-      if (!hasMoreWeekly) {
-        removeLoadMoreButton('weekly');
-      }
-    } else {
-      hasMoreWeekly = false;
-      removeLoadMoreButton('weekly');
-    }
-  } catch (e) {
-    console.error("Weekly pagination error:", e);
-    hasMoreWeekly = false;
-    removeLoadMoreButton('weekly');
-  } finally {
-    isLoadingMore = false;
+    box.innerHTML = `
+      <div class="no-results fade-in">
+        <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
+        <h2>Ошибка загрузки избранного</h2>
+        <p>Попробуйте перезагрузить страницу</p>
+      </div>
+    `;
   }
 }
 
@@ -794,131 +647,98 @@ async function clearFavorites() {
   }
 }
 
-async function renderWeekly(loadMore = false) {
+async function renderWeekly() {
   const box = $("resultsBox");
   if (!box) return;
 
-  if (!loadMore) {
-    showSectionPreloader('новинок');
-  }
+  showSectionPreloader('новинок');
 
   let html = '';
   let hasContent = false;
 
-  if (!loadMore) {
-    currentWeeklyPage = 1;
-    hasMoreWeekly = true;
-    // Показываем историю поиска как отдельный блок
-    const hasHistory = await renderSearchHistory();
-    
-    if (hasHistory) {
-      hasContent = true;
-      html = box.innerHTML;
-    }
+  // Показываем историю поиска как отдельный блок
+  const hasHistory = await renderSearchHistory();
+  
+  if (hasHistory) {
+    hasContent = true;
+    html = box.innerHTML;
   }
 
   // Затем загружаем новинки
   try {
-    const data = await apiWeekly(currentWeeklyPage);
+    const data = await apiWeekly();
+    currentWeeklyResults = data.results || [];
     
-    if (data.results && data.results.length) {
-      // Ограничиваем первую загрузку до 6 плееров
-      const limitedResults = loadMore ? data.results : data.results.slice(0, INITIAL_LOAD_COUNT);
-
-      if (!loadMore) {
-        if (hasContent) {
-          html += `
-            <section class="weekly-section">
-              <h2 class="section-title fade-in">
-                <i class="fas fa-bolt"></i> Свежее за неделю
-              </h2>
-              <div class="databases-info">
-                <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
-                <div class="database-links">
-                  <a href="https://shikimori.one" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> Shikimori
-                  </a>
-                  <a href="https://anilist.co" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> AniList
-                  </a>
-                  <a href="https://myanimelist.net" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> MyAnimeList
-                  </a>
-                  <a href="https://anidb.net" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> AniDB
-                  </a>
-                  <a href="https://kitsu.io" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> Kitsu
-                  </a>
-                </div>
+    if (currentWeeklyResults.length) {
+      if (hasContent) {
+        html += `
+          <section class="weekly-section">
+            <h2 class="section-title fade-in">
+              <i class="fas fa-bolt"></i> Свежее за неделю
+            </h2>
+            <div class="databases-info">
+              <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
+              <div class="database-links">
+                <a href="https://shikimori.one" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> Shikimori
+                </a>
+                <a href="https://anilist.co" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> AniList
+                </a>
+                <a href="https://myanimelist.net" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> MyAnimeList
+                </a>
+                <a href="https://anidb.net" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> AniDB
+                </a>
+                <a href="https://kitsu.io" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> Kitsu
+                </a>
               </div>
-              <div class="results-grid" id="weeklyGrid">
-          `;
-        } else {
-          html = `
-            <section class="weekly-section">
-              <h2 class="section-title fade-in">
-                <i class="fas fa-bolt"></i> Свежее за неделю
-              </h2>
-              <div class="databases-info">
-                <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
-                <div class="database-links">
-                  <a href="https://shikimori.one" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> Shikimori
-                  </a>
-                  <a href="https://anilist.co" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> AniList
-                  </a>
-                  <a href="https://myanimelist.net" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> MyAnimeList
-                  </a>
-                  <a href="https://anidb.net" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> AniDB
-                  </a>
-                  <a href="https://kitsu.io" target="_blank" class="database-link">
-                    <i class="fas fa-external-link-alt"></i> Kitsu
-                  </a>
-                </div>
-              </div>
-              <div class="results-grid" id="weeklyGrid">
-          `;
-        }
-      }
-
-      const cards = limitedResults.map(item => createAnimeCard(item));
-      
-      if (loadMore) {
-        html = cards.join('');
-      } else {
-        html += cards.join('') + `
             </div>
-          </section>
+            <div class="results-grid" id="weeklyGrid">
+        `;
+      } else {
+        html = `
+          <section class="weekly-section">
+            <h2 class="section-title fade-in">
+              <i class="fas fa-bolt"></i> Свежее за неделю
+            </h2>
+            <div class="databases-info">
+              <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
+              <div class="database-links">
+                <a href="https://shikimori.one" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> Shikimori
+                </a>
+                <a href="https://anilist.co" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> AniList
+                </a>
+                <a href="https://myanimelist.net" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> MyAnimeList
+                </a>
+                <a href="https://anidb.net" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> AniDB
+                </a>
+                <a href="https://kitsu.io" target="_blank" class="database-link">
+                  <i class="fas fa-external-link-alt"></i> Kitsu
+                </a>
+              </div>
+            </div>
+            <div class="results-grid" id="weeklyGrid">
         `;
       }
 
-      if (loadMore) {
-        const grid = box.querySelector('#weeklyGrid');
-        if (grid) {
-          grid.innerHTML += html;
-        }
-      } else {
-        box.innerHTML = html;
-      }
+      const cards = currentWeeklyResults.map(item => createAnimeCard(item));
+      
+      html += cards.join('') + `
+          </div>
+        </section>
+      `;
 
-      // Проверяем, есть ли еще результаты для загрузки
-      hasMoreWeekly = data.results.length >= WEEKLY_LIMIT;
-
-      // Добавляем кнопку "Загрузить еще" если есть еще результаты
-      if (hasMoreWeekly && !loadMore) {
-        box.querySelector('.weekly-section').innerHTML += showLoadMoreButton('weekly', 'loadMoreWeekly()');
-      } else if (!hasMoreWeekly) {
-        removeLoadMoreButton('weekly');
-      }
-
+      box.innerHTML = html;
       hasContent = true;
     } else {
-      hasMoreWeekly = false;
-      if (!loadMore && !hasContent) {
+      if (!hasContent) {
         html = `
           <div class="no-results fade-in">
             <i class="fas fa-search fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
@@ -937,8 +757,7 @@ async function renderWeekly(loadMore = false) {
     }
   } catch (e) {
     console.error("Ошибка загрузки новинок:", e);
-    hasMoreWeekly = false;
-    if (!hasContent && !loadMore) {
+    if (!hasContent) {
       html = `
         <div class="no-results fade-in">
           <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
@@ -960,147 +779,108 @@ function clearSearchInputAfterSuccess() {
 }
 
 /* ---------- ОБНОВЛЕННАЯ ФУНКЦИЯ search ---------- */
-async function search(loadMore = false) {
+async function search() {
   const input = $("searchInput");
   const q = input?.value.trim() || "";
   const box = $("resultsBox");
 
   if (!box) return;
 
-  if (!q && !loadMore) {
+  if (!q) {
     await renderWeekly();
     return;
   }
 
-  if (!loadMore) {
-    showSectionPreloader('результатов поиска');
-    currentSearchPage = 1;
-    hasMoreSearch = true;
-    await addToSearchHistory(q);
-  }
+  showSectionPreloader('результатов поиска');
+  await addToSearchHistory(q);
 
   try {
-    const data = await apiSearch(q, currentSearchPage);
-    if (!data.results || !data.results.length) {
-      if (!loadMore) {
-        box.innerHTML = `
-          <div class="no-results fade-in">
-            <i class="fas fa-search fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
-            <h2>По запросу "${q}" ничего не найдено</h2>
-            <p>Попробуйте изменить запрос:</p>
-            <ul>
-              <li><i class="fas fa-spell-check"></i> Проверить правильность написания</li>
-              <li><i class="fas fa-language"></i> Использовать английское название</li>
-              <li><i class="fas fa-filter"></i> Искать по жанру или году</li>
-              <li><i class="fas fa-simplify"></i> Упростить запрос</li>
-            </ul>
-          </div>
-        `;
-        
-        setTimeout(async () => {
-          const existingContent = box.innerHTML;
-          const hasHistory = await renderSearchHistory();
-          if (hasHistory) {
-            box.innerHTML = existingContent + '<div class="content-separator"></div>' + box.innerHTML;
-          }
-        }, 100);
-      }
+    const data = await apiSearch(q);
+    currentSearchResults = data.results || [];
+    
+    if (!currentSearchResults.length) {
+      box.innerHTML = `
+        <div class="no-results fade-in">
+          <i class="fas fa-search fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
+          <h2>По запросу "${q}" ничего не найдено</h2>
+          <p>Попробуйте изменить запрос:</p>
+          <ul>
+            <li><i class="fas fa-spell-check"></i> Проверить правильность написания</li>
+            <li><i class="fas fa-language"></i> Использовать английское название</li>
+            <li><i class="fas fa-filter"></i> Искать по жанру или году</li>
+            <li><i class="fas fa-simplify"></i> Упростить запрос</li>
+          </ul>
+        </div>
+      `;
+      
+      setTimeout(async () => {
+        const existingContent = box.innerHTML;
+        const hasHistory = await renderSearchHistory();
+        if (hasHistory) {
+          box.innerHTML = existingContent + '<div class="content-separator"></div>' + box.innerHTML;
+        }
+      }, 100);
       return;
     }
 
-    let html = '';
-    
-    // Ограничиваем первую загрузку до 6 плееров
-    const limitedResults = loadMore ? data.results : data.results.slice(0, INITIAL_LOAD_COUNT);
-    
-    if (!loadMore) {
-      html = `
-        <section class="search-results-section">
-          <div class="search-header">
-            <h2 class="section-title fade-in">
-              <i class="fas fa-search"></i> Результаты поиска: "${q}"
-            </h2>
-            <div class="stats-info">
-              <span class="stats-text">
-                <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${limitedResults.length}+ аниме</span> по запросу "${q}"
-              </span>
-            </div>
+    let html = `
+      <section class="search-results-section">
+        <div class="search-header">
+          <h2 class="section-title fade-in">
+            <i class="fas fa-search"></i> Результаты поиска: "${q}"
+          </h2>
+          <div class="stats-info">
+            <span class="stats-text">
+              <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${currentSearchResults.length} аниме</span> по запросу "${q}"
+            </span>
           </div>
-          <div class="databases-info">
-            <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
-            <div class="database-links">
-              <a href="https://shikimori.one" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> Shikimori
-              </a>
-              <a href="https://anilist.co" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> AniList
-              </a>
-              <a href="https://myanimelist.net" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> MyAnimeList
-              </a>
-              <a href="https://anidb.net" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> AniDB
-              </a>
-              <a href="https://kitsu.io" target="_blank" class="database-link">
-                <i class="fas fa-external-link-alt"></i> Kitsu
-              </a>
-            </div>
+        </div>
+        <div class="databases-info">
+          <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
+          <div class="database-links">
+            <a href="https://shikimori.one" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> Shikimori
+            </a>
+            <a href="https://anilist.co" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> AniList
+            </a>
+            <a href="https://myanimelist.net" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> MyAnimeList
+            </a>
+            <a href="https://anidb.net" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> AniDB
+            </a>
+            <a href="https://kitsu.io" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> Kitsu
+            </a>
           </div>
-          <div class="results-grid" id="searchResultsGrid">
-      `;
-    }
+        </div>
+        <div class="results-grid" id="searchResultsGrid">
+    `;
 
-    const cards = limitedResults.map(item => createAnimeCard(item));
+    const cards = currentSearchResults.map(item => createAnimeCard(item));
     
-    if (loadMore) {
-      html = cards.join('');
-    } else {
-      html += cards.join('') + `
-          </div>
-        </section>
-      `;
-    }
+    html += cards.join('') + `
+        </div>
+      </section>
+    `;
 
-    if (loadMore) {
-      const grid = box.querySelector('#searchResultsGrid');
-      if (grid) {
-        grid.innerHTML += html;
-        // Обновляем счетчик после загрузки дополнительных элементов
-        updateSearchCounter(q, grid.children.length);
-      }
-    } else {
-      box.innerHTML = html;
-    }
+    box.innerHTML = html;
 
-    // Проверяем, есть ли еще результаты для загрузки
-    hasMoreSearch = data.results.length >= SEARCH_LIMIT;
-
-    // Добавляем кнопку "Загрузить еще" если есть еще результаты
-    if (hasMoreSearch && !loadMore) {
-      box.querySelector('.search-results-section').innerHTML += showLoadMoreButton('search', 'loadMoreSearch()');
-    } else if (!hasMoreSearch) {
-      removeLoadMoreButton('search');
-    }
-
-    if (!loadMore) {
-      history.replaceState(null, null, "?q=" + encodeURIComponent(q));
-      
-      // ОЧИСТКА ПОЛЯ ПОИСКА ПОСЛЕ УСПЕШНОГО ВЫПОЛНЕНИЯ ПОИСКА
-      clearSearchInputAfterSuccess();
-    }
+    history.replaceState(null, null, "?q=" + encodeURIComponent(q));
+    
+    // ОЧИСТКА ПОЛЯ ПОИСКА ПОСЛЕ УСПЕШНОГО ВЫПОЛНЕНИЯ ПОИСКА
+    clearSearchInputAfterSuccess();
   } catch (e) {
     console.error("Search error:", e);
-    hasMoreSearch = false;
-    if (!loadMore) {
-      box.innerHTML = `
-        <div class="no-results fade-in">
-          <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
-          <h2>Ошибка загрузки</h2>
-          <p>Попробуйте повторить поиск позже</p>
-          <p style="color: var(--gray); font-size: 0.9rem;">${e.message}</p>
-        </div>
-      `;
-    }
+    box.innerHTML = `
+      <div class="no-results fade-in">
+        <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
+        <h2>Ошибка загрузки</h2>
+        <p>Попробуйте повторить поиск позже</p>
+        <p style="color: var(--gray); font-size: 0.9rem;">${e.message}</p>
+      </div>
+    `;
   }
 }
 
@@ -1211,6 +991,3 @@ window.renderFavoritesPage = renderFavoritesPage;
 window.renderWeekly = renderWeekly;
 window.navigateToHome = navigateToHome;
 window.navigateToFavorites = navigateToFavorites;
-window.loadMoreSearch = loadMoreSearch;
-window.loadMoreWeekly = loadMoreWeekly;
-window.loadMoreFavorites = loadMoreFavorites;
