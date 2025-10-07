@@ -25,8 +25,11 @@
 
   /* ---------- баннер ---------- */
   function buildBanner() {
+
     if (lock || document.querySelector('.ab-banner')) return;
     lock = true;
+
+    document.body.classList.add('ab-scroll-lock'); // 🔒 блокируем скролл
 
     const b = document.createElement('div'); b.className = 'ab-banner';
     b.innerHTML = `
@@ -89,6 +92,7 @@
 
   function hideBanner(el) {
     el.style.transform = 'translateY(100%)'; el.style.opacity = '0';
+    document.body.classList.remove('ab-scroll-lock'); // 🔓 разблокируем
     setTimeout(() => el.remove(), 300);
   }
 
