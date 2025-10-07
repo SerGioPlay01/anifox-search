@@ -330,38 +330,32 @@ function updateSEOMeta(apiData) {
 }
 
 /* ---------- CARD ---------- */
-function createAnimeCard(item) {
+function createAnimeCard(item, isFav = false) {
   const t = item.title;
   return `
     <div class="card fade-in">
       <div class="card-header">
         <h3 class="h2_name">${t}</h3>
         <div class="info-links">
-          <a href="https://shikimori.one/animes?search=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
-          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
-          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
         </div>
       </div>
-      <iframe class="single-player" src="${
-        item.link
-      }" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+
+      <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+
       <div class="card-actions">
-        <button class="action-btn favorite-btn" onclick='toggleFavorite(${JSON.stringify(
-          t
-        )}, ${JSON.stringify(
-    item.link
-  )})' title="Добавить в избранное"><i class="far fa-heart"></i></button>
-        <button class="action-btn" onclick='shareAnime(${JSON.stringify(
-          t
-        )}, ${JSON.stringify(
-    item.link
-  )})' title="Поделиться"><i class="fas fa-share"></i></button>
+        <button class="action-btn favorite-btn ${isFav ? 'active' : ''}"
+                onclick='toggleFavorite(${JSON.stringify(t)}, ${JSON.stringify(item.link)})'
+                title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
+          <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
+          <span class="btn-text">${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}</span>
+        </button>
+
+        <button class="action-btn" onclick='shareAnime(${JSON.stringify(t)}, ${JSON.stringify(item.link)})' title="Поделиться">
+          <i class="fas fa-share"></i>
+        </button>
       </div>
     </div>`;
 }
@@ -392,12 +386,22 @@ window.toggleFavorite = async (title, link) => {
   }
 };
 
-function updateFavBtn(link, is) {
-  document.querySelectorAll(".favorite-btn").forEach((b) => {
-    if (b.onclick && b.onclick.toString().includes(link)) {
-      b.querySelector("i").className = is ? "fas fa-heart" : "far fa-heart";
-      b.title = is ? "Удалить из избранного" : "Добавить в избранное";
-    }
+function updateFavBtn(link, isFav) {
+  document.querySelectorAll('.favorite-btn').forEach(btn => {
+    // принадлежит ли кнопка этому аниме
+    if (!btn.onclick || !btn.onclick.toString().includes(link)) return;
+
+    // иконка
+    btn.querySelector('i').className = isFav ? 'fas fa-heart' : 'far fa-heart';
+
+    // подсказка
+    btn.title = isFav ? 'Удалить из избранного' : 'Добавить в избранное';
+
+    // текст кнопки
+    btn.querySelector('.btn-text').textContent = btn.title;
+
+    // опционально – визуальное выделение
+    btn.classList.toggle('active', isFav);
   });
 }
 
@@ -472,7 +476,7 @@ async function renderFavoritesPage() {
     }
     let html = `<section class="favorites-section"><div class="section-header"><h2 class="section-title"><i class="fas fa-heart"></i> Избранное</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Всего: <span class="stats-highlight">${favs.length} аниме</span></span></div></div><div class="results-grid">`;
     html += favs
-      .map((f) => createAnimeCard({ title: f.title, link: f.link }))
+      .map((f) => createAnimeCard({ title: f.title, link: f.link }, true)) // <-- true
       .join("");
     html += `</div><div class="favorites-actions"><button onclick="clearFavorites()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить избранное</button><button onclick="navigateToHome()" class="clear-history-btn secondary"><i class="fas fa-arrow-left"></i> Вернуться к поиску</button></div></section>`;
     box.innerHTML = html;
