@@ -1,5 +1,51 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
+/* Стили для скроллбара */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+/* Дорожка скроллбара */
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+  border-radius: 10px;
+}
+
+/* Бегунок скроллбара */
+::-webkit-scrollbar-thumb {
+  background: #5b0a99;
+  border-radius: 10px;
+  border: 2px solid #0a0a0a;
+}
+
+/* Бегунок при наведении */
+::-webkit-scrollbar-thumb:hover {
+  background: #4a087a;
+}
+
+/* Бегунок при активном состоянии */
+::-webkit-scrollbar-thumb:active {
+  background: #3a0660;
+}
+
+/* Угол скроллбара */
+::-webkit-scrollbar-corner {
+  background: #0a0a0a;
+}
+
+/* Стили для Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #5b0a99 #0a0a0a;
+}
+
+/* Дополнительные стили для Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #5b0a99 #0a0a0a;
+}
+
 :root {
     --red: #5b0a99;
     --black: #0a0a0a;
