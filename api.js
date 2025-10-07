@@ -1,5 +1,5 @@
 /* =========================================================
-   AniFox 2.1  (полный клиентский билет)
+   AniFox 2.1  (fixed)
    Улучшения: модальное окно информации об аниме + share по title_orig
    ========================================================= */
 
@@ -37,7 +37,7 @@ async function initDB(){
 async function dbAdd(s,data){ const db=await initDB(),tx=db.transaction([s],'readwrite'); tx.objectStore(s).add(data); return promisifyTX(tx); }
 async function dbPut(s,data){ const db=await initDB(),tx=db.transaction([s],'readwrite'); tx.objectStore(s).put(data); return promisifyTX(tx); }
 async function dbGet(s,key){ const db=await initDB(),tx=db.transaction([s],'readonly'); return tx.objectStore(s).get(key); }
-async function dbGetAll(s,index){ 
+async function dbGetAll(s,index){
   const db=await initDB(),tx=db.transaction([s],'readonly'),
         store=index?tx.objectStore(s).index(index):tx.objectStore(s);
   return store.getAll();
@@ -151,9 +151,9 @@ function updateSEOMeta(apiData){
 
 /* ---------- CARD ---------- */
 async function createAnimeCard(item){
-  const t = item.title;
-  const favs = await dbGetAll(STORE_FAVORITES) || []; // ← добавили await
-  const isFav = favs.some(f => f.link === item.link);
+  const t=item.title;
+  const favs=(await dbGetAll(STORE_FAVORITES))||[];        // ← fix
+  const isFav=favs.some(f=>f.link===item.link);
   return `
   <div class="card fade-in">
     <div class="card-header">
@@ -182,7 +182,7 @@ async function createAnimeCard(item){
 /* ---------- FAVORITES ---------- */
 window.toggleFavorite=async(title,link)=>{
   try{
-    const favs=await dbGetAll(STORE_FAVORITES);
+    const favs=(await dbGetAll(STORE_FAVORITES))||[];
     const old=favs.find(f=>f.link===link);
     if(old){ await dbDel(STORE_FAVORITES,old.id); showNote(`«${title}» удалено из избранного`,'info'); }
     else { await dbAdd(STORE_FAVORITES,{id:Date.now(),title,link,t:Date.now()}); showNote(`«${title}» добавлено в избранное`,'success'); }
@@ -191,7 +191,7 @@ window.toggleFavorite=async(title,link)=>{
   }catch(e){ console.error(e); showNote('Ошибка при работе с избранным','error'); }
 };
 window.refreshFavoriteIcons=async()=>{
-  const favs=await dbGetAll(STORE_FAVORITES);
+  const favs=(await dbGetAll(STORE_FAVORITES))||[];
   const set=new Set(favs.map(f=>f.link));
   document.querySelectorAll('.favorite-btn').forEach(btn=>{
     const is=set.has(btn.dataset.link);
@@ -255,7 +255,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeAnimeModal();
 async function addHistory(q){
   if(!q.trim()) return;
   try{
-    const hist=await dbGetAll(STORE_SEARCH_HISTORY,'timestamp');
+    const hist=(await dbGetAll(STORE_SEARCH_HISTORY,'timestamp'))||[];
     const old=hist.find(i=>i.query===q);
     if(old) await dbDel(STORE_SEARCH_HISTORY,old.id);
     await dbAdd(STORE_SEARCH_HISTORY,{id:Date.now(),query:q,t:Date.now()});
@@ -272,13 +272,14 @@ async function renderFavoritesPage(){
   const box=$('resultsBox'); if(!box) return;
   box.innerHTML='<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка избранного...</p></div>';
   try{
-    const favs=(await dbGetAll(STORE_FAVORITES,'timestamp')).sort((a,b)=>b.t-a.t);
-    if(!favs.length){
+    const favs=(await dbGetAll(STORE_FAVORITES,'timestamp'))||[];
+    const list=favs.sort((a,b)=>b.t-a.t);
+    if(!list.length){
       box.innerHTML=`<div class="no-results fade-in"><i class="fas fa-heart fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>В избранном пока ничего нет</h2><p>Добавляйте аниме в избранное с помощью <i class="fas fa-heart"></i></p><button onclick="navigateToHome()" class="clear-history-btn" style="margin-top:1rem"><i class="fas fa-arrow-left"></i> Вернуться к поиску</button></div>`;
       return;
     }
-    let html=`<section class="favorites-section"><div class="section-header"><h2 class="section-title"><i class="fas fa-heart"></i> Избранное</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Всего: <span class="stats-highlight">${favs.length} аниме</span></span></div></div><div class="results-grid">`;
-    html+=(await Promise.all(favs.map(f=>createAnimeCard({title:f.title,link:f.link})))).join('');
+    let html=`<section class="favorites-section"><div class="section-header"><h2 class="section-title"><i class="fas fa-heart"></i> Избранное</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Всего: <span class="stats-highlight">${list.length} аниме</span></span></div></div><div class="results-grid">`;
+    html+=(await Promise.all(list.map(f=>createAnimeCard({title:f.title,link:f.link})))).join('');
     html+=`</div><div class="favorites-actions"><button onclick="clearFavorites()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить избранное</button><button onclick="navigateToHome()" class="clear-history-btn secondary"><i class="fas fa-arrow-left"></i> Вернуться к поиску</button></div></section>`;
     box.innerHTML=html;
   }catch(e){ box.innerHTML=`<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки избранного</h2><p>Попробуйте перезагрузить страницу</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`; }
@@ -292,10 +293,11 @@ async function renderWeekly(){
   box.innerHTML='<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка новинок...</p></div>';
   const hasHist=await (async()=>{
     try{
-      const hist=(await dbGetAll(STORE_SEARCH_HISTORY,'timestamp')).sort((a,b)=>b.t-a.t).slice(0,10);
-      if(!hist.length) return false;
+      const hist=(await dbGetAll(STORE_SEARCH_HISTORY,'timestamp'))||[];
+      const list=hist.sort((a,b)=>b.t-a.t).slice(0,10);
+      if(!list.length) return false;
       let h=`<section class="history-section"><h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2><div class="search-history-buttons">`;
-      hist.forEach(i=>h+=`<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g,"\\'")}')"><i class="fas fa-search"></i> ${i.query}<span class="remove-history" onclick="removeFromHistory(event,${i.id})"><i class="fas fa-times"></i></span></button>`);
+      list.forEach(i=>h+=`<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g,"\\'")}')"><i class="fas fa-search"></i> ${i.query}<span class="remove-history" onclick="removeFromHistory(event,${i.id})"><i class="fas fa-times"></i></span></button>`);
       h+=`</div><div class="history-actions"><button onclick="clearSearchHistory()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить историю</button></div></section>`;
       box.innerHTML=h; return true;
     }catch{return false;}
@@ -327,10 +329,11 @@ async function search(){
       box.innerHTML=`<div class="no-results fade-in"><i class="fas fa-search fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>По запросу «${q}» ничего не найдено</h2><p>Попробуйте изменить запрос:</p><ul><li><i class="fas fa-spell-check"></i> Проверить правильность написания</li><li><i class="fas fa-language"></i> Использовать английское название</li><li><i class="fas fa-filter"></i> Искать по жанру или году</li><li><i class="fas fa-simplify"></i> Упростить запрос</li></ul></div>`;
       setTimeout(async()=>{
         try{
-          const hist=(await dbGetAll(STORE_SEARCH_HISTORY,'timestamp')).sort((a,b)=>b.t-a.t).slice(0,10);
-          if(hist.length){
+          const hist=(await dbGetAll(STORE_SEARCH_HISTORY,'timestamp'))||[];
+          const list=hist.sort((a,b)=>b.t-a.t).slice(0,10);
+          if(list.length){
             let html=`<section class="history-section"><h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2><div class="search-history-buttons">`;
-            hist.forEach(i=>html+=`<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g,"\\'")}')"><i class="fas fa-search"></i> ${i.query}<span class="remove-history" onclick="removeFromHistory(event,${i.id})"><i class="fas fa-times"></i></span></button>`);
+            list.forEach(i=>html+=`<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g,"\\'")}')"><i class="fas fa-search"></i> ${i.query}<span class="remove-history" onclick="removeFromHistory(event,${i.id})"><i class="fas fa-times"></i></span></button>`);
             html+=`</div><div class="history-actions"><button onclick="clearSearchHistory()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить историю</button></div></section>`;
             box.innerHTML+='<div class="content-separator"></div>'+html;
           }
