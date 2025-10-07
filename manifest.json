@@ -4,7 +4,7 @@
   "description": "Бесплатная платформа для просмотра аниме в HD качестве. Тысячи сериалов и фильмов без регистрации.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
+  "background_color": "#5b0a99",
   "theme_color": "#5b0a99",
   "orientation": "portrait-primary",
   "scope": "/",

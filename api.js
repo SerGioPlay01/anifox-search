@@ -317,41 +317,223 @@ async function createAnimeCard(item) {
   const db = await initDB();
   const favs = await dbGetAll(STORE_FAVORITES);
   const isFav = favs.some((f) => f.link === item.link);
+  
   return `
     <div class="card fade-in">
       <div class="card-header">
         <h3 class="h2_name">${t}</h3>
         <div class="info-links">
-          <a href="https://shikimori.one/animes?search=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
-          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
-          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
+          <button class="info-link" onclick="showAnimeInfoModal(${JSON.stringify(item).replace(/'/g, "&#39;")})" title="Подробная информация">
+            <i class="fas fa-info-circle"></i>
+          </button>
+          <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="Shikimori">
+            <i class="fas fa-external-link-alt"></i>
+          </a>
+          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="AniList">
+            <i class="fas fa-external-link-alt"></i>
+          </a>
+          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}" target="_blank" class="info-link" title="MyAnimeList">
+            <i class="fas fa-external-link-alt"></i>
+          </a>
         </div>
       </div>
-      <iframe class="single-player" src="${
-        item.link
-      }" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+      
+      <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+      
       <div class="card-actions">
-        <button class="action-btn favorite-btn" data-link="${
-          item.link
-        }" onclick="toggleFavorite('${t.replace(/'/g, "\\'")}', '${
-    item.link
-  }')" title="${isFav ? "Удалить из избранного" : "Добавить в избранное"}">
+        <button class="action-btn favorite-btn" data-link="${item.link}" onclick="toggleFavorite('${t.replace(/'/g, "\\'")}', '${item.link}')" title="${isFav ? "Удалить из избранного" : "Добавить в избранное"}">
           <i class="${isFav ? "fas" : "far"} fa-heart"></i>
         </button>
-        <button class="action-btn" onclick="shareAnime('${t.replace(
-          /'/g,
-          "\\'"
-        )}', '${item.link}')" title="Поделиться">
+        <button class="action-btn" onclick="shareAnime('${t.replace(/'/g, "\\'")}', '${item.link}')" title="Поделиться">
           <i class="fas fa-share"></i>
+        </button>
+        <button class="action-btn" onclick="showAnimeInfoModal(${JSON.stringify(item).replace(/'/g, "&#39;")})" title="Подробная информация">
+          <i class="fas fa-info-circle"></i>
         </button>
       </div>
     </div>`;
+}
+
+// Функция для показа модального окна с информацией
+function showAnimeInfoModal(item) {
+  const material = item.material_data || {};
+  
+  const modalHTML = `
+    <div class="modal-overlay" id="animeInfoModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2><i class="fas fa-info-circle"></i> ${item.title}</h2>
+          <button onclick="closeAnimeInfoModal()" class="modal-close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="anime-info">
+            ${material.poster_url ? `
+              <div class="anime-poster">
+                <img src="${material.poster_url}" alt="${item.title}">
+              </div>
+            ` : ''}
+            
+            <div class="anime-details">
+              ${material.title_en ? `
+                <div class="detail-item">
+                  <i class="fas fa-language"></i>
+                  <strong>Оригинальное название:</strong> 
+                  <span>${material.title_en}</span>
+                </div>
+              ` : ''}
+              
+              ${material.year ? `
+                <div class="detail-item">
+                  <i class="fas fa-calendar-alt"></i>
+                  <strong>Год:</strong> 
+                  <span>${material.year}</span>
+                </div>
+              ` : ''}
+              
+              ${material.genres?.length ? `
+                <div class="detail-item">
+                  <i class="fas fa-tags"></i>
+                  <strong>Жанры:</strong> 
+                  <span>${material.genres.join(', ')}</span>
+                </div>
+              ` : ''}
+              
+              ${material.countries?.length ? `
+                <div class="detail-item">
+                  <i class="fas fa-globe"></i>
+                  <strong>Страны:</strong> 
+                  <span>${material.countries.join(', ')}</span>
+                </div>
+              ` : ''}
+              
+              ${material.duration ? `
+                <div class="detail-item">
+                  <i class="fas fa-clock"></i>
+                  <strong>Продолжительность:</strong> 
+                  <span>${material.duration} мин.</span>
+                </div>
+              ` : ''}
+              
+              ${item.episodes_count ? `
+                <div class="detail-item">
+                  <i class="fas fa-play-circle"></i>
+                  <strong>Эпизоды:</strong> 
+                  <span>${item.episodes_count}</span>
+                </div>
+              ` : ''}
+              
+              ${material.kinopoisk_rating ? `
+                <div class="detail-item">
+                  <i class="fas fa-star"></i>
+                  <strong>Рейтинг КиноПоиск:</strong> 
+                  <span>${material.kinopoisk_rating}</span>
+                </div>
+              ` : ''}
+              
+              ${material.imdb_rating ? `
+                <div class="detail-item">
+                  <i class="fas fa-star"></i>
+                  <strong>Рейтинг IMDB:</strong> 
+                  <span>${material.imdb_rating}</span>
+                </div>
+              ` : ''}
+              
+              ${material.description ? `
+                <div class="detail-section">
+                  <h3><i class="fas fa-file-alt"></i> Описание</h3>
+                  <p class="description">${material.description}</p>
+                </div>
+              ` : ''}
+              
+              ${material.actors?.length ? `
+                <div class="detail-section">
+                  <h3><i class="fas fa-users"></i> Актеры</h3>
+                  <p class="actors">${material.actors.slice(0, 6).join(', ')}${material.actors.length > 6 ? '...' : ''}</p>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          
+          ${item.screenshots?.length ? `
+            <div class="screenshots-section">
+              <h3><i class="fas fa-images"></i> Скриншоты</h3>
+              <div class="screenshots-grid">
+                ${item.screenshots.slice(0, 4).map(screenshot => `
+                  <div class="screenshot-item">
+                    <img src="${screenshot}" alt="Скриншот" onclick="openImageModal('${screenshot}')">
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+        
+        <div class="modal-footer">
+          <div class="database-links">
+            <a href="https://shikimori.one/animes?search=${encodeURIComponent(item.title)}" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> Shikimori
+            </a>
+            <a href="https://anilist.co/search/anime?search=${encodeURIComponent(item.title)}" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> AniList
+            </a>
+            <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(item.title)}" target="_blank" class="database-link">
+              <i class="fas fa-external-link-alt"></i> MyAnimeList
+            </a>
+          </div>
+          <button onclick="closeAnimeInfoModal()" class="modal-close-button">
+            <i class="fas fa-times"></i> Закрыть
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Закрытие по ESC
+  document.addEventListener('keydown', function closeOnEsc(e) {
+    if (e.key === 'Escape') {
+      closeAnimeInfoModal();
+      document.removeEventListener('keydown', closeOnEsc);
+    }
+  });
+  
+  // Закрытие по клику вне модалки
+  document.getElementById('animeInfoModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeAnimeInfoModal();
+    }
+  });
+}
+
+function closeAnimeInfoModal() {
+  const modal = document.getElementById('animeInfoModal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+function openImageModal(src) {
+  const imageModal = `
+    <div class="image-modal-overlay" onclick="closeImageModal()">
+      <img src="${src}" alt="Увеличенное изображение" onclick="event.stopPropagation()">
+      <button class="image-modal-close" onclick="closeImageModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', imageModal);
+}
+
+function closeImageModal() {
+  const imageModal = document.querySelector('.image-modal-overlay');
+  if (imageModal) {
+    imageModal.remove();
+  }
 }
 
 /* ---------- FAVORITES ---------- */
