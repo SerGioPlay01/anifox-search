@@ -151,9 +151,9 @@ function updateSEOMeta(apiData){
 
 /* ---------- CARD ---------- */
 async function createAnimeCard(item){
-  const t=item.title;
-  const favs=await dbGetAll(STORE_FAVORITES);
-  const isFav=favs.some(f=>f.link===item.link);
+  const t = item.title;
+  const favs = await dbGetAll(STORE_FAVORITES) || []; // ← добавили await
+  const isFav = favs.some(f => f.link === item.link);
   return `
   <div class="card fade-in">
     <div class="card-header">
