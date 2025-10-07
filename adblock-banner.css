@@ -399,3 +399,51 @@
     background: var(--red);
     border-radius: 4px;
 }
+
+/* ---------- напоминание «вы всё ещё с блокировщиком» ---------- */
+.ab-reminder{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.85);
+    backdrop-filter: blur(10px);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: abFade .3s ease-out;
+}
+
+.ab-reminder-content{
+    background: rgba(10,10,10,.98);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: var(--radius);
+    padding: 2rem;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    color: var(--white);
+}
+
+.ab-reminder-content i{
+    font-size: 3rem;
+    color: #ffc107;
+    margin-bottom: 1rem;
+}
+
+.ab-reminder-content h4{
+    font-size: 1.3rem;
+    margin: 0 0 .5rem 0;
+}
+
+.ab-reminder-content p{
+    font-size: .95rem;
+    color: var(--gray);
+    margin-bottom: 1.5rem;
+}
+
+@media(max-width:480px){
+    .ab-reminder-content{
+        padding: 1.5rem;
+    }
+}

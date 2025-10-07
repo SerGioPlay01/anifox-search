@@ -201,3 +201,48 @@
 
   document.addEventListener('DOMContentLoaded', run);
 })();
+
+/* ---------- повторная проверка ---------- */
+const RE_CHECK_DELAY = 3000; // 3 с
+const STORAGE_KEY_RECHECK = 'anifox-adblock-recheck';
+
+async function reCheckAdblock() {
+  // если пользователь уже нажал «с блокировщиком» — не докучаем
+  if (localStorage.getItem(STORAGE_KEY) === 'with-adblock') return;
+
+  const stillBlocked = await detectAdblock() || hasAdblockCache();
+  if (!stillBlocked) return; // всё ок
+
+  // показываем «жёсткое» окно-напоминание
+  const reminder = document.createElement('div');
+  reminder.className = 'ab-reminder';
+  reminder.innerHTML = `
+    <div class="ab-reminder-content">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h4>Блокировщик всё ещё активен</h4>
+      <p>Пожалуйста, отключите расширение и нажмите кнопку ниже.</p>
+      <button class="ab-btn ab-btn--main" id="ab-recheck-btn">
+        <i class="fas fa-check"></i> Я всё сделал
+      </button>
+    </div>
+  `;
+  document.body.appendChild(reminder);
+
+  reminder.querySelector('#ab-recheck-btn').onclick = async () => {
+    reminder.remove();
+    // снова проверяем через небольшую задержку
+    await new Promise(r => setTimeout(r, 500));
+    reCheckAdblock(); // рекурсия до победного
+  };
+}
+
+function hideBanner(banner) {
+  banner.style.transform = 'translateY(100%)';
+  banner.style.opacity = '0';
+  setTimeout(() => banner.remove(), 300);
+
+  // если пользователь выбрал «отключить», запускаем повторную проверку
+  if (localStorage.getItem(STORAGE_KEY) === 'disable-adblock') {
+    setTimeout(() => reCheckAdblock(), RE_CHECK_DELAY);
+  }
+}
