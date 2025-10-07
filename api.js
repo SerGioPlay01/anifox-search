@@ -433,6 +433,7 @@ async function search() {
     const slug = toSlug(q);
     const newUrl = `/search/${slug}`;
     history.replaceState(null, null, newUrl);
+    updateSEOMeta(data);
     if (input) input.value = '';
   } catch (e) {
     console.error('Ошибка search:', e);
@@ -456,8 +457,7 @@ function updateHeader() {
 
 window.navigateToHome = (e) => {
   if (e) e.preventDefault();
-  const url = location.pathname + (location.search.includes('q=') ? location.search.replace(/[?&]page=favorites/g, '') : '');
-  history.replaceState(null, null, url);
+  history.replaceState(null, null, '/'); // ✅ сброс пути
   updateHeader();
   renderWeekly();
 };
