@@ -256,6 +256,56 @@ async function apiWeekly() {
   return data;
 }
 
+/* ---------- ФУНКЦИИ ДЛЯ УДАЛЕНИЯ ДУБЛИКАТОВ ---------- */
+function removeDuplicatePlayers(results) {
+  const seen = new Set();
+  const uniqueResults = [];
+  
+  for (const item of results) {
+    // Создаем уникальный ключ на основе заголовка и ссылки
+    const key = `${item.title}_${item.link}`;
+    
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueResults.push(item);
+    }
+  }
+  
+  return uniqueResults;
+}
+
+function filterLowQualityTitles(results) {
+  return results.filter(item => {
+    const title = item.title.toLowerCase();
+    
+    // Фильтруем низкокачественные названия
+    const badPatterns = [
+      /трейлер/i,
+      /тизер/i,
+      /teaser/i,
+      /trailer/i,
+      /опенинг/i,
+      /ending/i,
+      /opening/i,
+      /превью/i,
+      /preview/i,
+      /реклама/i,
+      /advertisement/i,
+      /promo/i,
+      /промо/i,
+      /сборник/i,
+      /compilation/i,
+      /короткометражка/i,
+      /short film/i,
+      /ova\s*[\d\-]/i,
+      /special\s*[\d\-]/i
+    ];
+    
+    // Пропускаем элементы, которые содержат плохие паттерны
+    return !badPatterns.some(pattern => pattern.test(title));
+  });
+}
+
 /* ---------- UI FUNCTIONS ---------- */
 function showLoading() {
   const box = $("resultsBox");
@@ -667,7 +717,13 @@ async function renderWeekly() {
   // Затем загружаем новинки
   try {
     const data = await apiWeekly();
-    currentWeeklyResults = data.results || [];
+    let results = data.results || [];
+    
+    // Удаляем дубликаты и фильтруем низкокачественные названия
+    results = removeDuplicatePlayers(results);
+    results = filterLowQualityTitles(results);
+    
+    currentWeeklyResults = results;
     
     if (currentWeeklyResults.length) {
       if (hasContent) {
@@ -676,6 +732,11 @@ async function renderWeekly() {
             <h2 class="section-title fade-in">
               <i class="fas fa-bolt"></i> Свежее за неделю
             </h2>
+            <div class="stats-info">
+              <span class="stats-text">
+                <i class="fas fa-film"></i> Показано: <span class="stats-highlight">${currentWeeklyResults.length} аниме</span> (после фильтрации дублей)
+              </span>
+            </div>
             <div class="databases-info">
               <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
               <div class="database-links">
@@ -704,6 +765,11 @@ async function renderWeekly() {
             <h2 class="section-title fade-in">
               <i class="fas fa-bolt"></i> Свежее за неделю
             </h2>
+            <div class="stats-info">
+              <span class="stats-text">
+                <i class="fas fa-film"></i> Показано: <span class="stats-highlight">${currentWeeklyResults.length} аниме</span> (после фильтрации дублей)
+              </span>
+            </div>
             <div class="databases-info">
               <h3><i class="fas fa-database"></i> Базы данных аниме</h3>
               <div class="database-links">
@@ -796,7 +862,13 @@ async function search() {
 
   try {
     const data = await apiSearch(q);
-    currentSearchResults = data.results || [];
+    let results = data.results || [];
+    
+    // Удаляем дубликаты и фильтруем низкокачественные названия
+    results = removeDuplicatePlayers(results);
+    results = filterLowQualityTitles(results);
+    
+    currentSearchResults = results;
     
     if (!currentSearchResults.length) {
       box.innerHTML = `
@@ -831,7 +903,7 @@ async function search() {
           </h2>
           <div class="stats-info">
             <span class="stats-text">
-              <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${currentSearchResults.length} аниме</span> по запросу "${q}"
+              <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${currentSearchResults.length} аниме</span> по запросу "${q}" (после фильтрации дублей)
             </span>
           </div>
         </div>
