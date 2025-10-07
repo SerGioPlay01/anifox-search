@@ -396,10 +396,10 @@ window.refreshFavoriteIcons = async () => {
 };
 
 /* ---------- SHARE ---------- */
-window.shareAnime = (originalTitle, link) => {
-  const url = `${location.origin}/search/${encodeURIComponent(originalTitle)}`; // Используем оригинальное название в URL
+window.shareAnime = (title, title_en, link) => {
+  const url = `${location.origin}/search/${encodeURIComponent(title_en)}`; // Используем оригинальное название в URL
   if (navigator.share)
-    navigator.share({ title: originalTitle, text: `Смотри «${originalTitle}» на AniFox`, url });
+    navigator.share({ title: title, text: `Смотри «${title}» на AniFox`, url });
   else {
     navigator.clipboard.writeText(url);
     showNote("Ссылка скопирована в буфер обмена", "success");
