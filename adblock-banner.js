@@ -9,9 +9,9 @@
 (() => {
   const STORAGE_KEY       = 'anifox-adblock-choice';   // финальное решение
   const STORAGE_KEY_WANT  = 'anifox-adblock-want-disable'; // «хочет отключить»
-  const RE_CHECK_TRIES    = 5;     // кол-во попыток
-  const RE_CHECK_PAUSE    = 1500;  // ms между попытками
-  const PROGRESS_DELAY    = 500;   // ms перед первой проверкой
+  const RE_CHECK_TRIES    = 3;     // кол-во попыток
+  const RE_CHECK_PAUSE    = 1000;  // ms между попытками
+  const PROGRESS_DELAY    = 1000;  // ms перед первой проверкой
 
   let lock = false;
 
@@ -169,7 +169,7 @@
   function onWantDisable(banner) {
     localStorage.setItem(STORAGE_KEY_WANT, '1');
     hideBanner(banner);
-    setTimeout(() => reCheckAdblock(), 1500);
+    setTimeout(() => reCheckAdblock(), 1000);
   }
 
   function hideBanner(el) {
@@ -178,27 +178,31 @@
     setTimeout(() => el.remove(), 300);
   }
 
-  /* ---------- повторная проверка (5 попыток + прогресс) ---------- */
+  /* ---------- повторная проверка (3 попытки) ---------- */
   async function reCheckAdblock() {
     if (localStorage.getItem(STORAGE_KEY) === 'with-adblock') return;
 
     for (let i = 1; i <= RECHECK_TRIES; i++) {
       showProgress(`Проверка ${i} из ${RECHECK_TRIES}…`);
-      await new Promise(r => setTimeout(r, RECHECK_PAUSE));
+      await new Promise(r => setTimeout(r, RECHECK_PAUSE)); // ждём
 
-      detectAdblockHard(blocked => {
-        if (!blocked) {
-          hideProgress();
-          localStorage.setItem(STORAGE_KEY, 'disable-adblock');
-          localStorage.removeItem(STORAGE_KEY_WANT);
-          return;
-        }
-        if (i === RECHECK_TRIES) {
-          hideProgress();
-          showReminder();
-        }
+      // ждём результат detectAdblockHard
+      const stillBlocked = await new Promise(resolve => {
+        detectAdblockHard(resolve);
       });
+
+      if (!stillBlocked) {
+        // ✅ разблокировали
+        hideProgress();
+        localStorage.setItem(STORAGE_KEY, 'disable-adblock');
+        localStorage.removeItem(STORAGE_KEY_WANT);
+        return; // выходим из цикла
+      }
     }
+
+    // ❌ после всех попыток
+    hideProgress();
+    showReminder();
   }
 
   /* ---------- прогресс-окно ---------- */
