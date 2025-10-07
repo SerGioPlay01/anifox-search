@@ -13,6 +13,17 @@
     --gradient: linear-gradient(135deg, var(--red) 0%, #a31aff 100%);
 }
 
+:root.light-theme {
+    --black: #f2f2f2;
+    --white: #0a0a0a;
+    --gray: #aaa;
+    --dark-gray: #ccc;
+    --red: #ff5722;
+    --accent: #ff9800;
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --gradient: linear-gradient(135deg, var(--red) 0%, #ff9800 100%);
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
