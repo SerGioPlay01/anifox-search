@@ -350,7 +350,6 @@ function createAnimeCard(item, isFav = false) {
                 onclick='toggleFavorite(${JSON.stringify(t)}, ${JSON.stringify(item.link)})'
                 title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
           <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
-          <span class="btn-text">${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}</span>
         </button>
 
         <button class="action-btn" onclick='shareAnime(${JSON.stringify(t)}, ${JSON.stringify(item.link)})' title="Поделиться">
