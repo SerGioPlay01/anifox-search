@@ -3,48 +3,41 @@
  * Показывает баннер только при активном блокировщике.
  * 1. "Продолжить с блокировщиком" — больше не показываем.
  * 2. "Отключить и продолжить" — проверяем до победного.
- * 3. Поддержка: AdBlock, uBlock, AdGuard, Brave.
+ * 3. Поддержка: AdBlock, uBlock, AdGuard, Brave, Ghostery.
  * 4. Всё хранится в localStorage, куки не нужны.
  */
 (() => {
-  const STORAGE_KEY = "anifox-adblock-choice"; // финальное решение
-  const STORAGE_KEY_WANT = "anifox-adblock-want-disable"; // «хочет отключить»
-  const AD_CHECK_URL =
-    "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js";
-  const RE_CHECK_DELAY = 3000; // ms
+  const STORAGE_KEY       = 'anifox-adblock-choice';   // финальное решение
+  const STORAGE_KEY_WANT  = 'anifox-adblock-want-disable'; // «хочет отключить»
+  const AD_CHECK_URL      = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+  const GHOSTERY_CHECK    = 'https://www.ghostery.com/ghostery-ad-blocker'; // любой URL Ghostery
+  const RE_CHECK_DELAY    = 3000; // ms
 
   let lock = false;
 
   /* ---------- детект ---------- */
   async function detectAdblock() {
-    try {
-      await fetch(AD_CHECK_URL, { method: "HEAD", mode: "no-cors" });
-      return false;
-    } catch {
-      return true;
-    }
+    try { await fetch(AD_CHECK_URL, { method: 'HEAD', mode: 'no-cors' }); return false; } catch { return true; }
   }
   function hasAdblockCache() {
-    const s = document.createElement("script");
-    s.src = AD_CHECK_URL;
-    s.async = true;
+    const s = document.createElement('script'); s.src = AD_CHECK_URL; s.async = true;
     document.head.appendChild(s);
-    const blocked = !s.offsetHeight;
-    s.remove();
-    return blocked;
+    const blocked = !s.offsetHeight; s.remove(); return blocked;
   }
   async function isBrave() {
     return (navigator.brave && (await navigator.brave.isBrave())) || false;
   }
+  async function isGhostery() {
+    // Ghostery блокирует доступ к своим же URL + общий тест
+    try { await fetch(GHOSTERY_CHECK, { method: 'HEAD', mode: 'no-cors' }); return false; } catch { return true; }
+  }
 
   /* ---------- баннер ---------- */
   function buildBanner() {
-    if (lock || document.querySelector(".ab-banner")) return;
-    lock = true;
-    document.body.classList.add("ab-scroll-lock");
+    if (lock || document.querySelector('.ab-banner')) return;
+    lock = true; document.body.classList.add('ab-scroll-lock');
 
-    const b = document.createElement("div");
-    b.className = "ab-banner";
+    const b = document.createElement('div'); b.className = 'ab-banner';
     b.innerHTML = `
       <div class="ab-content">
         <div class="ab-header">
@@ -84,27 +77,24 @@
           <button class="ab-btn ab-btn--main" id="ab-disable"><i class="fas fa-ad"></i> Отключить блокировщик</button>
         </div>
       </div>`;
-
     document.body.appendChild(b);
 
-        b.querySelector("#ab-continue").onclick = () => {
-      // Если Brave — показываем инструкцию
-      if (navigator.brave && navigator.brave.isBrave) {
+    b.querySelector('#ab-continue').onclick  = () => {
+      // Если Brave или Ghostery — показываем инструкцию
+      if (navigator.brave || isGhostery()) {
         showInstructions();
-        saveChoice("with-adblock", b);
-      } else {
-        saveChoice("with-adblock", b);
       }
+      saveChoice('with-adblock', b);
     };
-    b.querySelector("#ab-disable").onclick = () => onWantDisable(b);
-    b.querySelector(".ab-close").onclick = () => saveChoice("dismissed", b);
+    b.querySelector('#ab-disable').onclick   = () => onWantDisable(b);
+    b.querySelector('.ab-close').onclick     = () => saveChoice('dismissed', b);
   }
 
   /* ---------- инструкции ---------- */
   function showInstructions() {
     const isBraveBrowser = navigator.brave && navigator.brave.isBrave;
-    const modal = document.createElement("div");
-    modal.className = "ab-instructions-modal";
+    const isGhosteryActive = isGhostery();
+    const modal = document.createElement('div'); modal.className = 'ab-instructions-modal';
     modal.innerHTML = `
       <div class="ab-instructions-content">
         <h3><i class="fas fa-info-circle"></i> Как отключить блокировщик</h3>
@@ -133,9 +123,7 @@
               <li>Обновите страницу</li>
             </ol>
           </div>
-          ${
-            isBraveBrowser
-              ? `
+          ${isBraveBrowser ? `
           <div class="ab-instruction-item brave-block">
             <h4>Brave Browser</h4>
             <ol>
@@ -144,9 +132,17 @@
               <li>Обновите страницу</li>
             </ol>
             <div class="brave-hint">Brave блокирует рекламу по умолчанию. Отключите защиту именно для этого сайта.</div>
-          </div>`
-              : ""
-          }
+          </div>` : ''}
+          ${isGhosteryActive ? `
+          <div class="ab-instruction-item ghostery-block">
+            <h4>Ghostery Tracker & Ad Blocker</h4>
+            <ol>
+              <li>Нажмите на иконку Ghostery (призрак) в панели инструментов</li>
+              <li>В открывшемся окне нажмите <b>«Доверять сайту»</b> или отключите <b>«Блокировка рекламы»</b></li>
+              <li>Обновите страницу</li>
+            </ol>
+            <div class="ghostery-hint">Ghostery автоматически блокирует рекламу и трекеры. Добавьте сайт в доверенные, чтобы отключить блокировку.</div>
+          </div>` : ''}
         </div>
         <button class="ab-btn ab-btn--main" onclick="this.closest('.ab-instructions-modal').remove(); window.location.reload();">
           <i class="fas fa-sync"></i> Обновить страницу
@@ -162,75 +158,60 @@
   }
 
   function onWantDisable(banner) {
-    localStorage.setItem(STORAGE_KEY_WANT, "1");
+    localStorage.setItem(STORAGE_KEY_WANT, '1');
     hideBanner(banner);
     setTimeout(() => reCheckAdblock(), RE_CHECK_DELAY);
   }
 
   function hideBanner(el) {
-    el.style.transform = "translateY(100%)";
-    el.style.opacity = "0";
-    document.body.classList.remove("ab-scroll-lock");
+    el.style.transform = 'translateY(100%)'; el.style.opacity = '0';
+    document.body.classList.remove('ab-scroll-lock');
     setTimeout(() => el.remove(), 300);
   }
 
   /* ---------- повторная проверка ---------- */
   async function reCheckAdblock() {
-    if (localStorage.getItem(STORAGE_KEY) === "with-adblock") return;
+    if (localStorage.getItem(STORAGE_KEY) === 'with-adblock') return;
 
-    const stillBlocked =
-      (await detectAdblock()) || hasAdblockCache() || (await isBrave());
-    if (!stillBlocked) {
-      // ✅ разблокировали
-      localStorage.setItem(STORAGE_KEY, "disable-adblock");
+    const stillBlocked = await detectAdblock() || hasAdblockCache() || await isBrave() || await isGhostery();
+    if (!stillBlocked) {               // ✅ разблокировали
+      localStorage.setItem(STORAGE_KEY, 'disable-adblock');
       localStorage.removeItem(STORAGE_KEY_WANT);
       return;
     }
-    showReminder(); // ❌ ещё блокирует
+    showReminder();                    // ❌ ещё блокирует
   }
 
   function showReminder() {
-    if (document.querySelector(".ab-reminder")) return;
-    const r = document.createElement("div");
-    r.className = "ab-reminder";
+    if (document.querySelector('.ab-reminder')) return;
+    const r = document.createElement('div'); r.className = 'ab-reminder';
     r.innerHTML = `
-    <div class="ab-reminder-content">
-      <i class="fas fa-exclamation-triangle"></i>
-      <h4>Блокировщик всё ещё активен</h4>
-      <p>Пожалуйста, отключите расширение и нажмите кнопку ниже.</p>
-      <div class="ab-reminder-actions">
-        <button class="ab-btn ab-btn--main" id="ab-recheck">
-          <i class="fas fa-check"></i> Я всё сделал
-        </button>
-        <button class="ab-btn ab-btn--soft" id="ab-show-instructions">
-          <i class="fas fa-question-circle"></i> Вызвать инструкции
-        </button>
-      </div>
-    </div>`;
+      <div class="ab-reminder-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h4>Блокировщик всё ещё активен</h4>
+        <p>Пожалуйста, отключите расширение и нажмите кнопку ниже.</p>
+        <div class="ab-reminder-actions">
+          <button class="ab-btn ab-btn--main" id="ab-recheck"><i class="fas fa-check"></i> Я всё сделал</button>
+          <button class="ab-btn ab-btn--soft" id="ab-show-instructions"><i class="fas fa-question-circle"></i> Вызвать инструкции</button>
+        </div>
+      </div>`;
     document.body.appendChild(r);
 
-    r.querySelector("#ab-recheck").onclick = () => {
-      r.remove();
-      setTimeout(() => reCheckAdblock(), 500);
+    r.querySelector('#ab-recheck').onclick = () => {
+      r.remove(); setTimeout(() => reCheckAdblock(), 500);
     };
-
-    r.querySelector("#ab-show-instructions").onclick = () => {
-      r.remove();
-      showInstructions();
+    r.querySelector('#ab-show-instructions').onclick = () => {
+      r.remove(); showInstructions();
     };
   }
 
   /* ---------- запуск ---------- */
   async function run() {
     if (localStorage.getItem(STORAGE_KEY)) return;
-    if (localStorage.getItem(STORAGE_KEY_WANT)) {
-      reCheckAdblock();
-      return;
-    }
-    const blocked =
-      (await detectAdblock()) || hasAdblockCache() || (await isBrave());
+    if (localStorage.getItem(STORAGE_KEY_WANT)) { reCheckAdblock(); return; }
+    const blocked = await detectAdblock() || hasAdblockCache() || await isBrave() || await isGhostery();
     if (blocked) buildBanner();
   }
 
-  document.addEventListener("DOMContentLoaded", run);
+  document.addEventListener('DOMContentLoaded', run);
 })();

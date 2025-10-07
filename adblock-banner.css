@@ -488,3 +488,15 @@ body.ab-scroll-lock {
   width: 100%;
   justify-content: center;
 }
+
+.ghostery-block .ghostery-hint{
+  margin-top: .75rem;
+  font-size: .8rem;
+  color: #ffc107;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.ghostery-block .ghostery-hint::before{
+  content: "👻";
+}
