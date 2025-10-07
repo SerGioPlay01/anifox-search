@@ -114,6 +114,123 @@ function showNote(msg, type = 'info') {
   setTimeout(() => n.remove(), 3000);
 }
 
+/* ---------- SEO: динамическое обновление мета (без DEFAULT_META) ---------- */
+function clearOldDynamicMeta() {
+  document.querySelectorAll('head [data-dynamic]').forEach(el => el.remove());
+}
+
+function setAttr(sel, attr, val) {
+  const el = document.head.querySelector(sel);
+  if (el) el.setAttribute(attr, val);
+}
+
+function buildKeywords(title, genres, year) {
+  const base = ['аниме', 'смотреть аниме онлайн', 'русская озвучка', 'anime hd'];
+  const words = `${title} ${genres} ${year}`
+    .toLowerCase()
+    .replace(/[«»"']/g, '')
+    .split(/[\s,]+/)
+    .filter(Boolean);
+  return Array.from(new Set([...base, ...words])).slice(0, 15).join(', ');
+}
+
+function updateSEOMeta(apiData) {
+  clearOldDynamicMeta();
+
+  const results = (apiData && apiData.results) || [];
+  const urlParams = new URLSearchParams(location.search);
+  const query = urlParams.get('q') || '';
+
+  /* читаем «базовые» значения из верстки (первые попавшиеся) */
+  const baseTitle = document.head.querySelector('title')?.textContent || 'AniFox';
+  const baseDesc = document.head.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+  const baseKeys = document.head.querySelector('meta[name="keywords"]')?.getAttribute('content') || '';
+  const baseOGTitle = document.head.querySelector('meta[property="og:title"]')?.getAttribute('content') || baseTitle;
+  const baseOGDesc = document.head.querySelector('meta[property="og:description"]')?.getAttribute('content') || baseDesc;
+  const baseTwTitle = document.head.querySelector('meta[name="twitter:title"]')?.getAttribute('content') || baseTitle;
+  const baseTwDesc = document.head.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || baseDesc;
+
+  let title = baseTitle;
+  let description = baseDesc;
+  let keywords = baseKeys;
+  let ogTitle = baseOGTitle;
+  let ogDesc = baseOGDesc;
+  let twTitle = baseTwTitle;
+  let twDesc = baseTwDesc;
+  let ogImage = document.head.querySelector('meta[property="og:image"]')?.getAttribute('content') || '/resources/obl_web.webp';
+
+  if (query) {
+    const top = results[0];
+    if (top) {
+      const { title: t, year, genres = '', material_data } = top;
+      const cleanTitle = t.replace(/\[.*?\]/g, '').trim();
+      title = `Смотреть аниме «${cleanTitle}» (${year}) онлайн бесплатно в HD — AniFox`;
+      description = `Аниме «${cleanTitle}» (${year}) уже на AniFox: русская озвучка, HD 1080p, без регистрации. Жанры: ${genres}. Смотри новые серии первым!`;
+      keywords = buildKeywords(cleanTitle, genres, year);
+      ogTitle = twTitle = `«${cleanTitle}» — смотреть онлайн`;
+      ogDesc = twDesc = description;
+      ogImage = material_data?.poster_url || ogImage;
+    } else {
+      title = `Поиск «${query}» — AniFox`;
+      description = `По запросу «${query}» ничего не найдено, но вы можете посмотреть другие аниме на AniFox.`;
+      keywords = `аниме, ${query}, смотреть онлайн`;
+      ogTitle = twTitle = title;
+      ogDesc = twDesc = description;
+    }
+  }
+
+  /* обновляем мета */
+  document.title = title;
+  setAttr('meta[name="description"]', 'content', description);
+  setAttr('meta[name="keywords"]', 'content', keywords);
+  setAttr('meta[property="og:title"]', 'content', ogTitle);
+  setAttr('meta[property="og:description"]', 'content', ogDesc);
+  setAttr('meta[property="og:image"]', 'content', ogImage);
+  setAttr('meta[name="twitter:title"]', 'content', twTitle);
+  setAttr('meta[name="twitter:description"]', 'content', twDesc);
+  setAttr('meta[name="twitter:image"]', 'content', ogImage);
+
+  /* canonical – всегда текущий URL (без внутренних якорей) */
+  let canonical = location.origin + location.pathname;
+  if (query) canonical += '?q=' + encodeURIComponent(query);
+  let linkCanon = document.head.querySelector('link[rel="canonical"]');
+  if (!linkCanon) {
+    linkCanon = document.createElement('link');
+    linkCanon.setAttribute('rel', 'canonical');
+    linkCanon.setAttribute('data-dynamic', '');
+    document.head.appendChild(linkCanon);
+  }
+  linkCanon.setAttribute('href', canonical);
+
+  /* JSON-LD: WebSite + список TVSeries */
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'AniFox',
+    url: location.origin,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${location.origin}/?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
+  if (results.length) {
+    jsonLd.mainEntity = results.slice(0, 10).map(r => ({
+      '@type': 'TVSeries',
+      name: r.title,
+      datePublished: r.year,
+      genre: r.genres,
+      image: r.material_data?.poster_url || ogImage,
+      url: `${location.origin}/?q=${encodeURIComponent(r.title)}`,
+    }));
+  }
+  const script = document.createElement('script');
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify(jsonLd);
+  script.setAttribute('data-dynamic', '');
+  document.head.appendChild(script);
+}
+
 /* ---------- CARD ---------- */
 function createAnimeCard(item) {
   const t = item.title;
@@ -270,6 +387,7 @@ async function renderWeekly() {
   
   try {
     const data = await apiWeekly();
+    updateSEOMeta(data);
     const seen = new Set();
     const list = (data.results || []).filter(i => { 
       const k = i.title.trim().toLowerCase(); 
@@ -340,6 +458,7 @@ async function search() {
     html += currentSearchResults.map(createAnimeCard).join('');
     html += `</div></section>`;
     box.innerHTML = html;
+    updateSEOMeta(data);
     
     history.replaceState(null, null, '?q=' + encodeURIComponent(q));
     if (input) input.value = '';
