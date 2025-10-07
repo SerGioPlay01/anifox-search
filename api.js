@@ -13,25 +13,13 @@ const STORE_SEARCH_RESULTS = 'search_results';
 let db = null;
 async function initDB() {
   if (db) return db;
-  
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    
-    req.onerror = () => {
-      console.error('Ошибка открытия БД:', req.error);
-      reject(req.error);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      db = req.result;
+      resolve(db);
     };
-    
-    req.onsuccess = () => { 
-      db = req.result; 
-      
-      db.onerror = (e) => {
-        console.error('Ошибка БД:', e.target.error);
-      };
-      
-      resolve(db); 
-    };
-    
     req.onupgradeneeded = e => {
       const d = e.target.result;
       [STORE_SEARCH_HISTORY, STORE_FAVORITES, STORE_SEARCH_RESULTS].forEach(n => {
@@ -42,12 +30,6 @@ async function initDB() {
         }
       });
     };
-    
-    setTimeout(() => {
-      if (!db) {
-        reject(new Error('Таймаут инициализации БД'));
-      }
-    }, 5000);
   });
 }
 
@@ -114,7 +96,7 @@ function showNote(msg, type = 'info') {
   setTimeout(() => n.remove(), 3000);
 }
 
-/* ---------- SEO: динамическое обновление мета (без DEFAULT_META) ---------- */
+/* ---------- SEO ---------- */
 function clearOldDynamicMeta() {
   document.querySelectorAll('head [data-dynamic]').forEach(el => el.remove());
 }
@@ -124,24 +106,30 @@ function setAttr(sel, attr, val) {
   if (el) el.setAttribute(attr, val);
 }
 
+function toSlug(str) {
+  const map = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '',
+    'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya', ' ': '-',
+    '!': '', '?': '', '.': '', ',': '', '"': '', '\'': '', '[': '', ']': '', '(': '', ')': ''
+  };
+  return str.toLowerCase().split('').map(ch => map[ch] || ch).join('').replace(/--+/g, '-').replace(/^-|-$/g, '');
+}
+
 function buildKeywords(title, genres, year) {
   const base = ['аниме', 'смотреть аниме онлайн', 'русская озвучка', 'anime hd'];
-  const words = `${title} ${genres} ${year}`
-    .toLowerCase()
-    .replace(/[«»"']/g, '')
-    .split(/[\s,]+/)
-    .filter(Boolean);
+  const words = `${title} ${genres} ${year}`.toLowerCase().replace(/[«»"']/g, '').split(/[\s,]+/).filter(Boolean);
   return Array.from(new Set([...base, ...words])).slice(0, 15).join(', ');
 }
 
 function updateSEOMeta(apiData) {
   clearOldDynamicMeta();
-
   const results = (apiData && apiData.results) || [];
   const urlParams = new URLSearchParams(location.search);
   const query = urlParams.get('q') || '';
 
-  /* читаем «базовые» значения из верстки (первые попавшиеся) */
   const baseTitle = document.head.querySelector('title')?.textContent || 'AniFox';
   const baseDesc = document.head.querySelector('meta[name="description"]')?.getAttribute('content') || '';
   const baseKeys = document.head.querySelector('meta[name="keywords"]')?.getAttribute('content') || '';
@@ -179,7 +167,6 @@ function updateSEOMeta(apiData) {
     }
   }
 
-  /* обновляем мета */
   document.title = title;
   setAttr('meta[name="description"]', 'content', description);
   setAttr('meta[name="keywords"]', 'content', keywords);
@@ -190,7 +177,6 @@ function updateSEOMeta(apiData) {
   setAttr('meta[name="twitter:description"]', 'content', twDesc);
   setAttr('meta[name="twitter:image"]', 'content', ogImage);
 
-  /* canonical – всегда текущий URL (без внутренних якорей) */
   let canonical = location.origin + location.pathname;
   if (query) canonical += '?q=' + encodeURIComponent(query);
   let linkCanon = document.head.querySelector('link[rel="canonical"]');
@@ -202,7 +188,6 @@ function updateSEOMeta(apiData) {
   }
   linkCanon.setAttribute('href', canonical);
 
-  /* JSON-LD: WebSite + список TVSeries */
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -267,9 +252,9 @@ window.toggleFavorite = async (title, link) => {
       showNote(`«${title}» добавлено в избранное`, 'success');
       updateFavBtn(link, true);
     }
-  } catch (e) { 
+  } catch (e) {
     console.error('Ошибка toggleFavorite:', e);
-    showNote('Ошибка при работе с избранным', 'error'); 
+    showNote('Ошибка при работе с избранным', 'error');
   }
 };
 
@@ -284,7 +269,8 @@ function updateFavBtn(link, is) {
 
 /* ---------- SHARE ---------- */
 window.shareAnime = (title, link) => {
-  const url = `${location.origin}?q=${encodeURIComponent(title)}`;
+  const slug = toSlug(title);
+  const url = `${location.origin}/search/${slug}`;
   if (navigator.share) navigator.share({ title, text: `Смотри «${title}» на AniFox`, url });
   else { navigator.clipboard.writeText(url); showNote('Ссылка скопирована в буфер обмена', 'success'); }
 };
@@ -302,50 +288,45 @@ async function addHistory(q) {
 
 window.searchFromHistory = q => { $('searchInput').value = q; search(); };
 
-window.removeFromHistory = async (e, id) => { 
-  e.stopPropagation(); 
+window.removeFromHistory = async (e, id) => {
+  e.stopPropagation();
   try {
-    await dbDel(STORE_SEARCH_HISTORY, id); 
-    renderWeekly(); 
+    await dbDel(STORE_SEARCH_HISTORY, id);
+    renderWeekly();
   } catch (e) {
     console.error('Ошибка удаления из истории:', e);
   }
 };
 
-window.clearSearchHistory = async () => { 
-  if (confirm('Очистить историю?')) { 
+window.clearSearchHistory = async () => {
+  if (confirm('Очистить историю?')) {
     try {
-      await dbClear(STORE_SEARCH_HISTORY); 
-      renderWeekly(); 
+      await dbClear(STORE_SEARCH_HISTORY);
+      renderWeekly();
     } catch (e) {
       console.error('Ошибка очистки истории:', e);
       showNote('Ошибка при очистке истории', 'error');
     }
-  } 
+  }
 };
 
 /* ---------- RENDER ---------- */
 async function renderFavoritesPage() {
   const box = $('resultsBox');
   if (!box) return;
-  
   box.innerHTML = '<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка избранного...</p></div>';
-  
   try {
     const db = await initDB();
     const favs = (await dbGetAll(STORE_FAVORITES, 'timestamp')).sort((a, b) => b.t - a.t);
-    
     if (!favs.length) {
       box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-heart fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>В избранном пока ничего нет</h2><p>Добавляйте аниме в избранное с помощью <i class="fas fa-heart"></i></p><button onclick="navigateToHome()" class="clear-history-btn" style="margin-top:1rem"><i class="fas fa-arrow-left"></i> Вернуться к поиску</button></div>`;
       return;
     }
-    
     let html = `<section class="favorites-section"><div class="section-header"><h2 class="section-title"><i class="fas fa-heart"></i> Избранное</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Всего: <span class="stats-highlight">${favs.length} аниме</span></span></div></div><div class="results-grid">`;
     html += favs.map(f => createAnimeCard({ title: f.title, link: f.link })).join('');
     html += `</div><div class="favorites-actions"><button onclick="clearFavorites()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить избранное</button><button onclick="navigateToHome()" class="clear-history-btn secondary"><i class="fas fa-arrow-left"></i> Вернуться к поиску</button></div></section>`;
     box.innerHTML = html;
-    
-  } catch (e) { 
+  } catch (e) {
     console.error('Ошибка renderFavoritesPage:', e);
     box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки избранного</h2><p>Попробуйте перезагрузить страницу</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
   }
@@ -369,7 +350,6 @@ async function renderWeekly() {
   const box = $('resultsBox');
   if (!box) return;
   box.innerHTML = '<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка новинок...</p></div>';
-  
   const hasHist = await (async () => {
     try {
       const hist = (await dbGetAll(STORE_SEARCH_HISTORY, 'timestamp')).sort((a, b) => b.t - a.t).slice(0, 10);
@@ -384,18 +364,17 @@ async function renderWeekly() {
       return false;
     }
   })();
-  
+
   try {
     const data = await apiWeekly();
     updateSEOMeta(data);
     const seen = new Set();
-    const list = (data.results || []).filter(i => { 
-      const k = i.title.trim().toLowerCase(); 
-      if (seen.has(k)) return false; 
-      seen.add(k); 
-      return true; 
+    const list = (data.results || []).filter(i => {
+      const k = i.title.trim().toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
     });
-    
     if (list.length) {
       let html = (hasHist ? box.innerHTML : '') + `<section class="weekly-section"><h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2><div class="results-grid">`;
       html += list.map(createAnimeCard).join('');
@@ -404,7 +383,7 @@ async function renderWeekly() {
     } else if (!hasHist) {
       box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-search fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Добро пожаловать в AniFox!</h2><p>Начните с поиска аниме</p><ul><li><i class="fas fa-search"></i> Используйте поиск для нахождения аниме</li><li><i class="fas fa-history"></i> Просматривайте историю поиска</li><li><i class="fas fa-bolt"></i> Смотрите свежие обновления</li><li><i class="fas fa-heart"></i> Добавляйте аниме в избранное</li></ul></div>`;
     }
-  } catch (e) { 
+  } catch (e) {
     console.error('Ошибка renderWeekly:', e);
     if (!hasHist) box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки</h2><p>Попробуйте перезагрузить страницу</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
   }
@@ -415,16 +394,11 @@ async function search() {
   const q = input?.value.trim() || '';
   const box = $('resultsBox');
   if (!box) return;
-  
-  if (!q) { 
-    renderWeekly(); 
-    return; 
-  }
-  
+  if (!q) { renderWeekly(); return; }
+
   box.innerHTML = '<div class="loading-container"><div class="loading"></div><p class="loading-text">Поиск аниме...</p></div>';
-  
   await addHistory(q);
-  
+
   try {
     const data = await apiSearch(q);
     const seen = new Set();
@@ -434,13 +408,12 @@ async function search() {
       seen.add(key);
       return true;
     });
-    
+
     if (!currentSearchResults.length) {
       box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-search fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>По запросу «${q}» ничего не найдено</h2><p>Попробуйте изменить запрос:</p><ul><li><i class="fas fa-spell-check"></i> Проверить правильность написания</li><li><i class="fas fa-language"></i> Использовать английское название</li><li><i class="fas fa-filter"></i> Искать по жанру или году</li><li><i class="fas fa-simplify"></i> Упростить запрос</li></ul></div>`;
-      
-      setTimeout(async () => { 
+      setTimeout(async () => {
         try {
-          const hist = (await dbGetAll(STORE_SEARCH_HISTORY, 'timestamp')).sort((a, b) => b.t - a.t).slice(0, 10); 
+          const hist = (await dbGetAll(STORE_SEARCH_HISTORY, 'timestamp')).sort((a, b) => b.t - a.t).slice(0, 10);
           if (hist.length) {
             let html = `<section class="history-section"><h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2><div class="search-history-buttons">`;
             hist.forEach(i => html += `<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g, "\\'")}')"><i class="fas fa-search"></i> ${i.query}<span class="remove-history" onclick="removeFromHistory(event, ${i.id})"><i class="fas fa-times"></i></span></button>`);
@@ -453,16 +426,17 @@ async function search() {
       }, 100);
       return;
     }
-    
+
     let html = `<section class="search-results-section"><div class="search-header"><h2 class="section-title fade-in"><i class="fas fa-search"></i> Результаты поиска: «${q}»</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${currentSearchResults.length} аниме</span> по запросу «${q}»</span></div></div><div class="results-grid">`;
     html += currentSearchResults.map(createAnimeCard).join('');
     html += `</div></section>`;
     box.innerHTML = html;
     updateSEOMeta(data);
-    
-    history.replaceState(null, null, '?q=' + encodeURIComponent(q));
+
+    const slug = toSlug(q);
+    const newUrl = `/search/${slug}`;
+    history.replaceState(null, null, newUrl);
     if (input) input.value = '';
-    
   } catch (e) {
     console.error('Ошибка search:', e);
     box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки</h2><p>Попробуйте повторить поиск позже</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
@@ -501,31 +475,42 @@ window.navigateToFavorites = () => {
 /* ---------- INIT ---------- */
 document.addEventListener('DOMContentLoaded', async () => {
   document.body.insertAdjacentHTML('afterbegin', '<div id="mainPreloader" class="preloader-overlay"><div class="preloader-content"><div class="preloader-spinner"></div><p class="preloader-text">Загрузка AniFox...</p></div></div>');
-  
+
   try {
     await initDB();
-    
-    const fa = document.createElement('link'); 
-    fa.rel = 'stylesheet'; 
-    fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'; 
+
+    const fa = document.createElement('link');
+    fa.rel = 'stylesheet';
+    fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
     document.head.appendChild(fa);
-    
+
     updateHeader();
-    
+
     const form = $('searchForm');
     const input = $('searchInput');
     const btn = $('scrollToTop');
-    
+
     if (form) form.addEventListener('submit', e => { e.preventDefault(); search(); });
-    
+
     if (input) {
       const p = new URLSearchParams(location.search);
       const q = p.get('q'), page = p.get('page');
-      if (page === 'favorites') renderFavoritesPage();
-      else if (q) { input.value = q; search(); }
-      else renderWeekly();
+
+      // Поддержка старых ?q=...
+      if (p.get('q')) {
+        const oldQ = p.get('q');
+        const slug = toSlug(oldQ);
+        const newUrl = `/search/${slug}`;
+        history.replaceState(null, null, newUrl);
+        input.value = oldQ;
+        search();
+      } else if (page === 'favorites') {
+        renderFavoritesPage();
+      } else {
+        renderWeekly();
+      }
     }
-    
+
     if (btn) {
       window.addEventListener('scroll', () => btn.classList.toggle('show', window.scrollY > 300));
       btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
