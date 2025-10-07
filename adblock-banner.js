@@ -1,66 +1,149 @@
 /**
  * AniFox Anti-Adblock Banner
- * Показывает баннер только при реальной блокировке.
- * 1. «Продолжить с блокировщиком» — больше не показываем.
- * 2. «Отключить и продолжить» — 3 попытки по 1 с.
- * 3. Поддержка: AdBlock, uBlock, AdGuard, Brave, Ghostery и др.
- * 4. Не срабатывает в чистых браузерах и мобильных режимах.
+ * Улучшенная версия с лучшим обнаружением без внешних скриптов
  */
 (() => {
-  const STORAGE_KEY      = 'anifox-adblock-choice';   // финальное решение
-  const STORAGE_KEY_WANT = 'anifox-adblock-want-disable'; // «хочет отключить»
-  const RE_CHECK_TRIES   = 3;     // кол-во попыток
-  const RE_CHECK_PAUSE   = 1000;  // ms между попытками
+  const STORAGE_KEY      = 'anifox-adblock-choice';
+  const STORAGE_KEY_WANT = 'anifox-adblock-want-disable';
+  const RE_CHECK_TRIES   = 3;
+  const RE_CHECK_PAUSE   = 1000;
 
   let lock = false;
 
-  /* ---------- многоуровневая проверка + исключение мобильных режимов ---------- */
+  /* ---------- улучшенная проверка без внешних скриптов ---------- */
   function detectAdblockHard(callback) {
-    // 1. Google-скрипт
-    const testGoogle = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-    let loadedGoogle = false;
-    const s = document.createElement('script');
-    s.src = testGoogle;
-    s.onload = () => loadedGoogle = true;
-    s.onerror = () => loadedGoogle = false;
-    document.head.appendChild(s);
+    let blockedSignals = 0;
+    const totalTests = 4;
+    let testsCompleted = 0;
 
-    // 2. Собственный скрипт (с вашего домена)
-    const testOwn = 'https://anifox-search.vercel.app/test-ad.js'; // замените на свой
-    let loadedOwn = false;
-    const s2 = document.createElement('script');
-    s2.src = testOwn + '?t=' + Date.now();
-    s2.onload = () => loadedOwn = true;
-    s2.onerror = () => loadedOwn = false;
-    document.head.appendChild(s2);
-
-    // 3. Проверяем Brave/Ghostery
-    Promise.all([isBrave(), isGhostery()]).then(([brave, ghostery]) => {
-      setTimeout(() => {
-        s.remove(); s2.remove();
-        const blocked = !loadedGoogle || !loadedOwn || brave || ghostery;
-
-        // 4. Исключаем мобильные режимы
+    function checkCompletion() {
+      testsCompleted++;
+      if (testsCompleted >= totalTests) {
+        const blocked = blockedSignals >= 2; // Если 2+ теста показали блокировку
+        
+        // Исключаем мобильные режимы
         const isMobileBlocked = /Opera Mini|Chrome Lite|Yandex Turbo|Firefox Focus/.test(navigator.userAgent);
         callback(blocked || isMobileBlocked);
-      }, 1000);
+      }
+    }
+
+    // Тест 1: Bait элементы с классами рекламы
+    const bait = document.createElement('div');
+    bait.className = 'ads ad-unit ad-banner advertisement';
+    bait.style.cssText = 'position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px;';
+    bait.innerHTML = '<div class="ad-text">Advertisement</div>';
+    document.body.appendChild(bait);
+
+    setTimeout(() => {
+      const style = window.getComputedStyle(bait);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.height === '0px') {
+        blockedSignals++;
+      }
+      bait.remove();
+      checkCompletion();
+    }, 300);
+
+    // Тест 2: Fake скрипт с триггерными атрибутами
+    const fakeScript = document.createElement('script');
+    fakeScript.innerHTML = 'window._adTest = true;';
+    fakeScript.setAttribute('data-ad-client', 'ca-pub-123456789');
+    fakeScript.setAttribute('type', 'text/javascript');
+    
+    fakeScript.onerror = () => {
+      blockedSignals++;
+      checkCompletion();
+    };
+    
+    document.head.appendChild(fakeScript);
+    
+    setTimeout(() => {
+      if (!window._adTest) {
+        blockedSignals++;
+      }
+      fakeScript.remove();
+      delete window._adTest;
+      checkCompletion();
+    }, 400);
+
+    // Тест 3: Проверка браузерных блокировщиков
+    Promise.all([isBrave(), isGhostery()]).then(([brave, ghostery]) => {
+      if (brave || ghostery) {
+        blockedSignals++;
+      }
+      checkCompletion();
     });
+
+    // Тест 4: MutationObserver для отслеживания удаления элементов
+    const testAd = document.createElement('div');
+    testAd.className = 'banner-ad textads';
+    testAd.style.cssText = 'position: absolute; left: -9999px; width: 1px; height: 1px;';
+    document.body.appendChild(testAd);
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.removedNodes) {
+          if (node === testAd) {
+            blockedSignals++;
+            observer.disconnect();
+            testAd.remove();
+            checkCompletion();
+            return;
+          }
+        }
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    setTimeout(() => {
+      observer.disconnect();
+      testAd.remove();
+      checkCompletion();
+    }, 500);
   }
 
   async function isBrave() {
-    return (navigator.brave && (await navigator.brave.isBrave())) || false;
+    if (navigator.brave) {
+      try {
+        return await navigator.brave.isBrave();
+      } catch {
+        return false;
+      }
+    }
+    return false;
   }
 
   async function isGhostery() {
-    try {
-      await fetch('https://www.ghostery.com/ghostery-ad-blocker', { method: 'HEAD', mode: 'no-cors' });
-      return false;
-    } catch {
-      return true;
-    }
+    return new Promise((resolve) => {
+      // Проверка через различные методы обнаружения Ghostery
+      const checks = [
+        () => typeof window._ghostery !== 'undefined',
+        () => typeof window.Ghostery !== 'undefined',
+        () => document.documentElement.getAttribute('data-ghostery') !== null
+      ];
+
+      for (const check of checks) {
+        if (check()) {
+          resolve(true);
+          return;
+        }
+      }
+
+      // Дополнительная проверка
+      const ghosteryTest = document.createElement('div');
+      ghosteryTest.style.cssText = 'display: none;';
+      ghosteryTest.setAttribute('data-ghostery', 'test');
+      document.body.appendChild(ghosteryTest);
+      
+      setTimeout(() => {
+        const style = window.getComputedStyle(ghosteryTest);
+        resolve(style.display === 'none');
+        ghosteryTest.remove();
+      }, 100);
+    });
   }
 
-  /* ---------- баннер ---------- */
+  /* ---------- баннер (без изменений) ---------- */
   function buildBanner() {
     if (lock || document.querySelector('.ab-banner')) return;
     lock = true; document.body.classList.add('ab-scroll-lock');
@@ -119,7 +202,7 @@
     b.querySelector('#ab-disable').onclick   = () => onWantDisable(b);
   }
 
-  /* ---------- инструкции ---------- */
+  /* ---------- инструкции (без изменений) ---------- */
   function showInstructions() {
     const isBraveBrowser = navigator.brave && navigator.brave.isBrave;
     const isGhosteryActive = isGhostery();
@@ -202,25 +285,22 @@
   async function reCheckAdblock() {
     if (localStorage.getItem(STORAGE_KEY) === 'with-adblock') return;
 
-    for (let i = 1; i <= RECHECK_TRIES; i++) {
-      showProgress(`Проверка ${i} из ${RECHECK_TRIES}…`);
-      await new Promise(r => setTimeout(r, RECHECK_PAUSE)); // ждём
+    for (let i = 1; i <= RE_CHECK_TRIES; i++) {
+      showProgress(`Проверка ${i} из ${RE_CHECK_TRIES}…`);
+      await new Promise(r => setTimeout(r, RE_CHECK_PAUSE));
 
-      // ждём результат detectAdblockHard
       const stillBlocked = await new Promise(resolve => {
         detectAdblockHard(resolve);
       });
 
       if (!stillBlocked) {
-        // ✅ разблокировали
         hideProgress();
         localStorage.setItem(STORAGE_KEY, 'disable-adblock');
         localStorage.removeItem(STORAGE_KEY_WANT);
-        return; // выходим из цикла
+        return;
       }
     }
 
-    // ❌ после всех попыток
     hideProgress();
     showReminder();
   }
