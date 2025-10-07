@@ -114,6 +114,7 @@ function createAnimeCard(item) {
 /* ---------- FAVORITES ---------- */
 window.toggleFavorite = async (title, link) => {
   try {
+    const db = await initDB(); // Ждем инициализации БД
     const favs = await dbGetAll(STORE_FAVORITES);
     const old = favs.find(f => f.link === link);
     if (old) {
@@ -125,14 +126,94 @@ window.toggleFavorite = async (title, link) => {
       showNote(`«${title}» добавлено в избранное`, 'success');
       updateFavBtn(link, true);
     }
-  } catch { showNote('Ошибка при работе с избранным', 'error'); }
+  } catch (e) { 
+    console.error('Ошибка toggleFavorite:', e);
+    showNote('Ошибка при работе с избранным', 'error'); 
+  }
 };
-function updateFavBtn(link, is) {
-  document.querySelectorAll('.favorite-btn').forEach(b => {
-    if (b.onclick && b.onclick.toString().includes(link)) {
-      b.querySelector('i').className = is ? 'fas fa-heart' : 'far fa-heart';
-      b.title = is ? 'Удалить из избранного' : 'Добавить в избранное';
+
+async function renderFavoritesPage() {
+  const box = $('resultsBox');
+  if (!box) return;
+  
+  box.innerHTML = '<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка избранного...</p></div>';
+  
+  try {
+    // Ждем полной инициализации БД
+    const db = await initDB();
+    
+    const favs = (await dbGetAll(STORE_FAVORITES, 'timestamp')).sort((a, b) => b.t - a.t);
+    
+    if (!favs.length) {
+      box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-heart fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>В избранном пока ничего нет</h2><p>Добавляйте аниме в избранное с помощью <i class="fas fa-heart"></i></p><button onclick="navigateToHome()" class="clear-history-btn" style="margin-top:1rem"><i class="fas fa-arrow-left"></i> Вернуться к поиску</button></div>`;
+      return;
     }
+    
+    let html = `<section class="favorites-section"><div class="section-header"><h2 class="section-title"><i class="fas fa-heart"></i> Избранное</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Всего: <span class="stats-highlight">${favs.length} аниме</span></span></div></div><div class="results-grid">`;
+    html += favs.map(f => createAnimeCard({ title: f.title, link: f.link })).join('');
+    html += `</div><div class="favorites-actions"><button onclick="clearFavorites()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить избранное</button><button onclick="navigateToHome()" class="clear-history-btn secondary"><i class="fas fa-arrow-left"></i> Вернуться к поиску</button></div></section>`;
+    box.innerHTML = html;
+    
+  } catch (e) { 
+    console.error('Ошибка renderFavoritesPage:', e);
+    box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки избранного</h2><p>Попробуйте перезагрузить страницу</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
+  }
+}
+
+window.clearFavorites = async () => {
+  if (confirm('Очистить всё избранное?')) {
+    try {
+      const db = await initDB(); // Ждем инициализации
+      await dbClear(STORE_FAVORITES);
+      renderFavoritesPage();
+      showNote('Избранное очищено', 'success');
+    } catch (e) {
+      console.error('Ошибка clearFavorites:', e);
+      showNote('Ошибка при очистке избранного', 'error');
+    }
+  }
+};
+
+// Также обновим функцию initDB для лучшей обработки ошибок
+async function initDB() {
+  if (db) return db;
+  
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    req.onerror = () => {
+      console.error('Ошибка открытия БД:', req.error);
+      reject(req.error);
+    };
+    
+    req.onsuccess = () => { 
+      db = req.result; 
+      
+      // Обработка ошибок при закрытии БД
+      db.onerror = (e) => {
+        console.error('Ошибка БД:', e.target.error);
+      };
+      
+      resolve(db); 
+    };
+    
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      [STORE_SEARCH_HISTORY, STORE_FAVORITES, STORE_SEARCH_RESULTS].forEach(n => {
+        if (!d.objectStoreNames.contains(n)) {
+          const s = d.createObjectStore(n, { keyPath: n === STORE_SEARCH_RESULTS ? 'query' : 'id' });
+          s.createIndex('timestamp', 't', { unique: false });
+          if (n === STORE_FAVORITES) s.createIndex('title', 'title', { unique: false });
+        }
+      });
+    };
+    
+    // Таймаут на случай если БД не открывается
+    setTimeout(() => {
+      if (!db) {
+        reject(new Error('Таймаут инициализации БД'));
+      }
+    }, 5000);
   });
 }
 
