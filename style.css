@@ -19,7 +19,7 @@
 
 body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: var(--black) url(/resources/bg.webp) center/cover fixed;
+    background: var(--black) url(/resources/bg.jpg) center/cover fixed;
     color: var(--white);
     display: flex;
     flex-direction: column;
