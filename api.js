@@ -397,8 +397,7 @@ window.refreshFavoriteIcons = async () => {
 
 /* ---------- SHARE ---------- */
 window.shareAnime = (originalTitle, link) => {
-  const slug = toSlug(originalTitle); // Используем оригинальное название на английском
-  const url = `${location.origin}/search/${slug}`;
+  const url = `${location.origin}/search/${encodeURIComponent(originalTitle)}`; // Используем оригинальное название в URL
   if (navigator.share)
     navigator.share({ title: originalTitle, text: `Смотри «${originalTitle}» на AniFox`, url });
   else {
