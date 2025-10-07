@@ -12,10 +12,6 @@ const STORE_FAVORITES = 'favorites';
 const STORE_SEARCH_RESULTS = 'search_results';
 const STORE_ANIME_INFO = 'anime_info';
 
-// Увеличиваем лимиты для загрузки всех результатов
-const SEARCH_LIMIT = 100; // Увеличили лимит для поиска
-const WEEKLY_LIMIT = 100; // Увеличили лимит для новинок
-
 // Глобальные переменные (убраны пагинационные переменные)
 let currentSearchResults = [];
 let currentWeeklyResults = [];
@@ -203,10 +199,10 @@ async function apiSearch(q) {
     console.log('Cache miss:', e);
   }
 
-  // Загружаем все результаты сразу с увеличенным лимитом
+  // Загружаем все результаты сразу без лимитов
   const url = `${BASE}?token=${TOKEN}&title=${encodeURIComponent(
     q
-  )}&types=anime,anime-serial&limit=${SEARCH_LIMIT}&with_material_data=true`;
+  )}&types=anime,anime-serial&with_material_data=true`;
   
   const data = await fetchKodik(url);
   
@@ -235,11 +231,11 @@ async function apiWeekly() {
     console.log('Weekly cache miss:', e);
   }
 
-  // Загружаем все новинки сразу с увеличенным лимитом
+  // Загружаем все новинки сразу без лимитов
   const url = `${BASE.replace(
     "/search",
     "/list"
-  )}?token=${TOKEN}&year=2025&updated_at=1&types=anime,anime-serial&limit=${WEEKLY_LIMIT}&with_material_data=true`;
+  )}?token=${TOKEN}&year=2025&updated_at=1&types=anime,anime-serial&with_material_data=true`;
   
   const data = await fetchKodik(url);
   

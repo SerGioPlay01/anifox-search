@@ -1,12 +1,12 @@
 :root {
-    --red: #e30613;
+    --red: #5b0a99;
     --black: #0a0a0a;
     --white: #f2f2f2;
     --gray: #666;
     --dark-gray: #333;
     --radius: 16px;
     --transition: .3s;
-    --accent: #e30613;
+    --accent: #9115ea;
     --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     --gradient: linear-gradient(135deg, var(--red) 0%, #ff1a2e 100%);
 }
