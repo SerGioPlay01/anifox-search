@@ -396,13 +396,12 @@ window.refreshFavoriteIcons = async () => {
 };
 
 /* ---------- SHARE ---------- */
-window.shareAnime = (title, title_orig, link, year, genres) => {
-  const url = `${location.origin}/search/${encodeURIComponent(title_orig)}`; // Используем оригинальное название в URL
-  const shareText = `Смотри «${title} (${year})» на AniFox. Жанры: ${genres.join(', ')}. ${url}`;
-
-  if (navigator.share) {
-    navigator.share({ title: title, text: shareText, url });
-  } else {
+window.shareAnime = (title, link) => {
+  const slug = toSlug(title);
+  const url = `${location.origin}/search/${slug}`;
+  if (navigator.share)
+    navigator.share({ title, text: `Смотри «${title}» на AniFox`, url });
+  else {
     navigator.clipboard.writeText(url);
     showNote("Ссылка скопирована в буфер обмена", "success");
   }
