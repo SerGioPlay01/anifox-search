@@ -500,3 +500,21 @@ body.ab-scroll-lock {
 .ghostery-block .ghostery-hint::before{
   content: "👻";
 }
+
+.ab-progress{
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
+  z-index: 10002; display: flex; align-items: center; justify-content: center;
+  animation: abFade .3s ease-out;
+}
+.ab-progress-content{
+  background: rgba(10,10,10,.98); border: 1px solid rgba(255,255,255,.15);
+  border-radius: var(--radius); padding: 1.5rem 2rem; text-align: center;
+  color: var(--white);
+}
+.ab-progress-spinner{
+  width: 32px; height: 32px; margin: 0 auto .75rem;
+  border: 3px solid rgba(255,255,255,.2); border-top-color: var(--red);
+  border-radius: 50%; animation: spin 1s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg); }}
