@@ -354,6 +354,7 @@ async function createAnimeCard(item) {
     </div>`;
 }
 
+
 // Функция для показа модального окна с информацией
 function showAnimeInfoModal(item) {
   const material = item.material_data || {};
