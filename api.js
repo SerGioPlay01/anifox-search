@@ -330,47 +330,38 @@ function updateSEOMeta(apiData) {
 }
 
 /* ---------- CARD ---------- */
-async function createAnimeCard(item) {
+function createAnimeCard(item) {
   const t = item.title;
-
-  // 1. Сразу узнаём, в избранном ли оно
-  const db = await initDB();
-  const favs = await dbGetAll(STORE_FAVORITES);
-  const isFav = favs.some(f => f.link === item.link);
-
   return `
     <div class="card fade-in">
       <div class="card-header">
         <h3 class="h2_name">${t}</h3>
         <div class="info-links">
-          <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}"
-             target="_blank" class="info-link" title="Shikimori">
-             <i class="fas fa-external-link-alt"></i></a>
-          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}"
-             target="_blank" class="info-link" title="AniList">
-             <i class="fas fa-external-link-alt"></i></a>
-          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}"
-             target="_blank" class="info-link" title="MyAnimeList">
-             <i class="fas fa-external-link-alt"></i></a>
+          <a href="https://shikimori.one/animes?search=${encodeURIComponent(
+            t
+          )}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(
+            t
+          )}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(
+            t
+          )}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
         </div>
       </div>
-
-      <iframe class="single-player" src="${item.link}"
-              allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
-
+      <iframe class="single-player" src="${
+        item.link
+      }" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
       <div class="card-actions">
-        <button class="action-btn favorite-btn"
-                data-link="${item.link}"
-                onclick="toggleFavorite('${t.replace(/'/g,"\\'")}', '${item.link}')"
-                title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
-          <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
-        </button>
-
-        <button class="action-btn"
-                onclick="shareAnime('${t.replace(/'/g,"\\'")}', '${item.link}')"
-                title="Поделиться">
-          <i class="fas fa-share"></i>
-        </button>
+        <button class="action-btn favorite-btn" onclick='toggleFavorite(${JSON.stringify(
+          t
+        )}, ${JSON.stringify(
+    item.link
+  )})' title="Добавить в избранное"><i class="far fa-heart"></i></button>
+        <button class="action-btn" onclick='shareAnime(${JSON.stringify(
+          t
+        )}, ${JSON.stringify(
+    item.link
+  )})' title="Поделиться"><i class="fas fa-share"></i></button>
       </div>
     </div>`;
 }
@@ -380,24 +371,24 @@ window.toggleFavorite = async (title, link) => {
   try {
     const db = await initDB();
     const favs = await dbGetAll(STORE_FAVORITES);
-    const old = favs.find(f => f.link === link);
-
+    const old = favs.find((f) => f.link === link);
     if (old) {
       await dbDel(STORE_FAVORITES, old.id);
-      showNote(`«${title}» удалено из избранного`, 'info');
+      showNote(`«${title}» удалено из избранного`, "info");
+      updateFavBtn(link, false);
     } else {
-      await dbAdd(STORE_FAVORITES, { id: Date.now(), title, link, t: Date.now() });
-      showNote(`«${title}» добавлено в избранное`, 'success');
+      await dbAdd(STORE_FAVORITES, {
+        id: Date.now(),
+        title,
+        link,
+        t: Date.now(),
+      });
+      showNote(`«${title}» добавлено в избранное`, "success");
+      updateFavBtn(link, true);
     }
-
-    // 4. Перерисовываем иконки
-    await refreshFavoriteIcons();
-
-    // 5. Если сейчас показывается вкладка «Избранное» – обновим всю сетку
-    if (location.hash === '#favorites') await renderFavoritesPage();
   } catch (e) {
-    console.error('Ошибка toggleFavorite:', e);
-    showNote('Ошибка при работе с избранным', 'error');
+    console.error("Ошибка toggleFavorite:", e);
+    showNote("Ошибка при работе с избранным", "error");
   }
 };
 
@@ -409,21 +400,6 @@ function updateFavBtn(link, is) {
     }
   });
 }
-
-// обновляет ВСЕ кнопки .favorite-btn на текущей странице
-window.refreshFavoriteIcons = async () => {
-  const db = await initDB();
-  const favs = await dbGetAll(STORE_FAVORITES);
-  const favLinks = new Set(favs.map(f => f.link));
-
-  document.querySelectorAll('.favorite-btn').forEach(btn => {
-    const link = btn.dataset.link;          // уникальный ключ
-    const isFav = favLinks.has(link);
-    const i = btn.querySelector('i');
-    i.className = isFav ? 'fas fa-heart' : 'far fa-heart';
-    btn.title = isFav ? 'Удалить из избранного' : 'Добавить в избранное';
-  });
-};
 
 /* ---------- SHARE ---------- */
 window.shareAnime = (title, link) => {
