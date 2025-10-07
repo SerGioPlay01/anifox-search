@@ -102,7 +102,7 @@ body {
 #searchInput:focus {
     border-color: var(--red);
     background: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 0 30px rgba(227, 6, 19, 0.3);
+    box-shadow: 0 0 30px rgba(150, 6, 227, 0.3);
     transform: translateY(-2px);
 }
 
@@ -134,7 +134,7 @@ body {
 
 #searchForm button:hover {
     transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(227, 6, 19, 0.4);
+    box-shadow: 0 10px 25px rgba(105, 6, 227, 0.4);
 }
 
 #searchForm button:hover::before {
@@ -363,6 +363,7 @@ body {
 /* Статистика и информация */
 .stats-info {
     background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(45px);
     padding: 1.5rem;
     border-radius: var(--radius);
     margin: 2rem 0;
@@ -849,6 +850,7 @@ html {
 /* Ссылки на базы данных */
 .databases-info {
   background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(45px);
   border-radius: var(--radius);
   padding: 1.5rem;
   margin: 1.5rem 0;
