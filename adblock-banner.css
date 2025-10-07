@@ -93,7 +93,7 @@ body.ab-scroll-lock {
 
 .ab-info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
   margin: 1rem 0;
 }
@@ -207,10 +207,8 @@ body.ab-scroll-lock {
   user-select: none;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
   font-size: 1rem;
-  min-height: 48px; /* удобный tap-размер */
 }
 
 .ab-btn--soft {
@@ -246,10 +244,13 @@ body.ab-scroll-lock {
   margin: 0;
 }
 
-/* ---------- модалка инструкций ---------- */
+/* Инструкции */
 .ab-instructions-modal {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
   z-index: 10000;
@@ -269,7 +270,6 @@ body.ab-scroll-lock {
   max-height: 90vh;
   overflow-y: auto;
   color: var(--white);
-  width: 100%;
 }
 
 .ab-instructions-content h3 {
@@ -277,9 +277,7 @@ body.ab-scroll-lock {
   margin: 0 0 1.5rem 0;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.75rem;
-  text-align: center;
 }
 
 .ab-instructions-content h3 i {
@@ -288,7 +286,7 @@ body.ab-scroll-lock {
 
 .ab-instructions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -298,11 +296,6 @@ body.ab-scroll-lock {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius);
   padding: 1.5rem;
-  transition: transform 0.3s ease;
-}
-
-.ab-instruction-item:hover {
-  transform: translateY(-2px);
 }
 
 .ab-instruction-item h4 {
@@ -331,6 +324,99 @@ body.ab-scroll-lock {
   line-height: 1.5;
 }
 
+/* Адаптивность */
+@media (max-width: 768px) {
+  .ab-banner {
+    padding: 1.5rem 1rem 50px;
+  }
+
+  .ab-info-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .ab-stats {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .ab-actions {
+    flex-direction: column;
+  }
+
+  .ab-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ab-instructions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ab-instructions-content {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ab-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .ab-text {
+    font-size: 1rem;
+  }
+
+  .ab-info-block {
+    padding: 1rem;
+  }
+
+  .ab-stats {
+    padding: 1rem;
+  }
+}
+
+/* Анимации */
+@keyframes abFade {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Улучшенная прокрутка */
+.ab-banner::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ab-banner::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ab-banner::-webkit-scrollbar-thumb {
+  background: var(--red);
+  border-radius: 3px;
+}
+
+.ab-instructions-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ab-instructions-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.ab-instructions-content::-webkit-scrollbar-thumb {
+  background: var(--red);
+  border-radius: 4px;
+}
+
 /* ---------- напоминание «вы всё ещё с блокировщиком» ---------- */
 .ab-reminder {
   position: fixed;
@@ -357,7 +443,7 @@ body.ab-scroll-lock {
 }
 
 .ab-reminder-content i {
-  font-size: 3rem;
+  font-size: 1.2rem;
   color: #ffc107;
   margin-bottom: 1rem;
 }
@@ -373,6 +459,24 @@ body.ab-scroll-lock {
   margin-bottom: 1.5rem;
 }
 
+@media (max-width: 480px) {
+  .ab-reminder-content {
+    padding: 1.5rem;
+  }
+}
+
+.brave-block .brave-hint{
+  margin-top: .75rem;
+  font-size: .8rem;
+  color: #ffc107;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.brave-block .brave-hint::before{
+  content: "🦁";
+}
+
 .ab-reminder-actions {
   display: flex;
   flex-direction: column;
@@ -385,77 +489,32 @@ body.ab-scroll-lock {
   justify-content: center;
 }
 
-@media (max-width: 480px) {
-  .ab-reminder-content {
-    padding: 1.5rem;
-  }
-}
-
-/* ---------- прогресс-окно ---------- */
-.ab-progress {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  z-index: 10002;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: abFade 0.3s ease-out;
-}
-
-.ab-progress-content {
-  background: rgba(10, 10, 10, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius);
-  padding: 1.5rem 2rem;
-  text-align: center;
-  color: var(--white);
-}
-
-.ab-progress-spinner {
-  width: 32px;
-  height: 32px;
-  margin: 0 auto 0.75rem;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  border-top-color: var(--red);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ---------- анимации ---------- */
-@keyframes abFade {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ---------- поддержка Brave / Ghostery ---------- */
-.brave-block .brave-hint,
-.ghostery-block .ghostery-hint {
-  margin-top: 0.75rem;
-  font-size: 0.8rem;
+.ghostery-block .ghostery-hint{
+  margin-top: .75rem;
+  font-size: .8rem;
   color: #ffc107;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: .4rem;
 }
-
-.brave-block .brave-hint::before {
-  content: "🦁";
-}
-
-.ghostery-block .ghostery-hint::before {
+.ghostery-block .ghostery-hint::before{
   content: "👻";
 }
+
+.ab-progress{
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
+  z-index: 10002; display: flex; align-items: center; justify-content: center;
+  animation: abFade .3s ease-out;
+}
+.ab-progress-content{
+  background: rgba(10,10,10,.98); border: 1px solid rgba(255,255,255,.15);
+  border-radius: var(--radius); padding: 1.5rem 2rem; text-align: center;
+  color: var(--white);
+}
+.ab-progress-spinner{
+  width: 32px; height: 32px; margin: 0 auto .75rem;
+  border: 3px solid rgba(255,255,255,.2); border-top-color: var(--red);
+  border-radius: 50%; animation: spin 1s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg); }}
