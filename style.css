@@ -54,6 +54,10 @@ body {
     z-index: 1000;
 }
 
+.top.light-theme {
+  background-color: #e2e2e2;
+}
+
 .logo-link {
     display: flex;
     align-items: center;
