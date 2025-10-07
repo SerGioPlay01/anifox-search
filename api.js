@@ -124,56 +124,49 @@ function buildKeywords(title, genres, year) {
   return Array.from(new Set([...base, ...words])).slice(0, 15).join(', ');
 }
 
-function updateSEOMeta(apiData, rawQuery = '') {
+function updateSEOMeta(apiData) {
   clearOldDynamicMeta();
   const results = (apiData && apiData.results) || [];
+  const urlParams = new URLSearchParams(location.search);
+  const query = urlParams.get('q') || '';
 
-  // 1️⃣ Запрос из переданного rawQuery или из ЧПУ-пути
-  const query = rawQuery || decodeURIComponent(location.pathname)
-                               .replace(/^\/search\//, '')
-                               .replace(/-/g, ' ')
-                               .trim();
-
-  // 2️⃣ Базовые значения из верстки
   const baseTitle = document.head.querySelector('title')?.textContent || 'AniFox';
-  const baseDesc   = document.head.querySelector('meta[name="description"]')?.getAttribute('content') || '';
-  const baseKeys   = document.head.querySelector('meta[name="keywords"]')?.getAttribute('content') || '';
+  const baseDesc = document.head.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+  const baseKeys = document.head.querySelector('meta[name="keywords"]')?.getAttribute('content') || '';
   const baseOGTitle = document.head.querySelector('meta[property="og:title"]')?.getAttribute('content') || baseTitle;
-  const baseOGDesc  = document.head.querySelector('meta[property="og:description"]')?.getAttribute('content') || baseDesc;
+  const baseOGDesc = document.head.querySelector('meta[property="og:description"]')?.getAttribute('content') || baseDesc;
   const baseTwTitle = document.head.querySelector('meta[name="twitter:title"]')?.getAttribute('content') || baseTitle;
-  const baseTwDesc  = document.head.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || baseDesc;
+  const baseTwDesc = document.head.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || baseDesc;
 
   let title = baseTitle;
   let description = baseDesc;
   let keywords = baseKeys;
   let ogTitle = baseOGTitle;
-  let ogDesc  = baseOGDesc;
+  let ogDesc = baseOGDesc;
   let twTitle = baseTwTitle;
-  let twDesc  = baseTwDesc;
+  let twDesc = baseTwDesc;
   let ogImage = document.head.querySelector('meta[property="og:image"]')?.getAttribute('content') || '/resources/obl_web.webp';
 
-  // 3️⃣ Формируем SEO-контент, если есть запрос
   if (query) {
     const top = results[0];
     if (top) {
       const { title: t, year, genres = '', material_data } = top;
       const cleanTitle = t.replace(/\[.*?\]/g, '').trim();
-      title       = `Смотреть аниме «${cleanTitle}» (${year}) онлайн бесплатно в HD — AniFox`;
+      title = `Смотреть аниме «${cleanTitle}» (${year}) онлайн бесплатно в HD — AniFox`;
       description = `Аниме «${cleanTitle}» (${year}) уже на AniFox: русская озвучка, HD 1080p, без регистрации. Жанры: ${genres}. Смотри новые серии первым!`;
-      keywords    = buildKeywords(cleanTitle, genres, year);
+      keywords = buildKeywords(cleanTitle, genres, year);
       ogTitle = twTitle = `«${cleanTitle}» — смотреть онлайн`;
-      ogDesc  = twDesc  = description;
-      ogImage     = material_data?.poster_url || ogImage;
+      ogDesc = twDesc = description;
+      ogImage = material_data?.poster_url || ogImage;
     } else {
-      title       = `Поиск «${query}» — AniFox`;
+      title = `Поиск «${query}» — AniFox`;
       description = `По запросу «${query}» ничего не найдено, но вы можете посмотреть другие аниме на AniFox.`;
-      keywords    = `аниме, ${query}, смотреть онлайн`;
+      keywords = `аниме, ${query}, смотреть онлайн`;
       ogTitle = twTitle = title;
-      ogDesc  = twDesc  = description;
+      ogDesc = twDesc = description;
     }
   }
 
-  // 4️⃣ Применяем мета
   document.title = title;
   setAttr('meta[name="description"]', 'content', description);
   setAttr('meta[name="keywords"]', 'content', keywords);
@@ -184,7 +177,6 @@ function updateSEOMeta(apiData, rawQuery = '') {
   setAttr('meta[name="twitter:description"]', 'content', twDesc);
   setAttr('meta[name="twitter:image"]', 'content', ogImage);
 
-  // 5️⃣ Canonical
   let canonical = location.origin + location.pathname;
   if (query) canonical += '?q=' + encodeURIComponent(query);
   let linkCanon = document.head.querySelector('link[rel="canonical"]');
@@ -196,7 +188,6 @@ function updateSEOMeta(apiData, rawQuery = '') {
   }
   linkCanon.setAttribute('href', canonical);
 
-  // 6️⃣ JSON-LD
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -440,7 +431,7 @@ async function search() {
     html += currentSearchResults.map(createAnimeCard).join('');
     html += `</div></section>`;
     box.innerHTML = html;
-  updateSEOMeta(data, q);
+    updateSEOMeta(data);
 
     const slug = toSlug(q);
     const newUrl = `/search/${slug}`;
