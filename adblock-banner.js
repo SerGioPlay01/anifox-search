@@ -274,20 +274,63 @@
     };
   }
 
-  /* ---------- запуск ---------- */
-  async function run() {
-    if (localStorage.getItem(STORAGE_KEY)) return;
-    if (localStorage.getItem(STORAGE_KEY_WANT)) {
-      reCheckAdblock();
-      return;
+/* ---------- запуск (с задержкой и отладкой) ---------- */
+async function run() {
+  if (localStorage.getItem(STORAGE_KEY)) return;
+
+  // Ждём 5 секунд после загрузки DOM — чтобы расширения «успокоились»
+  await new Promise(r => setTimeout(r, 5000));
+
+  // Если пользователь уже нажимал «отключить» — запускаем повторную проверку
+  if (localStorage.getItem(STORAGE_KEY_WANT)) {
+    await reCheckAdblock();
+    return;
+  }
+
+  // 5 попыток с интервалом 2 секунды
+  const TRIES = 5, PAUSE = 2000;
+  for (let i = 1; i <= TRIES; i++) {
+    console.log(`[AniFox] Проверка ${i}/${TRIES}…`);
+    const blocked = await detectAdblock() || hasAdblockCache() || await isBrave() || await isGhostery();
+    if (!blocked) {
+      console.log('[AniFox] Блокировки не обнаружены.');
+      return; // не показываем баннер
     }
-    const blocked =
+    if (i < TRIES) await new Promise(r => setTimeout(r, PAUSE));
+  }
+
+  console.log('[AniFox] Блокировка обнаружена — показываем баннер.');
+  buildBanner();
+}
+
+  document.addEventListener("DOMContentLoaded", run);
+})();
+
+async function reCheckAdblock() {
+  if (localStorage.getItem(STORAGE_KEY) === 'with-adblock') return;
+
+  for (let i = 1; i <= RECHECK_TRIES; i++) {
+    showProgress(`Проверка ${i} из ${RECHECK_TRIES}…`);
+    await new Promise(r => setTimeout(r, RECHECK_PAUSE));
+
+    const stillBlocked =
       (await detectAdblock()) ||
       hasAdblockCache() ||
       (await isBrave()) ||
       (await isGhostery());
-    if (blocked) buildBanner();
+
+    console.log(`[AniFox] Попытка ${i}: заблокировано = ${stillBlocked}`);
+
+    if (!stillBlocked) {
+      hideProgress();
+      localStorage.setItem(STORAGE_KEY, 'disable-adblock');
+      localStorage.removeItem(STORAGE_KEY_WANT);
+      console.log('[AniFox] Разблокировка подтверждена.');
+      return;
+    }
   }
 
-  document.addEventListener("DOMContentLoaded", run);
-})();
+  hideProgress();
+  console.log('[AniFox] Блокировка не убрана — показываем напоминание.');
+  showReminder();
+}
