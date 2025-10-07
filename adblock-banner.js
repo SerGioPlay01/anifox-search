@@ -85,7 +85,9 @@
         </div>
       </div>`;
 
-    b.querySelector("#ab-continue").onclick = () => {
+    document.body.appendChild(b);
+
+        b.querySelector("#ab-continue").onclick = () => {
       // Если Brave — показываем инструкцию
       if (navigator.brave && navigator.brave.isBrave) {
         showInstructions();
@@ -94,11 +96,6 @@
         saveChoice("with-adblock", b);
       }
     };
-
-    document.body.appendChild(b);
-
-    b.querySelector("#ab-continue").onclick = () =>
-      saveChoice("with-adblock", b);
     b.querySelector("#ab-disable").onclick = () => onWantDisable(b);
     b.querySelector(".ab-close").onclick = () => saveChoice("dismissed", b);
   }
