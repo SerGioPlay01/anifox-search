@@ -3,7 +3,8 @@
  * Показывает баннер только при активном блокировщике.
  * 1. "Продолжить с блокировщиком" — больше не показываем.
  * 2. "Отключить и продолжить" — проверяем до победного.
- * 3. Всё хранится в localStorage, куки не нужны.
+ * 3. Поддержка: AdBlock, uBlock, AdGuard, Brave.
+ * 4. Всё хранится в localStorage, куки не нужны.
  */
 (() => {
   const STORAGE_KEY       = 'anifox-adblock-choice';   // финальное решение
@@ -22,14 +23,14 @@
     document.head.appendChild(s);
     const blocked = !s.offsetHeight; s.remove(); return blocked;
   }
+  async function isBrave() {
+    return navigator.brave && await navigator.brave.isBrave() || false;
+  }
 
   /* ---------- баннер ---------- */
   function buildBanner() {
-
     if (lock || document.querySelector('.ab-banner')) return;
-    lock = true;
-
-    document.body.classList.add('ab-scroll-lock'); // 🔒 блокируем скролл
+    lock = true; document.body.classList.add('ab-scroll-lock');
 
     const b = document.createElement('div'); b.className = 'ab-banner';
     b.innerHTML = `
@@ -78,6 +79,56 @@
     b.querySelector('.ab-close').onclick     = () => saveChoice('dismissed', b);
   }
 
+  /* ---------- инструкции ---------- */
+  function showInstructions() {
+    const isBraveBrowser = navigator.brave && navigator.brave.isBrave;
+    const modal = document.createElement('div'); modal.className = 'ab-instructions-modal';
+    modal.innerHTML = `
+      <div class="ab-instructions-content">
+        <h3><i class="fas fa-info-circle"></i> Как отключить блокировщик</h3>
+        <div class="ab-instructions-grid">
+          <div class="ab-instruction-item">
+            <h4>AdBlock / AdBlock Plus</h4>
+            <ol>
+              <li>Нажмите на иконку AdBlock в браузере</li>
+              <li>Выберите "Не выполнять на страницах этого сайта"</li>
+              <li>Обновите страницу</li>
+            </ol>
+          </div>
+          <div class="ab-instruction-item">
+            <h4>uBlock Origin</h4>
+            <ol>
+              <li>Нажмите на иконку uBlock</li>
+              <li>Кликните на большую кнопку питания</li>
+              <li>Обновите страницу</li>
+            </ol>
+          </div>
+          <div class="ab-instruction-item">
+            <h4>AdGuard</h4>
+            <ol>
+              <li>Нажмите на иконку AdGuard</li>
+              <li>Выключите защиту для этого сайта</li>
+              <li>Обновите страницу</li>
+            </ol>
+          </div>
+          ${isBraveBrowser ? `
+          <div class="ab-instruction-item brave-block">
+            <h4>Brave Browser</h4>
+            <ol>
+              <li>Нажмите на иконку льва в адресной строке</li>
+              <li>Включите переключатель "Блокировка рекламы: ВЫКЛ" для anifox-search.vercel.app</li>
+              <li>Обновите страницу</li>
+            </ol>
+            <div class="brave-hint">Brave блокирует рекламу по умолчанию. Отключите защиту именно для этого сайта.</div>
+          </div>` : ''}
+        </div>
+        <button class="ab-btn ab-btn--main" onclick="this.closest('.ab-instructions-modal').remove(); window.location.reload();">
+          <i class="fas fa-sync"></i> Обновить страницу
+        </button>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
   function saveChoice(value, banner) {
     localStorage.setItem(STORAGE_KEY, value);
     localStorage.removeItem(STORAGE_KEY_WANT);
@@ -92,7 +143,7 @@
 
   function hideBanner(el) {
     el.style.transform = 'translateY(100%)'; el.style.opacity = '0';
-    document.body.classList.remove('ab-scroll-lock'); // 🔓 разблокируем
+    document.body.classList.remove('ab-scroll-lock');
     setTimeout(() => el.remove(), 300);
   }
 
@@ -100,7 +151,7 @@
   async function reCheckAdblock() {
     if (localStorage.getItem(STORAGE_KEY) === 'with-adblock') return;
 
-    const stillBlocked = await detectAdblock() || hasAdblockCache();
+    const stillBlocked = await detectAdblock() || hasAdblockCache() || await isBrave();
     if (!stillBlocked) {               // ✅ разблокировали
       localStorage.setItem(STORAGE_KEY, 'disable-adblock');
       localStorage.removeItem(STORAGE_KEY_WANT);
@@ -129,11 +180,9 @@
 
   /* ---------- запуск ---------- */
   async function run() {
-    if (localStorage.getItem(STORAGE_KEY)) return;          // решение принято
-    if (localStorage.getItem(STORAGE_KEY_WANT)) {           // хочет отключить
-      reCheckAdblock(); return;
-    }
-    const blocked = await detectAdblock() || hasAdblockCache();
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    if (localStorage.getItem(STORAGE_KEY_WANT)) { reCheckAdblock(); return; }
+    const blocked = await detectAdblock() || hasAdblockCache() || await isBrave();
     if (blocked) buildBanner();
   }
 
