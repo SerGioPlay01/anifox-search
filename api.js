@@ -265,14 +265,14 @@ function updateSEOMeta(apiData) {
     keywords = buildKeywords(cleanTitle, genres, year);
     ogTitle = twTitle = `«${cleanTitle}» — смотреть онлайн`;
     ogDesc = twDesc = description;
-    ogImage = material_data?.poster_url || "/resources/obl_web.webp";
+    ogImage = material_data?.poster_url || "/resources/obl_web.jpg";
   } else {
     title = `Поиск «${query}» — AniFox`;
     description = `По запросу «${query}» ничего не найдено, но вы можете посмотреть другие аниме на AniFox.`;
     keywords = `аниме, ${query}, смотреть онлайн`;
     ogTitle = twTitle = title;
     ogDesc = twDesc = description;
-    ogImage = "/resources/obl_web.webp";
+    ogImage = "/resources/obl_web.jpg";
   }
 
   /* перезаписываем только то, что уже есть в HTML */
