@@ -317,37 +317,34 @@ async function createAnimeCard(item) {
   const db = await initDB();
   const favs = await dbGetAll(STORE_FAVORITES);
   const isFav = favs.some((f) => f.link === item.link);
+
+  // Экранирование специальных символов для HTML
+  const escapeHTML = (str) => {
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+  };
+
+  const escapedTitle = escapeHTML(t);
+
   return `
     <div class="card fade-in">
       <div class="card-header">
-        <h3 class="h2_name">${t}</h3>
+        <h3 class="h2_name">${escapedTitle}</h3>
         <div class="info-links">
-          <a href="https://shikimori.one/animes?search=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
-          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
-          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
         </div>
       </div>
-      <iframe class="single-player" src="${
-        item.link
-      }" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+      <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${escapedTitle}"></iframe>
       <div class="card-actions">
-        <button class="action-btn favorite-btn" data-link="${
-          item.link
-        }" onclick="toggleFavorite('${t.replace(/'/g, "\\'")}', '${
-    item.link
-  }')" title="${isFav ? "Удалить из избранного" : "Добавить в избранное"}">
-          <i class="${isFav ? "fas" : "far"} fa-heart"></i>
+        <button class="action-btn favorite-btn" data-link="${item.link}" onclick="toggleFavorite('${escapedTitle.replace(/'/g, "\\'")}', '${item.link}')" title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
+          <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
         </button>
-        <button class="action-btn" onclick="shareAnime('${t.replace(
-          /'/g,
-          "\\'"
-        )}', '${item.link}')" title="Поделиться">
+        <button class="action-btn" onclick="shareAnime('${escapedTitle.replace(/'/g, "\\'")}', '${item.link}')" title="Поделиться">
           <i class="fas fa-share"></i>
         </button>
       </div>
@@ -396,11 +393,13 @@ window.refreshFavoriteIcons = async () => {
 };
 
 /* ---------- SHARE ---------- */
-window.shareAnime = (title, title_orig, link) => {
+window.shareAnime = (title, title_orig, link, year, genres) => {
   const url = `${location.origin}/search/${encodeURIComponent(title_orig)}`; // Используем оригинальное название в URL
-  if (navigator.share)
-    navigator.share({ title: title, text: `Смотри «${title}» на AniFox`, url });
-  else {
+  const shareText = `Смотри «${title} (${year})» на AniFox. Жанры: ${genres.join(', ')}. ${url}`;
+
+  if (navigator.share) {
+    navigator.share({ title: title, text: shareText, url });
+  } else {
     navigator.clipboard.writeText(url);
     showNote("Ссылка скопирована в буфер обмена", "success");
   }
