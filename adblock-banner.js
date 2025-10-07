@@ -1,34 +1,50 @@
 /**
  * AniFox Anti-Adblock Banner
- * Показывает баннер только при активном блокировщике.
- * 1. "Продолжить с блокировщиком" — больше не показываем.
- * 2. "Отключить и продолжить" — проверяем до победного.
+ * Показывает баннер только при реальной блокировке.
+ * 1. «Продолжить с блокировщиком» — больше не показываем.
+ * 2. «Отключить и продолжить» — 3 попытки по 1 с.
  * 3. Поддержка: AdBlock, uBlock, AdGuard, Brave, Ghostery и др.
- * 4. Всё хранится в localStorage, куки не нужны.
+ * 4. Не срабатывает в чистых браузерах и мобильных режимах.
  */
 (() => {
-  const STORAGE_KEY       = 'anifox-adblock-choice';   // финальное решение
-  const STORAGE_KEY_WANT  = 'anifox-adblock-want-disable'; // «хочет отключить»
-  const RE_CHECK_TRIES    = 3;     // кол-во попыток
-  const RE_CHECK_PAUSE    = 1000;  // ms между попытками
-  const PROGRESS_DELAY    = 1000;  // ms перед первой проверкой
+  const STORAGE_KEY      = 'anifox-adblock-choice';   // финальное решение
+  const STORAGE_KEY_WANT = 'anifox-adblock-want-disable'; // «хочет отключить»
+  const RE_CHECK_TRIES   = 3;     // кол-во попыток
+  const RE_CHECK_PAUSE   = 1000;  // ms между попытками
 
   let lock = false;
 
-  /* ---------- надёжный детект ---------- */
+  /* ---------- многоуровневая проверка + исключение мобильных режимов ---------- */
   function detectAdblockHard(callback) {
-    const testUrl = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-    let loaded = false;
+    // 1. Google-скрипт
+    const testGoogle = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+    let loadedGoogle = false;
     const s = document.createElement('script');
-    s.src = testUrl;
-    s.onload = () => loaded = true;
-    s.onerror = () => loaded = false;
+    s.src = testGoogle;
+    s.onload = () => loadedGoogle = true;
+    s.onerror = () => loadedGoogle = false;
     document.head.appendChild(s);
 
-    setTimeout(() => {
-      s.remove();
-      callback(!loaded); // true = заблокирован
-    }, 1000);
+    // 2. Собственный скрипт (с вашего домена)
+    const testOwn = 'https://anifox-search.vercel.app/test-ad.js'; // замените на свой
+    let loadedOwn = false;
+    const s2 = document.createElement('script');
+    s2.src = testOwn + '?t=' + Date.now();
+    s2.onload = () => loadedOwn = true;
+    s2.onerror = () => loadedOwn = false;
+    document.head.appendChild(s2);
+
+    // 3. Проверяем Brave/Ghostery
+    Promise.all([isBrave(), isGhostery()]).then(([brave, ghostery]) => {
+      setTimeout(() => {
+        s.remove(); s2.remove();
+        const blocked = !loadedGoogle || !loadedOwn || brave || ghostery;
+
+        // 4. Исключаем мобильные режимы
+        const isMobileBlocked = /Opera Mini|Chrome Lite|Yandex Turbo|Firefox Focus/.test(navigator.userAgent);
+        callback(blocked || isMobileBlocked);
+      }, 1000);
+    });
   }
 
   async function isBrave() {
@@ -58,32 +74,6 @@
           <button class="ab-close">&times;</button>
         </div>
         <p class="ab-text"><i class="fas fa-shield-alt"></i> Обнаружен блокировщик. Реклама помогает проекту оставаться бесплатным.</p>
-        <div class="ab-info-grid">
-          <div class="ab-info-block"><h4><i class="fas fa-server"></i> Зачем нужна реклама?</h4><ul>
-            <li><i class="fas fa-check-circle"></i> Серверные расходы: хостинг, CDN, хранилище видео</li>
-            <li><i class="fas fa-check-circle"></i> Ежедневное обновление базы аниме и метаданных</li>
-            <li><i class="fas fa-check-circle"></i> Разработка новых функций и улучшение производительности</li>
-            <li><i class="fas fa-check-circle"></i> Поддержка стабильной работы плееров и API</li>
-            <li><i class="fas fa-check-circle"></i> Модерация контента и борьба с мертвыми ссылками</li>
-          </ul></div>
-          <div class="ab-info-block"><h4><i class="fas fa-ad"></i> Типы рекламы на сайте</h4><ul>
-            <li><i class="fas fa-check-circle"></i> Баннерная реклама на сайте (ненавязчивая)</li>
-            <li><i class="fas fa-check-circle"></i> Реклама в плеере от Kodik (можно пропустить)</li>
-            <li><i class="fas fa-check-circle"></i> Партнерские программы легальных стриминговых сервисов</li>
-          </ul><div class="ab-ad-warning"><i class="fas fa-info-circle"></i> Реклама Kodik в плеере: можно пропустить через 5-10 секунд</div></div>
-          <div class="ab-info-block"><h4><i class="fas fa-gift"></i> Что получаете вы</h4><ul>
-            <li><i class="fas fa-check-circle"></i> Бесплатный доступ к тысячам аниме без регистрации</li>
-            <li><i class="fas fa-check-circle"></i> HD качество и стабильная работа плееров</li>
-            <li><i class="fas fa-check-circle"></i> Регулярные обновления и новинки</li>
-            <li><i class="fas fa-check-circle"></i> Отсутствие платных подписок и скрытых платежей</li>
-            <li><i class="fas fa-check-circle"></i> Безопасность и отсутствие вредоносных программ</li>
-          </ul></div>
-        </div>
-        <div class="ab-stats">
-          <div class="ab-stat"><i class="fas fa-users"></i><span>500K+ пользователей в месяц</span></div>
-          <div class="ab-stat"><i class="fas fa-video"></i><span>10K+ аниме доступно</span></div>
-          <div class="ab-stat"><i class="fas fa-clock"></i><span>24/7 без перебоев</span></div>
-        </div>
         <div class="ab-actions">
           <button class="ab-btn ab-btn--soft" id="ab-continue"><i class="fas fa-shield-alt"></i> Продолжить с блокировщиком</button>
           <button class="ab-btn ab-btn--main" id="ab-disable"><i class="fas fa-ad"></i> Отключить блокировщик</button>
