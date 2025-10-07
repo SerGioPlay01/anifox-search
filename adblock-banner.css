@@ -476,3 +476,15 @@ body.ab-scroll-lock {
 .brave-block .brave-hint::before{
   content: "🦁";
 }
+
+.ab-reminder-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.ab-reminder-actions .ab-btn {
+  width: 100%;
+  justify-content: center;
+}
