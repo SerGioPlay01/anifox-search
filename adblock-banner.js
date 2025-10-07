@@ -74,26 +74,37 @@
         </div>
         <p class="ab-text"><i class="fas fa-shield-alt"></i> Обнаружен блокировщик. Реклама помогает проекту оставаться бесплатным.</p>
         
-        <!-- СТАТИСТИКА -->
+        <!-- СТАТИСТИКА (как было раньше) -->
         <div class="ab-stats">
           <div class="ab-stat"><i class="fas fa-users"></i><span>500K+ пользователей в месяц</span></div>
           <div class="ab-stat"><i class="fas fa-video"></i><span>10K+ аниме доступно</span></div>
           <div class="ab-stat"><i class="fas fa-clock"></i><span>24/7 без перебоев</span></div>
         </div>
 
-        <!-- ПРЕИМУЩЕСТВА -->
-        <div class="ab-benefits">
-          <h4><i class="fas fa-gift"></i> Что вы получаете</h4>
-          <ul>
+        <!-- ПРЕИМУЩЕСТВА (как было раньше) -->
+        <div class="ab-info-grid">
+          <div class="ab-info-block"><h4><i class="fas fa-server"></i> Зачем нужна реклама?</h4><ul>
+            <li><i class="fas fa-check-circle"></i> Серверные расходы: хостинг, CDN, хранилище видео</li>
+            <li><i class="fas fa-check-circle"></i> Ежедневное обновление базы аниме и метаданных</li>
+            <li><i class="fas fa-check-circle"></i> Разработка новых функций и улучшение производительности</li>
+            <li><i class="fas fa-check-circle"></i> Поддержка стабильной работы плееров и API</li>
+            <li><i class="fas fa-check-circle"></i> Модерация контента и борьба с мертвыми ссылками</li>
+          </ul></div>
+          <div class="ab-info-block"><h4><i class="fas fa-ad"></i> Типы рекламы на сайте</h4><ul>
+            <li><i class="fas fa-check-circle"></i> Баннерная реклама на сайте (ненавязчивая)</li>
+            <li><i class="fas fa-check-circle"></i> Реклама в плеере от Kodik (можно пропустить)</li>
+            <li><i class="fas fa-check-circle"></i> Партнерские программы легальных стриминговых сервисов</li>
+          </ul><div class="ab-ad-warning"><i class="fas fa-info-circle"></i> Реклама Kodik в плеере: можно пропустить через 5-10 секунд</div></div>
+          <div class="ab-info-block"><h4><i class="fas fa-gift"></i> Что вы получаете</h4><ul>
             <li><i class="fas fa-check-circle"></i> Бесплатный доступ к тысячам аниме без регистрации</li>
             <li><i class="fas fa-check-circle"></i> HD качество и стабильная работа плееров</li>
             <li><i class="fas fa-check-circle"></i> Регулярные обновления и новинки</li>
             <li><i class="fas fa-check-circle"></i> Отсутствие платных подписок и скрытых платежей</li>
             <li><i class="fas fa-check-circle"></i> Безопасность и отсутствие вредоносных программ</li>
-          </ul>
+          </ul></div>
         </div>
 
-        <!-- КНОПКИ -->
+        <!-- КНОПКИ (центрированные) -->
         <div class="ab-actions">
           <button class="ab-btn ab-btn--soft" id="ab-continue"><i class="fas fa-shield-alt"></i> Продолжить с блокировщиком</button>
           <button class="ab-btn ab-btn--main" id="ab-disable"><i class="fas fa-ad"></i> Отключить блокировщик</button>
