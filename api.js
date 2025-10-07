@@ -338,6 +338,20 @@ async function createAnimeCard(item) {
         </div>
       </div>
       
+      ${item.material_data?.poster_url ? `
+        <div class="anime-poster" style="text-align: center; margin-bottom: 1rem;">
+          <img src="${item.material_data.poster_url}" alt="${t}" style="max-width: 200px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        </div>
+      ` : ''}
+      
+      ${item.material_data ? `
+        <div class="anime-meta">
+          ${item.material_data.year ? `<span class="anime-year"><i class="fas fa-calendar-alt"></i> ${item.material_data.year}</span>` : ''}
+          ${item.material_data.kinopoisk_rating ? `<span class="anime-rating"><i class="fas fa-star"></i> ${item.material_data.kinopoisk_rating}</span>` : ''}
+          ${item.episodes_count ? `<span class="anime-episodes"><i class="fas fa-play-circle"></i> ${item.episodes_count} эп.</span>` : ''}
+        </div>
+      ` : ''}
+      
       <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
       
       <div class="card-actions">
@@ -353,7 +367,6 @@ async function createAnimeCard(item) {
       </div>
     </div>`;
 }
-
 
 // Функция для показа модального окна с информацией
 function showAnimeInfoModal(item) {
