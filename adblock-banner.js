@@ -16,15 +16,22 @@
 
   let lock = false;
 
-  /* ---------- детект ---------- */
-  async function detectAdblock() {
-    try {
-      await fetch(AD_CHECK_URL, { method: "HEAD", mode: "no-cors" });
-      return false;
-    } catch {
-      return true;
-    }
-  }
+/* ---------- надёжный детект ---------- */
+function detectAdblockHard(callback) {
+  const testUrl = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+  let loaded = false;
+  const s = document.createElement('script');
+  s.src = testUrl;
+  s.onload = () => loaded = true;
+  s.onerror = () => loaded = false;
+  document.head.appendChild(s);
+
+  setTimeout(() => {
+    s.remove();
+    callback(!loaded); // true = заблокирован
+  }, 1000); // ждём 1 секунду
+}
+
   function hasAdblockCache() {
     const s = document.createElement("script");
     s.src = AD_CHECK_URL;
@@ -274,63 +281,28 @@
     };
   }
 
-/* ---------- запуск (с задержкой и отладкой) ---------- */
-async function run() {
+/* ---------- запуск (жёсткий детект) ---------- */
+function run() {
   if (localStorage.getItem(STORAGE_KEY)) return;
-
-  // Ждём 5 секунд после загрузки DOM — чтобы расширения «успокоились»
-  await new Promise(r => setTimeout(r, 5000));
-
-  // Если пользователь уже нажимал «отключить» — запускаем повторную проверку
-  if (localStorage.getItem(STORAGE_KEY_WANT)) {
-    await reCheckAdblock();
-    return;
-  }
-
-  // 5 попыток с интервалом 2 секунды
-  const TRIES = 5, PAUSE = 2000;
-  for (let i = 1; i <= TRIES; i++) {
-    console.log(`[AniFox] Проверка ${i}/${TRIES}…`);
-    const blocked = await detectAdblock() || hasAdblockCache() || await isBrave() || await isGhostery();
-    if (!blocked) {
-      console.log('[AniFox] Блокировки не обнаружены.');
-      return; // не показываем баннер
-    }
-    if (i < TRIES) await new Promise(r => setTimeout(r, PAUSE));
-  }
-
-  console.log('[AniFox] Блокировка обнаружена — показываем баннер.');
-  buildBanner();
+  detectAdblockHard(blocked => {
+    if (blocked) buildBanner();
+  });
 }
 
   document.addEventListener("DOMContentLoaded", run);
 })();
 
-async function reCheckAdblock() {
+/* ---------- повторная проверка (жёсткий детект) ---------- */
+function reCheckAdblock() {
   if (localStorage.getItem(STORAGE_KEY) === 'with-adblock') return;
 
-  for (let i = 1; i <= RECHECK_TRIES; i++) {
-    showProgress(`Проверка ${i} из ${RECHECK_TRIES}…`);
-    await new Promise(r => setTimeout(r, RECHECK_PAUSE));
-
-    const stillBlocked =
-      (await detectAdblock()) ||
-      hasAdblockCache() ||
-      (await isBrave()) ||
-      (await isGhostery());
-
-    console.log(`[AniFox] Попытка ${i}: заблокировано = ${stillBlocked}`);
-
-    if (!stillBlocked) {
-      hideProgress();
+  detectAdblockHard(async blocked => {
+    if (!blocked) {
       localStorage.setItem(STORAGE_KEY, 'disable-adblock');
       localStorage.removeItem(STORAGE_KEY_WANT);
-      console.log('[AniFox] Разблокировка подтверждена.');
       return;
     }
-  }
-
-  hideProgress();
-  console.log('[AniFox] Блокировка не убрана — показываем напоминание.');
-  showReminder();
+    // Если всё ещё блокирует — показываем напоминание
+    showReminder();
+  });
 }
