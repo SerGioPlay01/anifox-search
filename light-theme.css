@@ -1019,3 +1019,24 @@ html {
     background: var(--red);
     color: white;
 }
+
+/* Невидимая SEO часть */
+.footer-seo {
+    opacity: 0.01;
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
+}
+
+.seo-keywords {
+    display: none;
+}
+
+.seo-content {
+    display: none;
+}
+
+.structured-data {
+    display: none !important;
+}
