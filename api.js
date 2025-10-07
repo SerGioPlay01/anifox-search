@@ -337,31 +337,15 @@ function createAnimeCard(item) {
       <div class="card-header">
         <h3 class="h2_name">${t}</h3>
         <div class="info-links">
-          <a href="https://shikimori.one/animes?search=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
-          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
-          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(
-            t
-          )}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
+          <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
         </div>
       </div>
-      <iframe class="single-player" src="${
-        item.link
-      }" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+      <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
       <div class="card-actions">
-        <button class="action-btn favorite-btn" onclick='toggleFavorite(${JSON.stringify(
-          t
-        )}, ${JSON.stringify(
-    item.link
-  )})' title="Добавить в избранное"><i class="far fa-heart"></i></button>
-        <button class="action-btn" onclick='shareAnime(${JSON.stringify(
-          t
-        )}, ${JSON.stringify(
-    item.link
-  )})' title="Поделиться"><i class="fas fa-share"></i></button>
+        <button class="action-btn favorite-btn" onclick='toggleFavorite(${JSON.stringify(t)}, ${JSON.stringify(item.link)})' title="Добавить в избранное"><i class="far fa-heart"></i></button>
+        <button class="action-btn" onclick='shareAnime(${JSON.stringify(t)}, ${JSON.stringify(item.link)})' title="Поделиться"><i class="fas fa-share"></i></button>
       </div>
     </div>`;
 }
@@ -620,7 +604,7 @@ async function search() {
     if (input) input.value = "";
 
     updateSEOMeta(data);
-    
+
   } catch (e) {
     console.error("Ошибка search:", e);
     box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки</h2><p>Попробуйте повторить поиск позже</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
