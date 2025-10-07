@@ -3,10 +3,10 @@
  * Улучшенная версия с лучшим обнаружением без внешних скриптов
  */
 (() => {
-  const STORAGE_KEY      = 'anifox-adblock-choice';
-  const STORAGE_KEY_WANT = 'anifox-adblock-want-disable';
-  const RE_CHECK_TRIES   = 3;
-  const RE_CHECK_PAUSE   = 1000;
+  const STORAGE_KEY = "anifox-adblock-choice";
+  const STORAGE_KEY_WANT = "anifox-adblock-want-disable";
+  const RE_CHECK_TRIES = 3;
+  const RE_CHECK_PAUSE = 1000;
 
   let lock = false;
 
@@ -20,23 +20,31 @@
       testsCompleted++;
       if (testsCompleted >= totalTests) {
         const blocked = blockedSignals >= 2; // Если 2+ теста показали блокировку
-        
+
         // Исключаем мобильные режимы
-        const isMobileBlocked = /Opera Mini|Chrome Lite|Yandex Turbo|Firefox Focus/.test(navigator.userAgent);
+        const isMobileBlocked =
+          /Opera Mini|Chrome Lite|Yandex Turbo|Firefox Focus/.test(
+            navigator.userAgent
+          );
         callback(blocked || isMobileBlocked);
       }
     }
 
     // Тест 1: Bait элементы с классами рекламы
-    const bait = document.createElement('div');
-    bait.className = 'ads ad-unit ad-banner advertisement';
-    bait.style.cssText = 'position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px;';
+    const bait = document.createElement("div");
+    bait.className = "ads ad-unit ad-banner advertisement";
+    bait.style.cssText =
+      "position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px;";
     bait.innerHTML = '<div class="ad-text">Advertisement</div>';
     document.body.appendChild(bait);
 
     setTimeout(() => {
       const style = window.getComputedStyle(bait);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.height === '0px') {
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.height === "0px"
+      ) {
         blockedSignals++;
       }
       bait.remove();
@@ -44,18 +52,18 @@
     }, 300);
 
     // Тест 2: Fake скрипт с триггерными атрибутами
-    const fakeScript = document.createElement('script');
-    fakeScript.innerHTML = 'window._adTest = true;';
-    fakeScript.setAttribute('data-ad-client', 'ca-pub-123456789');
-    fakeScript.setAttribute('type', 'text/javascript');
-    
+    const fakeScript = document.createElement("script");
+    fakeScript.innerHTML = "window._adTest = true;";
+    fakeScript.setAttribute("data-ad-client", "ca-pub-123456789");
+    fakeScript.setAttribute("type", "text/javascript");
+
     fakeScript.onerror = () => {
       blockedSignals++;
       checkCompletion();
     };
-    
+
     document.head.appendChild(fakeScript);
-    
+
     setTimeout(() => {
       if (!window._adTest) {
         blockedSignals++;
@@ -74,9 +82,10 @@
     });
 
     // Тест 4: MutationObserver для отслеживания удаления элементов
-    const testAd = document.createElement('div');
-    testAd.className = 'banner-ad textads';
-    testAd.style.cssText = 'position: absolute; left: -9999px; width: 1px; height: 1px;';
+    const testAd = document.createElement("div");
+    testAd.className = "banner-ad textads";
+    testAd.style.cssText =
+      "position: absolute; left: -9999px; width: 1px; height: 1px;";
     document.body.appendChild(testAd);
 
     const observer = new MutationObserver((mutations) => {
@@ -117,9 +126,9 @@
     return new Promise((resolve) => {
       // Проверка через различные методы обнаружения Ghostery
       const checks = [
-        () => typeof window._ghostery !== 'undefined',
-        () => typeof window.Ghostery !== 'undefined',
-        () => document.documentElement.getAttribute('data-ghostery') !== null
+        () => typeof window._ghostery !== "undefined",
+        () => typeof window.Ghostery !== "undefined",
+        () => document.documentElement.getAttribute("data-ghostery") !== null,
       ];
 
       for (const check of checks) {
@@ -130,14 +139,14 @@
       }
 
       // Дополнительная проверка
-      const ghosteryTest = document.createElement('div');
-      ghosteryTest.style.cssText = 'display: none;';
-      ghosteryTest.setAttribute('data-ghostery', 'test');
+      const ghosteryTest = document.createElement("div");
+      ghosteryTest.style.cssText = "display: none;";
+      ghosteryTest.setAttribute("data-ghostery", "test");
       document.body.appendChild(ghosteryTest);
-      
+
       setTimeout(() => {
         const style = window.getComputedStyle(ghosteryTest);
-        resolve(style.display === 'none');
+        resolve(style.display === "none");
         ghosteryTest.remove();
       }, 100);
     });
@@ -145,10 +154,12 @@
 
   /* ---------- баннер (без изменений) ---------- */
   function buildBanner() {
-    if (lock || document.querySelector('.ab-banner')) return;
-    lock = true; document.body.classList.add('ab-scroll-lock');
+    if (lock || document.querySelector(".ab-banner")) return;
+    lock = true;
+    document.body.classList.add("ab-scroll-lock");
 
-    const b = document.createElement('div'); b.className = 'ab-banner';
+    const b = document.createElement("div");
+    b.className = "ab-banner";
     b.innerHTML = `
       <div class="ab-content">
         <div class="ab-header">
@@ -195,18 +206,19 @@
       </div>`;
     document.body.appendChild(b);
 
-    b.querySelector('#ab-continue').onclick  = () => {
+    b.querySelector("#ab-continue").onclick = () => {
       if (navigator.brave || isGhostery()) showInstructions();
-      saveChoice('with-adblock', b);
+      saveChoice("with-adblock", b);
     };
-    b.querySelector('#ab-disable').onclick   = () => onWantDisable(b);
+    b.querySelector("#ab-disable").onclick = () => onWantDisable(b);
   }
 
   /* ---------- инструкции (без изменений) ---------- */
   function showInstructions() {
     const isBraveBrowser = navigator.brave && navigator.brave.isBrave;
     const isGhosteryActive = isGhostery();
-    const modal = document.createElement('div'); modal.className = 'ab-instructions-modal';
+    const modal = document.createElement("div");
+    modal.className = "ab-instructions-modal";
     modal.innerHTML = `
       <div class="ab-instructions-content">
         <h3><i class="fas fa-info-circle"></i> Как отключить блокировщик</h3>
@@ -235,7 +247,9 @@
               <li>Обновите страницу</li>
             </ol>
           </div>
-          ${isBraveBrowser ? `
+          ${
+            isBraveBrowser
+              ? `
           <div class="ab-instruction-item brave-block">
             <h4>Brave Browser</h4>
             <ol>
@@ -244,8 +258,12 @@
               <li>Обновите страницу</li>
             </ol>
             <div class="brave-hint">Brave блокирует рекламу по умолчанию. Отключите защиту именно для этого сайта.</div>
-          </div>` : ''}
-          ${isGhosteryActive ? `
+          </div>`
+              : ""
+          }
+          ${
+            isGhosteryActive
+              ? `
           <div class="ab-instruction-item ghostery-block">
             <h4>Ghostery Tracker & Ad Blocker</h4>
             <ol>
@@ -254,7 +272,9 @@
               <li>Обновите страницу</li>
             </ol>
             <div class="ghostery-hint">Ghostery автоматически блокирует рекламу и трекеры. Добавьте сайт в доверенные, чтобы отключить блокировку.</div>
-          </div>` : ''}
+          </div>`
+              : ""
+          }
         </div>
         <button class="ab-btn ab-btn--main" onclick="this.closest('.ab-instructions-modal').remove(); window.location.reload();">
           <i class="fas fa-sync"></i> Обновить страницу
@@ -270,32 +290,33 @@
   }
 
   function onWantDisable(banner) {
-    localStorage.setItem(STORAGE_KEY_WANT, '1');
+    localStorage.setItem(STORAGE_KEY_WANT, "1");
     hideBanner(banner);
     setTimeout(() => reCheckAdblock(), 1000);
   }
 
   function hideBanner(el) {
-    el.style.transform = 'translateY(100%)'; el.style.opacity = '0';
-    document.body.classList.remove('ab-scroll-lock');
+    el.style.transform = "translateY(100%)";
+    el.style.opacity = "0";
+    document.body.classList.remove("ab-scroll-lock");
     setTimeout(() => el.remove(), 300);
   }
 
   /* ---------- повторная проверка (3 попытки) ---------- */
   async function reCheckAdblock() {
-    if (localStorage.getItem(STORAGE_KEY) === 'with-adblock') return;
+    if (localStorage.getItem(STORAGE_KEY) === "with-adblock") return;
 
     for (let i = 1; i <= RE_CHECK_TRIES; i++) {
       showProgress(`Проверка ${i} из ${RE_CHECK_TRIES}…`);
-      await new Promise(r => setTimeout(r, RE_CHECK_PAUSE));
+      await new Promise((r) => setTimeout(r, RE_CHECK_PAUSE));
 
-      const stillBlocked = await new Promise(resolve => {
+      const stillBlocked = await new Promise((resolve) => {
         detectAdblockHard(resolve);
       });
 
       if (!stillBlocked) {
         hideProgress();
-        localStorage.setItem(STORAGE_KEY, 'disable-adblock');
+        localStorage.setItem(STORAGE_KEY, "disable-adblock");
         localStorage.removeItem(STORAGE_KEY_WANT);
         return;
       }
@@ -308,8 +329,8 @@
   /* ---------- прогресс-окно ---------- */
   function showProgress(text) {
     hideProgress();
-    const p = document.createElement('div');
-    p.className = 'ab-progress';
+    const p = document.createElement("div");
+    p.className = "ab-progress";
     p.innerHTML = `
       <div class="ab-progress-content">
         <div class="ab-progress-spinner"></div>
@@ -319,12 +340,13 @@
   }
 
   function hideProgress() {
-    document.querySelector('.ab-progress')?.remove();
+    document.querySelector(".ab-progress")?.remove();
   }
 
   function showReminder() {
-    if (document.querySelector('.ab-reminder')) return;
-    const r = document.createElement('div'); r.className = 'ab-reminder';
+    if (document.querySelector(".ab-reminder")) return;
+    const r = document.createElement("div");
+    r.className = "ab-reminder";
     r.innerHTML = `
       <div class="ab-reminder-content">
         <i class="fas fa-exclamation-triangle"></i>
@@ -337,21 +359,25 @@
       </div>`;
     document.body.appendChild(r);
 
-    r.querySelector('#ab-recheck').onclick = () => {
-      r.remove(); setTimeout(() => reCheckAdblock(), 500);
+    r.querySelector("#ab-recheck").onclick = () => {
+      r.remove();
+      setTimeout(() => {
+        location.reload(); // Перезагрузка страницы
+      }, 500);
     };
-    r.querySelector('#ab-show-instructions').onclick = () => {
-      r.remove(); showInstructions();
+    r.querySelector("#ab-show-instructions").onclick = () => {
+      r.remove();
+      showInstructions();
     };
   }
 
   /* ---------- запуск (жёсткий детект) ---------- */
   function run() {
     if (localStorage.getItem(STORAGE_KEY)) return;
-    detectAdblockHard(blocked => {
+    detectAdblockHard((blocked) => {
       if (blocked) buildBanner();
     });
   }
 
-  document.addEventListener('DOMContentLoaded', run);
+  document.addEventListener("DOMContentLoaded", run);
 })();
