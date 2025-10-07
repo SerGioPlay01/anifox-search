@@ -71,9 +71,29 @@
         <div class="ab-header">
           <i class="fas fa-heart"></i>
           <h3>Поддержите AniFox</h3>
-          <button class="ab-close">&times;</button>
         </div>
         <p class="ab-text"><i class="fas fa-shield-alt"></i> Обнаружен блокировщик. Реклама помогает проекту оставаться бесплатным.</p>
+        
+        <!-- СТАТИСТИКА -->
+        <div class="ab-stats">
+          <div class="ab-stat"><i class="fas fa-users"></i><span>500K+ пользователей в месяц</span></div>
+          <div class="ab-stat"><i class="fas fa-video"></i><span>10K+ аниме доступно</span></div>
+          <div class="ab-stat"><i class="fas fa-clock"></i><span>24/7 без перебоев</span></div>
+        </div>
+
+        <!-- ПРЕИМУЩЕСТВА -->
+        <div class="ab-benefits">
+          <h4><i class="fas fa-gift"></i> Что вы получаете</h4>
+          <ul>
+            <li><i class="fas fa-check-circle"></i> Бесплатный доступ к тысячам аниме без регистрации</li>
+            <li><i class="fas fa-check-circle"></i> HD качество и стабильная работа плееров</li>
+            <li><i class="fas fa-check-circle"></i> Регулярные обновления и новинки</li>
+            <li><i class="fas fa-check-circle"></i> Отсутствие платных подписок и скрытых платежей</li>
+            <li><i class="fas fa-check-circle"></i> Безопасность и отсутствие вредоносных программ</li>
+          </ul>
+        </div>
+
+        <!-- КНОПКИ -->
         <div class="ab-actions">
           <button class="ab-btn ab-btn--soft" id="ab-continue"><i class="fas fa-shield-alt"></i> Продолжить с блокировщиком</button>
           <button class="ab-btn ab-btn--main" id="ab-disable"><i class="fas fa-ad"></i> Отключить блокировщик</button>
@@ -86,7 +106,6 @@
       saveChoice('with-adblock', b);
     };
     b.querySelector('#ab-disable').onclick   = () => onWantDisable(b);
-    b.querySelector('.ab-close').onclick     = () => saveChoice('dismissed', b);
   }
 
   /* ---------- инструкции ---------- */
