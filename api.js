@@ -648,16 +648,14 @@ function updateSEOMeta(apiData) {
     },
   };
   if (results.length)
-    jsonLd.mainEntity = results
-      .slice(0, 10)
-      .map((r) => ({
-        "@type": "TVSeries",
-        name: r.title,
-        datePublished: r.year,
-        genre: r.genres,
-        image: r.material_data?.poster_url || ogImage,
-        url: `${location.origin}/?q=${encodeURIComponent(r.title)}`,
-      }));
+    jsonLd.mainEntity = results.slice(0, 10).map((r) => ({
+      "@type": "TVSeries",
+      name: r.title,
+      datePublished: r.year,
+      genre: r.genres,
+      image: r.material_data?.poster_url || ogImage,
+      url: `${location.origin}/?q=${encodeURIComponent(r.title)}`,
+    }));
   const scr = document.createElement("script");
   scr.type = "application/ld+json";
   scr.textContent = JSON.stringify(jsonLd);
@@ -690,11 +688,11 @@ async function createAnimeCard(item) {
   const favs = await getFavorites();
   const isFav = favs.some((f) => f.link === item.link);
 
-  // Проверяем, есть ли достаточно данных для информации
-  const hasInfoData = await hasSufficientInfoData(item);
-  
-  // Проверяем, работает ли кнопка поделиться
-  const hasShareData = item.title && item.link && item.title.length > 0;
+  // ПРОСТАЯ И НАДЕЖНАЯ ПРОВЕРКА ДАННЫХ
+  const hasInfoData = checkInfoData(item);
+  const hasShareData = checkShareData(item);
+
+  console.log(`Card "${t}":`, { hasInfoData, hasShareData, item }); // Для отладки
 
   return `
   <div class="card fade-in">
@@ -725,55 +723,70 @@ async function createAnimeCard(item) {
       </button>
       ${
         hasShareData
-          ? `
-      <button class="action-btn" onclick="shareAnime('${JSON.stringify(
-        item
-      ).replace(/"/g, "&quot;")}')" title="Поделиться">
-        <i class="fas fa-share"></i>
-      </button>
-      `
+          ? `<button class="action-btn" onclick="shareAnime('${JSON.stringify(
+              item
+            ).replace(/"/g, "&quot;")}')" title="Поделиться">
+              <i class="fas fa-share"></i>
+            </button>`
           : ""
       }
       ${
         hasInfoData
-          ? `
-      <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify(
-        item
-      ).replace(/"/g, "&quot;")}')" title="Информация">
-        <i class="fas fa-info-circle"></i>
-      </button>
-      `
+          ? `<button class="action-btn" onclick="showAnimeInfo('${JSON.stringify(
+              item
+            ).replace(/"/g, "&quot;")}')" title="Информация">
+              <i class="fas fa-info-circle"></i>
+            </button>`
           : ""
       }
     </div>
   </div>`;
 }
 
-// Функция проверки достаточности данных для информации
-async function hasSufficientInfoData(item) {
-  // Если есть material_data с описанием - показываем кнопку
-  if (item.material_data && item.material_data.description && 
-      item.material_data.description.length > 10 && 
-      item.material_data.description !== 'Описание отсутствует.') {
-    return true;
-  }
-  
-  // Если есть год и жанры - тоже достаточно для базовой информации
-  if (item.year && item.genres && item.genres.length > 0) {
-    return true;
-  }
-  
-  // Проверяем через Shikimori API, есть ли данные
-  try {
-    const extendedInfo = await getAnimeExtendedInfo(item);
-    if (extendedInfo.description && extendedInfo.description.length > 50) {
+// ПРОСТАЯ ПРОВЕРКА ДЛЯ КНОПКИ ИНФОРМАЦИИ
+function checkInfoData(item) {
+  // Если есть material_data с нормальным описанием
+  if (item.material_data && item.material_data.description) {
+    const desc = item.material_data.description;
+    if (desc.length > 20 && desc !== "Описание отсутствует.") {
       return true;
     }
-  } catch (e) {
-    console.log('No Shikimori data available for:', item.title);
   }
-  
+
+  // Если есть год, жанры или рейтинг
+  if (
+    item.year ||
+    (item.genres && item.genres.length > 0) ||
+    (item.material_data && item.material_data.rating)
+  ) {
+    return true;
+  }
+
+  // Если есть скриншоты
+  if (item.screenshots && item.screenshots.length > 0) {
+    return true;
+  }
+
+  // Если есть постер
+  if (item.material_data && item.material_data.poster_url) {
+    return true;
+  }
+
   return false;
+}
+
+// ПРОВЕРКА ДЛЯ КНОПКИ ПОДЕЛИТЬСЯ
+function checkShareData(item) {
+  // Должны быть title и link
+  if (!item.title || !item.link) return false;
+
+  // Title не должен быть пустым
+  if (item.title.trim().length === 0) return false;
+
+  // Link должен быть валидным URL
+  if (!item.link.startsWith("http")) return false;
+
+  return true;
 }
 
 /* ---------- FAVORITES ---------- */
@@ -914,9 +927,10 @@ window.showAnimeInfo = async (itemRaw) => {
     const isFav = favs.some((f) => f.link === item.link);
 
     // Проверяем, есть ли достаточно данных для показа
-    const hasEnoughData = 
-      description && description.length > 10 && 
-      description !== 'Описание отсутствует.' &&
+    const hasEnoughData =
+      description &&
+      description.length > 10 &&
+      description !== "Описание отсутствует." &&
       (item.year || item.genres?.length > 0 || rating || duration);
 
     if (!hasEnoughData) {
@@ -926,10 +940,19 @@ window.showAnimeInfo = async (itemRaw) => {
           <button class="modal-close" onclick="closeAnimeModal()">&times;</button>
           <div class="modal-grid">
             <div class="modal-left">
-              <img src="${md.poster_url || "/resources/obl_web.jpg"}" alt="Постер" class="modal-poster">
+              <img src="${
+                md.poster_url || "/resources/obl_web.jpg"
+              }" alt="Постер" class="modal-poster">
               <div class="modal-btns">
-                <button class="modal-btn ${isFav ? "secondary" : "primary"}" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}','${item.link}')">
-                  <i class="${isFav ? "fas" : "far"} fa-heart"></i> ${isFav ? "Удалить из избранного" : "Добавить в избранное"}
+                <button class="modal-btn ${
+                  isFav ? "secondary" : "primary"
+                }" onclick="toggleFavorite('${item.title.replace(
+        /'/g,
+        "\\'"
+      )}','${item.link}')">
+                  <i class="${isFav ? "fas" : "far"} fa-heart"></i> ${
+        isFav ? "Удалить из избранного" : "Добавить в избранное"
+      }
                 </button>
               </div>
             </div>
@@ -937,11 +960,29 @@ window.showAnimeInfo = async (itemRaw) => {
               <h2 class="modal-title">${item.title}</h2>
               <p class="modal-orig">${item.title_orig || ""}</p>
               <div class="modal-meta-grid">
-                ${item.year ? `<div class="meta-item"><span class="meta-label">Год:</span> <b>${item.year}</b></div>` : ''}
-                ${item.type ? `<div class="meta-item"><span class="meta-label">Тип:</span> <b>${item.type}</b></div>` : ''}
-                ${item.quality ? `<div class="meta-item"><span class="meta-label">Качество:</span> <b>${item.quality}</b></div>` : ''}
+                ${
+                  item.year
+                    ? `<div class="meta-item"><span class="meta-label">Год:</span> <b>${item.year}</b></div>`
+                    : ""
+                }
+                ${
+                  item.type
+                    ? `<div class="meta-item"><span class="meta-label">Тип:</span> <b>${item.type}</b></div>`
+                    : ""
+                }
+                ${
+                  item.quality
+                    ? `<div class="meta-item"><span class="meta-label">Качество:</span> <b>${item.quality}</b></div>`
+                    : ""
+                }
               </div>
-              ${item.genres && item.genres.length > 0 ? `<div class="modal-genres">${item.genres.map(g => `<span class="genre-tag">${g}</span>`).join('')}</div>` : ''}
+              ${
+                item.genres && item.genres.length > 0
+                  ? `<div class="modal-genres">${item.genres
+                      .map((g) => `<span class="genre-tag">${g}</span>`)
+                      .join("")}</div>`
+                  : ""
+              }
               <div class="modal-desc">
                 <p style="color: var(--gray); font-style: italic;">
                   <i class="fas fa-info-circle"></i> Подробная информация об этом аниме временно недоступна.
@@ -965,48 +1006,95 @@ window.showAnimeInfo = async (itemRaw) => {
         <button class="modal-close" onclick="closeAnimeModal()">&times;</button>
         <div class="modal-grid">
           <div class="modal-left">
-            <img src="${md.poster_url || "/resources/obl_web.jpg"}" alt="Постер" class="modal-poster">
-            ${rating ? `<div class="modal-rating"><i class="fas fa-star"></i> ${rating}</div>` : ""}
+            <img src="${
+              md.poster_url || "/resources/obl_web.jpg"
+            }" alt="Постер" class="modal-poster">
+            ${
+              rating
+                ? `<div class="modal-rating"><i class="fas fa-star"></i> ${rating}</div>`
+                : ""
+            }
             <div class="modal-btns">
-              <button class="modal-btn ${isFav ? "secondary" : "primary"}" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}','${item.link}')">
-                <i class="${isFav ? "fas" : "far"} fa-heart"></i> ${isFav ? "Удалить из избранного" : "Добавить в избранное"}
+              <button class="modal-btn ${
+                isFav ? "secondary" : "primary"
+              }" onclick="toggleFavorite('${item.title.replace(
+      /'/g,
+      "\\'"
+    )}','${item.link}')">
+                <i class="${isFav ? "fas" : "far"} fa-heart"></i> ${
+      isFav ? "Удалить из избранного" : "Добавить в избранное"
+    }
               </button>
             </div>
-            ${extendedInfo.shikimoriData ? '<div class="modal-source-info"><i class="fas fa-database"></i> Данные дополнены Shikimori</div>' : ""}
+            ${
+              extendedInfo.shikimoriData
+                ? '<div class="modal-source-info"><i class="fas fa-database"></i> Данные дополнены Shikimori</div>'
+                : ""
+            }
           </div>
           <div class="modal-right">
             <h2 class="modal-title">${item.title}</h2>
             <p class="modal-orig">${item.title_orig || ""}</p>
             <div class="modal-meta-grid">
-              <div class="meta-item"><span class="meta-label">Год:</span> <b>${item.year || "—"}</b></div>
-              <div class="meta-item"><span class="meta-label">Тип:</span> <b>${item.type || "—"}</b></div>
-              <div class="meta-item"><span class="meta-label">Качество:</span> <b>${item.quality || "—"}</b></div>
-              ${duration ? `<div class="meta-item"><span class="meta-label">Длительность:</span> <b>${duration}</b></div>` : ""}
-              ${status ? `<div class="meta-item"><span class="meta-label">Статус:</span> <b>${status}</b></div>` : ""}
+              <div class="meta-item"><span class="meta-label">Год:</span> <b>${
+                item.year || "—"
+              }</b></div>
+              <div class="meta-item"><span class="meta-label">Тип:</span> <b>${
+                item.type || "—"
+              }</b></div>
+              <div class="meta-item"><span class="meta-label">Качество:</span> <b>${
+                item.quality || "—"
+              }</b></div>
+              ${
+                duration
+                  ? `<div class="meta-item"><span class="meta-label">Длительность:</span> <b>${duration}</b></div>`
+                  : ""
+              }
+              ${
+                status
+                  ? `<div class="meta-item"><span class="meta-label">Статус:</span> <b>${status}</b></div>`
+                  : ""
+              }
             </div>
-            ${studios.length > 0 ? `
+            ${
+              studios.length > 0
+                ? `
             <div class="modal-studios">
               <span class="meta-label">Студии:</span> 
               <span class="studios-list">${studios.join(", ")}</span>
             </div>
-            ` : ""}
-            <div class="modal-genres">${(item.genres || []).map(g => `<span class="genre-tag">${g}</span>`).join("")}</div>
+            `
+                : ""
+            }
+            <div class="modal-genres">${(item.genres || [])
+              .map((g) => `<span class="genre-tag">${g}</span>`)
+              .join("")}</div>
             <div class="modal-desc">${description}</div>
-            ${allScreenshots.length > 0 ? `
+            ${
+              allScreenshots.length > 0
+                ? `
             <div class="modal-screens">
               <h3 class="modal-screens-title">Скриншоты</h3>
               <div class="screenshots-grid">
-                ${allScreenshots.map((s, index) => `
-                  <div class="screenshot-item" onclick="openScreenshotViewer('${allScreenshots.join("|")}', ${index})">
+                ${allScreenshots
+                  .map(
+                    (s, index) => `
+                  <div class="screenshot-item" onclick="openScreenshotViewer('${allScreenshots.join(
+                    "|"
+                  )}', ${index})">
                     <img src="${s}" loading="lazy" class="scr">
                     <div class="screenshot-overlay">
                       <i class="fas fa-expand"></i>
                     </div>
                   </div>
-                `).join("")}
+                `
+                  )
+                  .join("")}
               </div>
             </div>
-            ` : ""}
+            `
+                : ""
+            }
           </div>
         </div>
       </div>
@@ -1024,9 +1112,14 @@ window.showAnimeInfo = async (itemRaw) => {
         <button class="modal-close" onclick="closeAnimeModal()">&times;</button>
         <div class="modal-grid">
           <div class="modal-left">
-            <img src="${md.poster_url || "/resources/obl_web.jpg"}" alt="Постер" class="modal-poster">
+            <img src="${
+              md.poster_url || "/resources/obl_web.jpg"
+            }" alt="Постер" class="modal-poster">
             <div class="modal-btns">
-              <button class="modal-btn primary" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}','${item.link}')">
+              <button class="modal-btn primary" onclick="toggleFavorite('${item.title.replace(
+                /'/g,
+                "\\'"
+              )}','${item.link}')">
                 <i class="far fa-heart"></i> Добавить в избранное
               </button>
             </div>
@@ -1260,6 +1353,7 @@ async function renderFavoritesPage() {
           fav.title,
           cardError
         );
+        // В функции renderFavoritesPage заменим fallback карточку на:
         const fallbackCard = `
 <div class="card fade-in">
   <div class="card-header">
