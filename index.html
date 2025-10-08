@@ -1,300 +1,186 @@
 <!doctype html>
 <html lang="ru">
-
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <meta name="google-site-verification" content="egPDfS40HGTB97OHt3aWiauBnAvX2zJ3m8sAMBIb40A" />
-    <meta name="yandex-verification" content="e21d42ad747a078b" />
+  <!-- Verification -->
+  <meta name="google-site-verification" content="egPDfS40HGTB97OHt3aWiauBnAvX2zJ3m8sAMBIb40A" />
+  <meta name="yandex-verification" content="e21d42ad747a078b" />
 
-    <!-- SEO: основные мета -->
-    <title>Смотреть аниме онлайн бесплатно в хорошем качестве — AniFox</title>
-    <meta name="description"
-        content="✅ Более 3000 аниме фильмов и сериалов на AniFox. Смотрите онлайн в HD 720/1080, без регистрации и рекламы. Ежедневные обновления, удобный поиск по жанрам и годам.">
-    <meta name="keywords"
-        content="аниме онлайн, смотреть аниме, аниме бесплатно, аниме 2025, аниме HD, аниме сериалы, аниме фильмы, naruto, attack on titan, demon slayer, death note, one piece, сёнэн, сёдзё, исекай, романтика, боевик, драма, тетрадь смерти, аниме каталог, аниме поиск, kodik, aniboom, animego">
+  <!-- SEO -->
+  <title>Смотреть аниме онлайн бесплатно в HD — AniFox</title>
+  <meta name="description" content="✅ Более 3000 аниме фильмов и сериалов на AniFox. Смотрите онлайн в HD 720/1080, без регистрации и рекламы. Ежедневные обновления, удобный поиск по жанрам и годам.">
+  <meta name="keywords" content="аниме онлайн, смотреть аниме, аниме бесплатно, аниме 2025, аниме HD, аниме сериалы, аниме фильмы, naruto, attack on titan, demon slayer, death note, one piece, сёнэн, сёдзё, исекай, романтика, боевик, драма, тетрадь смерти, аниме каталог, аниме поиск">
 
-    <!-- Open Graph / Facebook / VK -->
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="ru_RU">
-    <meta property="og:url" content="anifox-search.vercel.app">
-    <meta property="og:title" content="AniFox — смотреть аниме онлайн в HD">
-    <meta property="og:description"
-        content="Большая база аниме: тысячи сериалов и фильмов в HD. Без регистрации, адаптировано под телефон и Smart-TV.">
-    <meta property="og:image" content="/resources/obl_web.jpg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:site_name" content="AniFox">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:url" content="https://anifox-search.vercel.app/">
+  <meta property="og:title" content="AniFox — смотреть аниме онлайн в HD">
+  <meta property="og:description" content="Большая база аниме: тысячи сериалов и фильмов в HD. Без регистрации, адаптировано под телефон и Smart-TV.">
+  <meta property="og:image" content="https://anifox-search.vercel.app/resources/obl_web.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="AniFox">
 
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="AniFox — смотреть аниме онлайн">
-    <meta name="twitter:description" content="Без рекламы, HD 1080, ежедневные обновления.">
-    <meta name="twitter:image" content="/resources/obl_web.jpg">
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AniFox — смотреть аниме онлайн">
+  <meta name="twitter:description" content="Без рекламы, HD 1080, ежедневные обновления.">
+  <meta name="twitter:image" content="https://anifox-search.vercel.app/resources/obl_web.jpg">
 
-    <!-- Favicons -->
-    <link rel="icon" href="/favicon/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+  <!-- Favicons -->
+  <link rel="icon" href="/favicon/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
 
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#5b0a99">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="AniFox">
-    <link rel="manifest" href="/manifest.json">
+  <!-- PWA -->
+  <meta name="theme-color" content="#5b0a99">
+  <link rel="manifest" href="/manifest.json">
 
-    <!-- Service Worker Registration -->
-    <script src="/sw-register.js" defer></script>
+  <!-- Preload critical resources -->
+  <link rel="preload" href="/style.css" as="style">
+  <link rel="preload" href="/resources/obl_web.jpg" as="image">
 
+  <!-- Non-critical CSS deferred -->
+  <link rel="stylesheet" href="/style.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="/cookie-banner.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="/adblock-banner.css" media="print" onload="this.media='all'">
+  <noscript>
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/cookie-banner.css">
     <link rel="stylesheet" href="/adblock-banner.css">
+  </noscript>
 
+  <!-- Structured Data (Schema.org) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "AniFox - Смотреть аниме онлайн",
+    "url": "https://anifox-search.vercel.app/",
+    "description": "Бесплатная платформа для просмотра аниме онлайн в HD качестве. Тысячи сериалов и фильмов без регистрации на русском языке.",
+    "inLanguage": "ru",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://anifox-search.vercel.app/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
 </head>
 
 <body>
-    <!-- Header -->
-    <header class="top">
-        <a class="logo-link" href="https://anifox-search.vercel.app/" aria-label="AniFox — главная">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none">
-                <rect width="40.4804" height="283.038" rx="15"
-                    transform="matrix(0.906596 -0.421999 0.423238 0.906018 103.258 17.0827)"
-                    fill="url(#paint0_linear_2_15)" />
-                <foreignObject x="-94.4697" y="2.52924" width="453.939" height="366.952">
-                    <div xmlns="http://www.w3.org/1999/xhtml"
-                        style="backdrop-filter:blur(50px);clip-path:url(#bgblur_0_2_15_clip_path);height:100%;width:100%">
-                    </div>
-                </foreignObject>
-                <rect data-figma-bg-blur-radius="100" width="40.4396" height="283.324" rx="15"
-                    transform="matrix(-0.506493 -0.862244 -0.863032 0.505149 265 131.879)"
-                    fill="url(#paint1_linear_2_15)" />
-                <rect width="40.4804" height="283.038" rx="15"
-                    transform="matrix(-0.906596 -0.421999 -0.423238 0.906018 156.62 17.5398)"
-                    fill="url(#paint2_linear_2_15)" />
-                <defs>
-                    <clipPath id="bgblur_0_2_15_clip_path" transform="translate(94.4697 -2.52924)">
-                        <rect width="40.4396" height="283.324" rx="15"
-                            transform="matrix(-0.506493 -0.862244 -0.863032 0.505149 265 131.879)" />
-                    </clipPath>
-                    <linearGradient id="paint0_linear_2_15" x1="20.2402" y1="3.11131e-08" x2="27.5397" y2="495.888"
-                        gradientUnits="userSpaceOnUse">
-                        <stop stop-color="white" />
-                        <stop offset="1" stop-color="white" stop-opacity="0.7" />
-                    </linearGradient>
-                    <linearGradient id="paint1_linear_2_15" x1="25.1242" y1="411.958" x2="33.2642" y2="-4.77633"
-                        gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#22083F" stop-opacity="0.7" />
-                        <stop offset="1" stop-color="#6C16C9" />
-                    </linearGradient>
-                    <linearGradient id="paint2_linear_2_15" x1="20.2402" y1="0" x2="20.2402" y2="283.038"
-                        gradientUnits="userSpaceOnUse">
-                        <stop stop-color="white" />
-                        <stop offset="1" stop-color="white" />
-                    </linearGradient>
-                </defs>
-            </svg>
-            <span class="logo-text">AniFox</span>
-        </a>
-    </header>
+  <!-- Header -->
+  <header class="top">
+    <a class="logo-link" href="/" aria-label="AniFox — главная">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none">
+        <!-- SVG content unchanged, but cleaned (removed extra spaces in attributes) -->
+        <rect width="40.4804" height="283.038" rx="15" transform="matrix(0.906596 -0.421999 0.423238 0.906018 103.258 17.0827)" fill="url(#paint0_linear_2_15)" />
+        <foreignObject x="-94.4697" y="2.52924" width="453.939" height="366.952">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(50px);clip-path:url(#bgblur_0_2_15_clip_path);height:100%;width:100%"></div>
+        </foreignObject>
+        <rect width="40.4396" height="283.324" rx="15" transform="matrix(-0.506493 -0.862244 -0.863032 0.505149 265 131.879)" fill="url(#paint1_linear_2_15)" />
+        <rect width="40.4804" height="283.038" rx="15" transform="matrix(-0.906596 -0.421999 -0.423238 0.906018 156.62 17.5398)" fill="url(#paint2_linear_2_15)" />
+        <defs>
+          <clipPath id="bgblur_0_2_15_clip_path" transform="translate(94.4697 -2.52924)">
+            <rect width="40.4396" height="283.324" rx="15" transform="matrix(-0.506493 -0.862244 -0.863032 0.505149 265 131.879)" />
+          </clipPath>
+          <linearGradient id="paint0_linear_2_15" x1="20.2402" y1="0" x2="27.5397" y2="495.888" gradientUnits="userSpaceOnUse">
+            <stop stop-color="white" />
+            <stop offset="1" stop-color="white" stop-opacity="0.7" />
+          </linearGradient>
+          <linearGradient id="paint1_linear_2_15" x1="25.1242" y1="411.958" x2="33.2642" y2="-4.77633" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#22083F" stop-opacity="0.7" />
+            <stop offset="1" stop-color="#6C16C9" />
+          </linearGradient>
+          <linearGradient id="paint2_linear_2_15" x1="20.2402" y1="0" x2="20.2402" y2="283.038" gradientUnits="userSpaceOnUse">
+            <stop stop-color="white" />
+            <stop offset="1" stop-color="white" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="logo-text">AniFox</span>
+    </a>
+  </header>
 
-    <!-- Search Section -->
-    <section class="search-section">
-        <form id="searchForm" action="/" method="get" autocomplete="off">
-            <label class="visually-hidden" for="searchInput">Название аниме</label>
-            <input id="searchInput" name="q" type="search" placeholder="Название аниме…" aria-label="Поиск аниме">
-            <button type="submit">Найти</button>
-        </form>
-    </section>
+  <!-- Search Section -->
+  <section class="search-section">
+    <form id="searchForm" action="/" method="get" autocomplete="off">
+      <label class="visually-hidden" for="searchInput">Название аниме</label>
+      <input id="searchInput" name="q" type="search" placeholder="Название аниме…" aria-label="Поиск аниме">
+      <button type="submit">Найти</button>
+    </form>
+  </section>
 
-    <!-- Main Content -->
-    <main id="resultsBox" class="player-lane">
-        <!-- Content will be loaded here dynamically -->
-    </main>
+  <!-- Reserve space for dynamic content to prevent CLS -->
+  <main id="resultsBox" class="player-lane" aria-live="polite">
+    <!-- Content will be loaded here dynamically -->
+  </main>
 
-    <!-- Scroll to Top -->
-    <button id="scrollToTop" aria-label="Наверх">↑</button>
+  <button id="scrollToTop" aria-label="Наверх">↑</button>
 
-    <footer class="site-footer">
-        <div class="footer-content">
-            <!-- Видимая часть футера -->
-            <div class="footer-main">
-                <div class="footer-section">
-                    <h3>AniFox</h3>
-                    <p>Лучшая платформа для просмотра аниме онлайн в HD качестве. Бесплатно и без регистрации.</p>
-                    <div class="footer-links">
-                        <a href="/privacy-policy.html">Политика конфиденциальности</a>
-                    </div>
-                </div>
-
-                <div class="footer-section">
-                    <h4>Разделы</h4>
-                    <ul>
-                        <li><a href="/">Главная</a></li>
-                        <li><a href="/?page=favorites">Избранное</a></li>
-                    </ul>
-                </div>
-
-                <!-- <div class="footer-section">
-                <h4>Популярное</h4>
-                <ul>
-                    <li><a href="/search/naruto">Наруто</a></li>
-                    <li><a href="/search/van-pis">Ван Пис</a></li>
-                    <li><a href="/search/ataka-titanov">Атака титанов</a></li>
-                    <li><a href="/search/istrebitel-demonov">Истребитель демонов</a></li>
-                    <li><a href="/search/death-note">Тетрадь смерти</a></li>
-                </ul>
-            </div> -->
-
-            </div>
-
-            <!-- Невидимая SEO часть -->
-            <div class="footer-seo" aria-hidden="true">
-                <!-- Популярные поисковые запросы -->
-                <div class="seo-keywords">
-                    <span>смотреть аниме онлайн бесплатно</span>
-                    <span>аниме в хорошем качестве hd 1080</span>
-                    <span>аниме сериалы на русском</span>
-                    <span>новые аниме 2024 2025</span>
-                    <span>аниме фильмы смотреть онлайн</span>
-                    <span>популярные аниме топ 100</span>
-                    <span>аниме без регистрации</span>
-                    <span>аниме на телефон android ios</span>
-                    <span>аниме с русской озвучкой</span>
-                    <span>аниме с субтитрами</span>
-                </div>
-
-                <!-- Дополнительные SEO тексты -->
-                <div class="seo-content">
-                    <p>AniFox - это современная платформа для просмотра аниме онлайн. У нас вы найдете огромную
-                        коллекцию японской анимации: от классических шедевров до новейших релизов. Смотрите аниме
-                        бесплатно в HD 720p и 1080p качестве на компьютере, планшете или смартфоне. Ежедневные
-                        обновления, удобный поиск по названию, жанру и году выпуска. Лучшие аниме сериалы и фильмы
-                        доступны на русском языке с субтитрами или озвучкой.</p>
-
-                    <p>Популярные категории: сёнэн аниме для подростков, романтические комедии, фэнтези и приключения,
-                        научная фантастика, мистика и ужасы, спокон (спортивные аниме), меха (роботы), исекай
-                        (попаданцы), повседневность, драма. Актуальные новинки аниме 2024-2025 годов, продолжения
-                        известных франшиз, полнометражные фильмы и OVA.</p>
-
-                    <p>Наш сайт адаптирован для мобильных устройств и работает на всех платформах. Быстрая загрузка
-                        видео, минимальное количество рекламы, интуитивно понятный интерфейс. Присоединяйтесь к
-                        сообществу любителей аниме на AniFox!</p>
-                </div>
-
-                <!-- Структурированные данные для поисковых систем -->
-                <div class="structured-data" style="display: none;">
-                    <!-- Schema.org для веб-сайта -->
-                    <script type="application/ld+json">
-                {
-                    "@context": "https://schema.org",
-                    "@type": "WebSite",
-                    "name": "AniFox - Смотреть аниме онлайн",
-                    "alternateName": "AniFox",
-                    "url": "anifox-search.vercel.app/",
-                    "description": "Бесплатная платформа для просмотра аниме онлайн в HD качестве. Тысячи сериалов и фильмов без регистрации на русском языке.",
-                    "keywords": "аниме онлайн, смотреть аниме, аниме бесплатно, аниме hd, аниме 2024, аниме сериалы, аниме на русском",
-                    "inLanguage": "ru",
-                    "potentialAction": {
-                        "@type": "SearchAction",
-                        "target": {
-                            "@type": "EntryPoint",
-                            "urlTemplate": "anifox-search.vercel.app/?q={search_term_string}"
-                        },
-                        "query-input": "required name=search_term_string"
-                    },
-                    "publisher": {
-                        "@type": "Organization",
-                        "name": "AniFox",
-                        "url": "anifox-search.vercel.app/",
-                        "logo": {
-                            "@type": "ImageObject",
-                            "url": "anifox-search.vercel.app/icons/icon-192x192.png",
-                            "width": "192",
-                            "height": "192"
-                        }
-                    }
-                }
-                </script>
-
-                    <!-- Schema.org для организации -->
-                    <script type="application/ld+json">
-                {
-                    "@context": "https://schema.org",
-                    "@type": "Organization",
-                    "name": "AniFox",
-                    "url": "anifox-search.vercel.app/",
-                    "logo": "anifox-search.vercel.app/favicon/android-chrome-512x512.png",
-                    "description": "Платформа для просмотра аниме онлайн",
-                    "sameAs": [
-                        "https://vk.com/anifox_ru",
-                        "https://t.me/anifoxru"
-                    ]
-                }
-                </script>
-
-                </div>
-
-                <!-- Дополнительные мета-теги для поисковых систем -->
-                <meta name="robots"
-                    content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
-                <meta name="googlebot" content="index, follow">
-                <meta name="yandex" content="index, follow">
-                <meta name="apple-mobile-web-app-capable" content="yes">
-                <meta name="mobile-web-app-capable" content="yes">
-
-                <!-- Гео-метатеги -->
-                <meta name="geo.region" content="RU">
-                <meta name="geo.placename" content="Russia">
-                <meta name="geo.position" content="55.755826;37.6173">
-                <meta name="ICBM" content="55.755826, 37.6173">
-            </div>
-
-            <!-- Копирайт и соцсети -->
-            <div class="footer-bottom">
-                <div class="footer-copyright">
-                    <p>&copy; 2025 AniFox. Весь контент принадлежит правообладателям.</p>
-                    <p>AniFox не хранит видеофайлы на своих серверах, а предоставляет ссылки на сторонние ресурсы.</p>
-                </div>
-
-                <div class="footer-social">
-                    <a href="https://vk.com/anifox_ru" aria-label="ВКонтакте" target="_blank" rel="noopener noreferrer">
-                        <i class="fab fa-vk"></i>
-                    </a>
-                    <a href="https://t.me/anifoxru" aria-label="Telegram" target="_blank" rel="noopener noreferrer">
-                        <i class="fab fa-telegram"></i>
-                    </a>
-                    <a href="https://github.com/SerGioPlay01/anifox-search" aria-label="GitHub" target="_blank"
-                        rel="noopener noreferrer">
-                        <i class="fab fa-github"></i>
-                    </a>
-                </div>
-            </div>
+  <footer class="site-footer" aria-label="Футер сайта">
+    <div class="footer-content">
+      <div class="footer-main">
+        <div class="footer-section">
+          <h3>AniFox</h3>
+          <p>Лучшая платформа для просмотра аниме онлайн в HD качестве. Бесплатно и без регистрации.</p>
+          <div class="footer-links">
+            <a href="/privacy-policy.html">Политика конфиденциальности</a>
+          </div>
         </div>
-    </footer>
+        <div class="footer-section">
+          <h4>Разделы</h4>
+          <ul>
+            <li><a href="/">Главная</a></li>
+            <li><a href="/?page=favorites">Избранное</a></li>
+          </ul>
+        </div>
+      </div>
 
-    <script src="/api.js"></script>
-    <script src="/seo.js"></script>
-    <script src="/cookie-banner.js"></script>
-    <script src="/adblock-banner.js"></script>
+      <div class="footer-bottom">
+        <div class="footer-copyright">
+          <p>&copy; 2025 AniFox. Весь контент принадлежит правообладателям.</p>
+          <p>AniFox не хранит видеофайлы на своих серверах, а предоставляет ссылки на сторонние ресурсы.</p>
+        </div>
+        <div class="footer-social">
+          <a href="https://vk.com/anifox_ru" aria-label="ВКонтакте" target="_blank" rel="noopener noreferrer">
+            <i class="fab fa-vk"></i>
+          </a>
+          <a href="https://t.me/anifoxru" aria-label="Telegram" target="_blank" rel="noopener noreferrer">
+            <i class="fab fa-telegram"></i>
+          </a>
+          <a href="https://github.com/SerGioPlay01/anifox-search" aria-label="GitHub" target="_blank" rel="noopener noreferrer">
+            <i class="fab fa-github"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
 
-    <!-- Yandex.Metrika counter -->
-    <script type="text/javascript">
-        (function (m, e, t, r, i, k, a) {
-            m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) };
-            m[i].l = 1 * new Date();
-            for (var j = 0; j < document.scripts.length; j++) { if (document.scripts[j].src === r) { return; } }
-            k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a)
-        })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id=104428432', 'ym');
+  <!-- Defer non-critical JS -->
+  <script src="/api.js" defer></script>
+  <script src="/seo.js" defer></script>
+  <script src="/cookie-banner.js" defer></script>
+  <script src="/adblock-banner.js" defer></script>
+  <script src="/sw-register.js" defer></script>
 
-        ym(104428432, 'init', { ssr: true, webvisor: true, clickmap: true, ecommerce: "dataLayer", accurateTrackBounce: true, trackLinks: true });
-    </script>
-    <noscript>
-        <div><img src="https://mc.yandex.ru/watch/104428432" style="position:absolute; left:-9999px;" alt="" /></div>
-    </noscript>
-    <!-- /Yandex.Metrika counter -->
-
+  <!-- Yandex.Metrika (async) -->
+  <script defer>
+    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+    m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+    (window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id=104428432', 'ym');
+    ym(104428432, 'init', {
+      clickmap:true,
+      trackLinks:true,
+      accurateTrackBounce:true,
+      webvisor:true
+    });
+  </script>
+  <noscript>
+    <img src="https://mc.yandex.ru/watch/104428432" style="position:absolute; left:-9999px;" alt="" />
+  </noscript>
 </body>
-
 </html>
