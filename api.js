@@ -27,7 +27,7 @@ function loadFontAwesome() {
         
         const faLink = document.createElement('link');
         faLink.rel = 'stylesheet';
-        faLink.href = 'font_icon/all.min.css';
+        faLink.href = 'font_icon/all.css';
         faLink.setAttribute('data-font-awesome', 'true');
         
         faLink.onload = () => resolve();
@@ -41,7 +41,7 @@ function loadFontAwesomeFallback() {
     return new Promise((resolve, reject) => {
         const fallbackLink = document.createElement('link');
         fallbackLink.rel = 'stylesheet';
-        fallbackLink.href = './font_icon/all.min.css';
+        fallbackLink.href = './font_icon/all.css';
         fallbackLink.setAttribute('data-font-awesome', 'true');
         
         fallbackLink.onload = () => resolve();
