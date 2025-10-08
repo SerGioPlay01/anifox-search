@@ -1,6 +1,6 @@
 /* =========================================================
-   AniFox 2.3 (optimized)
-   Улучшения: оптимизация производительности + очистка кэша + улучшенное управление ресурсами
+   AniFox 2.4 (optimized)
+   Улучшения: прогрессивная загрузка + оптимизация производительности + подготовка к деплою
    ========================================================= */
 
 /* ---------- CONFIG ---------- */
@@ -8,21 +8,21 @@ const TOKEN = "a036c8a4c59b43e72e212e4d0388ef7d";
 const BASE = "https://kodikapi.com/search";
 const TTL = 10 * 60 * 1000; // 10-мин кэш
 const SHIKIMORI_API_BASE = "https://shikimori.one/api";
-const CACHE_VERSION = '2.3';
+const CACHE_VERSION = '2.4';
+
+/* ---------- GLOBAL STATE ---------- */
+let progressiveLoadingEnabled = true;
+let currentLoadingOperations = new Set();
 
 /* ---------- FONT AWESOME FIX ---------- */
-// Надежная загрузка Font Awesome
 function loadFontAwesome() {
     return new Promise((resolve, reject) => {
-        // Проверяем, не загружен ли уже Font Awesome
         if (document.querySelector('link[href*="font-awesome"]') || 
             document.querySelector('style[data-font-awesome]')) {
-            console.log('✅ Font Awesome already loaded');
             resolve();
             return;
         }
         
-        // Создаем элемент link для Font Awesome
         const faLink = document.createElement('link');
         faLink.rel = 'stylesheet';
         faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
@@ -30,22 +30,13 @@ function loadFontAwesome() {
         faLink.crossOrigin = 'anonymous';
         faLink.setAttribute('data-font-awesome', 'true');
         
-        faLink.onload = () => {
-            console.log('✅ Font Awesome loaded successfully');
-            resolve();
-        };
-        
-        faLink.onerror = (error) => {
-            console.error('❌ Font Awesome loading failed:', error);
-            // Fallback: пробуем альтернативный CDN
-            loadFontAwesomeFallback().then(resolve).catch(reject);
-        };
+        faLink.onload = () => resolve();
+        faLink.onerror = () => loadFontAwesomeFallback().then(resolve).catch(reject);
         
         document.head.appendChild(faLink);
     });
 }
 
-// Fallback загрузка Font Awesome
 function loadFontAwesomeFallback() {
     return new Promise((resolve, reject) => {
         const fallbackLink = document.createElement('link');
@@ -53,33 +44,11 @@ function loadFontAwesomeFallback() {
         fallbackLink.href = 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css';
         fallbackLink.setAttribute('data-font-awesome', 'true');
         
-        fallbackLink.onload = () => {
-            console.log('✅ Font Awesome loaded from fallback CDN');
-            resolve();
-        };
-        
-        fallbackLink.onerror = (error) => {
-            console.error('❌ All Font Awesome CDNs failed');
-            reject(error);
-        };
+        fallbackLink.onload = () => resolve();
+        fallbackLink.onerror = reject;
         
         document.head.appendChild(fallbackLink);
     });
-}
-
-// Проверка доступности Font Awesome
-function checkFontAwesomeLoaded() {
-    const testElement = document.createElement('i');
-    testElement.className = 'fas fa-heart';
-    testElement.style.display = 'none';
-    document.body.appendChild(testElement);
-    
-    const style = window.getComputedStyle(testElement);
-    const fontFamily = style.fontFamily || '';
-    const isLoaded = fontFamily.includes('Font Awesome');
-    
-    testElement.remove();
-    return isLoaded;
 }
 
 /* ---------- CACHE MANAGEMENT ---------- */
@@ -89,9 +58,7 @@ class CacheManager {
         this.scripts = new Set();
     }
 
-    // Очистка старых стилей и скриптов
     clearOldAssets() {
-        // Очистка старых стилей (кроме Font Awesome)
         document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
             if (link.href && !this.styleSheets.has(link.href) && 
                 link.getAttribute('data-dynamic') && 
@@ -100,24 +67,21 @@ class CacheManager {
             }
         });
 
-        // Очистка старых скриптов
         document.querySelectorAll('script[src]').forEach(script => {
             if (script.src && !this.scripts.has(script.src) && script.getAttribute('data-dynamic')) {
                 script.remove();
             }
         });
 
-        // Очистка динамически созданных элементов
         document.querySelectorAll('[data-dynamic]').forEach(el => {
             if (!el.isConnected) return;
             const timestamp = parseInt(el.getAttribute('data-timestamp') || '0');
-            if (Date.now() - timestamp > 300000) { // 5 минут
+            if (Date.now() - timestamp > 300000) {
                 el.remove();
             }
         });
     }
 
-    // Добавление стиля с контролем версий
     addStyle(href) {
         if (this.styleSheets.has(href)) return;
         
@@ -130,7 +94,6 @@ class CacheManager {
         this.styleSheets.add(href);
     }
 
-    // Добавление скрипта с контролем версий
     addScript(src, options = {}) {
         if (this.scripts.has(src)) return Promise.resolve();
 
@@ -151,9 +114,8 @@ class CacheManager {
         });
     }
 
-    // Периодическая очистка
     startCleanupInterval() {
-        setInterval(() => this.clearOldAssets(), 60000); // Каждую минуту
+        setInterval(() => this.clearOldAssets(), 60000);
     }
 }
 
@@ -216,7 +178,6 @@ async function initDB() {
     });
 }
 
-// Очистка старого кэша
 async function clearOldCacheData() {
     try {
         const db = await initDB();
@@ -252,14 +213,11 @@ async function clearOldCacheData() {
             
             await promisifyTX(tx);
         }
-        
-        console.log('✅ Old cache data cleared');
     } catch (error) {
         console.warn('Cache cleanup error:', error);
     }
 }
 
-// Оптимизированные функции работы с IndexedDB
 const dbOperations = {
     async add(s, data) {
         try {
@@ -310,10 +268,7 @@ const dbOperations = {
             const store = index ? tx.objectStore(s).index(index) : tx.objectStore(s);
             return new Promise((resolve, reject) => {
                 const request = store.getAll();
-                request.onsuccess = () => {
-                    const result = request.result || [];
-                    resolve(result);
-                };
+                request.onsuccess = () => resolve(request.result || []);
                 request.onerror = () => reject(request.error);
             });
         } catch (error) {
@@ -359,10 +314,7 @@ const dbClear = dbOperations.clear;
 function promisifyTX(tx) {
     return new Promise((res, rej) => {
         tx.oncomplete = () => res();
-        tx.onerror = (e) => {
-            console.error("Transaction error:", e);
-            rej(tx.error);
-        };
+        tx.onerror = () => rej(tx.error);
     });
 }
 
@@ -434,6 +386,61 @@ async function optimizedFetch(url, options = {}) {
     }
 }
 
+/* ---------- PROGRESSIVE LOADING UTILS ---------- */
+function shouldUseProgressiveLoading(itemCount) {
+    return progressiveLoadingEnabled && itemCount > 5;
+}
+
+function createLoadingIndicator() {
+    return `<div class="loading-indicator" id="loadingIndicator">
+        <div class="preloader-spinner small"></div>
+        <p>Загрузка...</p>
+    </div>`;
+}
+
+function removeLoadingIndicator() {
+    const indicator = document.getElementById('loadingIndicator');
+    if (indicator) indicator.remove();
+}
+
+async function safeCreateAnimeCard(item) {
+    try {
+        return await createAnimeCard(item);
+    } catch (error) {
+        console.error('Error creating anime card:', error);
+        return createFallbackCard(item);
+    }
+}
+
+function createFallbackCard(item) {
+    return `
+    <div class="card fade-in">
+        <div class="card-header">
+            <h3 class="h2_name">${escapeHtml(item.title)}</h3>
+            <div class="info-links">
+                <a href="https://shikimori.one/animes?search=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
+                <a href="https://anilist.co/search/anime?search=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
+                <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
+            </div>
+        </div>
+        <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${escapeHtml(item.title)}"></iframe>
+        <div class="card-actions">
+            <button class="action-btn favorite-btn" data-link="${item.link}" onclick="toggleFavorite('${escapeHtml(item.title).replace(/'/g, "\\'")}','${item.link}')" title="Удалить из избранного">
+                <i class="fas fa-heart"></i>
+            </button>
+        </div>
+    </div>`;
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 /* ---------- FETCH ---------- */
 async function fetchKodik(url, attempt = 1) {
     const ctrl = new AbortController(),
@@ -467,68 +474,49 @@ async function fetchShikimoriInfo(title, attempt = 1) {
     const timeout = setTimeout(() => ctrl.abort(), 8000);
 
     try {
-        const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(
-            title
-        )}&limit=1`;
-
+        const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(title)}&limit=1`;
         const response = await fetch(searchUrl, {
             signal: ctrl.signal,
             headers: {
-                "User-Agent": "AniFox/2.3 (https://anifox-search.vercel.app)",
+                "User-Agent": "AniFox/2.4 (https://anifox-search.vercel.app)",
                 Accept: "application/json",
             },
         });
 
         clearTimeout(timeout);
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
-
-        if (!data || data.length === 0) {
-            return getFallbackShikimoriData(title);
-        }
+        if (!data || data.length === 0) return getFallbackShikimoriData(title);
 
         const anime = data[0];
-
         let detailedInfo = null;
+        
         try {
             const detailUrl = `${SHIKIMORI_API_BASE}/animes/${anime.id}`;
             const detailResponse = await fetch(detailUrl, {
                 signal: ctrl.signal,
                 headers: {
-                    "User-Agent": "AniFox/2.3 (https://anifox-search.vercel.app)",
+                    "User-Agent": "AniFox/2.4 (https://anifox-search.vercel.app)",
                     Accept: "application/json",
                 },
             });
 
-            if (detailResponse.ok) {
-                detailedInfo = await detailResponse.json();
-            }
+            if (detailResponse.ok) detailedInfo = await detailResponse.json();
         } catch (detailError) {
             console.warn("Не удалось получить детальную информацию:", detailError);
         }
 
         const finalInfo = detailedInfo || anime;
-
         const result = {
-            description:
-                finalInfo.description ||
-                `«${finalInfo.russian || finalInfo.name}» - аниме. ${
-                    finalInfo.english || ""
-                }`,
+            description: finalInfo.description || `«${finalInfo.russian || finalInfo.name}» - аниме. ${finalInfo.english || ""}`,
             rating: finalInfo.score ? finalInfo.score.toFixed(1) : null,
             duration: getDurationFromShikimori(finalInfo),
             status: getStatusFromShikimori(finalInfo.status),
             studios: finalInfo.studios ? finalInfo.studios.map((s) => s.name) : [],
-            genres: finalInfo.genres
-                ? finalInfo.genres.map((g) => g.russian || g.name)
-                : [],
-            poster_url: finalInfo.image
-                ? `https://shikimori.one${finalInfo.image.original}`
-                : null,
+            genres: finalInfo.genres ? finalInfo.genres.map((g) => g.russian || g.name) : [],
+            poster_url: finalInfo.image ? `https://shikimori.one${finalInfo.image.original}` : null,
             shikimoriId: finalInfo.id,
             shikimoriUrl: `https://shikimori.one${finalInfo.url}`,
         };
@@ -548,9 +536,7 @@ async function fetchShikimoriInfo(title, attempt = 1) {
         clearTimeout(timeout);
         console.warn("Shikimori request failed:", e);
 
-        if (attempt >= 2) {
-            return getFallbackShikimoriData(title);
-        }
+        if (attempt >= 2) return getFallbackShikimoriData(title);
 
         await new Promise((r) => setTimeout(r, attempt * 1000));
         return fetchShikimoriInfo(title, attempt + 1);
@@ -559,11 +545,9 @@ async function fetchShikimoriInfo(title, attempt = 1) {
 
 function getDurationFromShikimori(anime) {
     if (!anime.duration) return null;
-
     const duration = anime.duration;
     if (duration < 10) return `${duration} мин.`;
     if (duration < 60) return `${duration} мин.`;
-
     const hours = Math.floor(duration / 60);
     const minutes = duration % 60;
     return minutes > 0 ? `${hours} ч. ${minutes} мин.` : `${hours} ч.`;
@@ -581,26 +565,15 @@ function getStatusFromShikimori(status) {
 
 function getFallbackShikimoriData(title) {
     const titleLower = title.toLowerCase();
-
     let genres = ["аниме"];
-    if (titleLower.includes("приключ") || titleLower.includes("adventure"))
-        genres.push("приключения");
-    if (titleLower.includes("фэнтези") || titleLower.includes("fantasy"))
-        genres.push("фэнтези");
-    if (
-        titleLower.includes("роман") ||
-        titleLower.includes("love") ||
-        titleLower.includes("romance")
-    )
-        genres.push("романтика");
-    if (titleLower.includes("комеди") || titleLower.includes("comedy"))
-        genres.push("комедия");
-    if (titleLower.includes("драм") || titleLower.includes("drama"))
-        genres.push("драма");
-    if (titleLower.includes("экшен") || titleLower.includes("action"))
-        genres.push("экшен");
-    if (titleLower.includes("школ") || titleLower.includes("school"))
-        genres.push("школа");
+    
+    if (titleLower.includes("приключ") || titleLower.includes("adventure")) genres.push("приключения");
+    if (titleLower.includes("фэнтези") || titleLower.includes("fantasy")) genres.push("фэнтези");
+    if (titleLower.includes("роман") || titleLower.includes("love") || titleLower.includes("romance")) genres.push("романтика");
+    if (titleLower.includes("комеди") || titleLower.includes("comedy")) genres.push("комедия");
+    if (titleLower.includes("драм") || titleLower.includes("drama")) genres.push("драма");
+    if (titleLower.includes("экшен") || titleLower.includes("action")) genres.push("экшен");
+    if (titleLower.includes("школ") || titleLower.includes("school")) genres.push("школа");
 
     return {
         description: `«${title}» - аниме. Подробное описание временно недоступно.`,
@@ -619,9 +592,7 @@ async function getAnimeExtendedInfo(item) {
 
     try {
         const cached = await dbGet(STORE_ANIME_INFO, cacheKey);
-        if (cached && Date.now() - cached.t < TTL) {
-            return cached.data;
-        }
+        if (cached && Date.now() - cached.t < TTL) return cached.data;
     } catch (e) {}
 
     const result = {
@@ -643,54 +614,27 @@ async function getAnimeExtendedInfo(item) {
         result.studios = md.studios || [];
     }
 
-    const needsMoreData =
-        !result.description ||
-        result.description === "Описание отсутствует." ||
-        result.description.length < 50 ||
-        !result.rating ||
-        !result.studios.length;
+    const needsMoreData = !result.description || result.description === "Описание отсутствует." || result.description.length < 50 || !result.rating || !result.studios.length;
 
     if (needsMoreData) {
         try {
             const shikimoriData = await fetchShikimoriInfo(item.title);
             if (shikimoriData) {
                 result.shikimoriData = shikimoriData;
-
-                if (!result.description || result.description.length < 50) {
-                    result.description = shikimoriData.description;
-                }
-                if (!result.rating) {
-                    result.rating = shikimoriData.rating;
-                }
-                if (!result.duration) {
-                    result.duration = shikimoriData.duration;
-                }
-                if (!result.status) {
-                    result.status = shikimoriData.status;
-                }
-                if (!result.studios.length) {
-                    result.studios = shikimoriData.studios || [];
-                }
-                if (
-                    shikimoriData.genres &&
-                    (!item.genres || item.genres.length === 0)
-                ) {
-                    item.genres = shikimoriData.genres;
-                }
+                if (!result.description || result.description.length < 50) result.description = shikimoriData.description;
+                if (!result.rating) result.rating = shikimoriData.rating;
+                if (!result.duration) result.duration = shikimoriData.duration;
+                if (!result.status) result.status = shikimoriData.status;
+                if (!result.studios.length) result.studios = shikimoriData.studios || [];
+                if (shikimoriData.genres && (!item.genres || item.genres.length === 0)) item.genres = shikimoriData.genres;
             }
         } catch (e) {
             console.warn("Failed to fetch Shikimori data:", e);
         }
     }
 
-    if (
-        (!item.screenshots || item.screenshots.length < 3) &&
-        (!item.material_data?.screenshots ||
-            item.material_data.screenshots.length < 3)
-    ) {
-        result.additionalScreenshots = generateRelevantScreenshots(
-            item.genres || []
-        );
+    if ((!item.screenshots || item.screenshots.length < 3) && (!item.material_data?.screenshots || item.material_data.screenshots.length < 3)) {
+        result.additionalScreenshots = generateRelevantScreenshots(item.genres || []);
     }
 
     try {
@@ -718,9 +662,7 @@ function generateRelevantScreenshots(genres) {
 
     let screenshots = [];
     genres.forEach((genre) => {
-        if (genreScreenshots[genre]) {
-            screenshots = [...screenshots, ...genreScreenshots[genre]];
-        }
+        if (genreScreenshots[genre]) screenshots = [...screenshots, ...genreScreenshots[genre]];
     });
 
     return [...new Set(screenshots)].slice(0, 3);
@@ -903,13 +845,13 @@ function updateSEOMeta(apiData) {
 
 /* ---------- CARD ---------- */
 async function createAnimeCard(item) {
-    const t   = item.title;
+    const t = item.title;
     const favs = await getFavorites();
     const isFav = favs.some(f => f.link === item.link);
 
     const hasInfoData = checkSimpleInfoData(item);
-    const hasShareData = !!(item.link && t);          // ← минимально нужное для шаринга
-    const hasFavData   = !!(item.link && t);          // ← минимально нужное для избранного
+    const hasShareData = !!(item.link && t);
+    const hasFavData = !!(item.link && t);
 
     return `
     <div class="card fade-in">
@@ -1190,30 +1132,24 @@ window.showAnimeInfo = async (itemRaw) => {
     }
 };
 
-// Новая функция для обработки клика с улучшенной интерактивностью
 window.handleFavoriteClick = async (title, link) => {
     const btn = document.getElementById('favorite-btn');
     if (!btn) return;
 
-    // Сохраняем исходное состояние
     const originalText = btn.querySelector('.btn-text').textContent;
     const originalIcon = btn.querySelector('i').className;
     const isCurrentlyFavorite = btn.getAttribute('data-is-favorite') === 'true';
 
-    // Блокируем кнопку и показываем индикатор загрузки
     btn.disabled = true;
     btn.querySelector('.btn-text').style.display = 'none';
     btn.querySelector('.btn-loading').style.display = 'inline';
 
     try {
-        // Вызываем оригинальную функцию
         await toggleFavorite(title, link);
         
-        // Обновляем состояние кнопки после успешного выполнения
         const newFavState = !isCurrentlyFavorite;
         btn.setAttribute('data-is-favorite', newFavState);
         
-        // Обновляем внешний вид кнопки
         if (newFavState) {
             btn.classList.remove('primary');
             btn.classList.add('secondary');
@@ -1226,7 +1162,6 @@ window.handleFavoriteClick = async (title, link) => {
             btn.querySelector('.btn-text').textContent = 'Добавить в избранное';
         }
 
-        // Добавляем анимацию подтверждения
         btn.style.transform = 'scale(1.05)';
         setTimeout(() => {
             btn.style.transform = 'scale(1)';
@@ -1234,15 +1169,10 @@ window.handleFavoriteClick = async (title, link) => {
 
     } catch (error) {
         console.error('Error toggling favorite:', error);
-        
-        // В случае ошибки возвращаем исходное состояние
         btn.querySelector('.btn-text').textContent = originalText;
         btn.querySelector('i').className = originalIcon;
-        
-        // Показываем сообщение об ошибке
         alert('Произошла ошибка при изменении избранного. Попробуйте еще раз.');
     } finally {
-        // Восстанавливаем кнопку в любом случае
         btn.disabled = false;
         btn.querySelector('.btn-text').style.display = 'inline';
         btn.querySelector('.btn-loading').style.display = 'none';
@@ -1380,7 +1310,7 @@ window.clearSearchHistory = async () => {
     }
 };
 
-/* ---------- RENDER ---------- */
+/* ---------- PROGRESSIVE RENDERING ---------- */
 async function renderFavoritesPage() {
     const box = $("resultsBox");
     if (!box) return;
@@ -1412,65 +1342,13 @@ async function renderFavoritesPage() {
                     </span>
                 </div>
             </div>
-            <div class="results-grid">`;
+            <div class="results-grid" id="favoritesGrid">`;
 
-        for (const fav of list) {
-            try {
-                let fullItemData = null;
-
-                const searchQueries = await dbGetAll(STORE_SEARCH_RESULTS);
-                for (const cachedQuery of searchQueries) {
-                    if (cachedQuery.data && cachedQuery.data.results) {
-                        const found = cachedQuery.data.results.find(
-                            (item) => item.link === fav.link || item.title === fav.title
-                        );
-                        if (found) {
-                            fullItemData = found;
-                            break;
-                        }
-                    }
-                }
-
-                if (!fullItemData) {
-                    fullItemData = {
-                        title: fav.title,
-                        link: fav.link,
-                        year: fav.year || "—",
-                        type: fav.type || "—",
-                        quality: fav.quality || "—",
-                        genres: fav.genres || [],
-                        material_data: {
-                            poster_url: fav.poster_url || "/resources/obl_web.jpg",
-                            description: fav.description || "Описание отсутствует.",
-                        },
-                    };
-                }
-
-                const cardHtml = await createAnimeCard(fullItemData);
-                html += cardHtml;
-            } catch (cardError) {
-                console.error("Error creating card for favorite:", fav.title, cardError);
-                const fallbackCard = `
-                <div class="card fade-in">
-                    <div class="card-header">
-                        <h3 class="h2_name">${fav.title}</h3>
-                        <div class="info-links">
-                            <a href="https://shikimori.one/animes?search=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
-                            <a href="https://anilist.co/search/anime?search=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
-                            <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
-                        </div>
-                    </div>
-                    <iframe class="single-player" src="${fav.link}" allowfullscreen loading="lazy" title="Плеер: ${fav.title}"></iframe>
-                    <div class="card-actions">
-                        <button class="action-btn favorite-btn" data-link="${fav.link}" onclick="toggleFavorite('${fav.title.replace(/'/g, "\\'")}','${fav.link}')" title="Удалить из избранного">
-                            <i class="fas fa-heart"></i>
-                        </button>
-                    </div>
-                </div>`;
-                html += fallbackCard;
-            }
-        }
-
+        // Рендерим первые 5 карточек сразу
+        const initialBatch = list.slice(0, 5);
+        const initialCards = await Promise.all(initialBatch.map(safeCreateAnimeCard));
+        html += initialCards.join('');
+        
         html += `</div>
             <div class="favorites-actions">
                 <button onclick="clearFavorites()" class="clear-history-btn">
@@ -1483,6 +1361,13 @@ async function renderFavoritesPage() {
         </section>`;
 
         box.innerHTML = html;
+
+        // Прогрессивная загрузка оставшихся карточек
+        if (shouldUseProgressiveLoading(list.length)) {
+            const remainingItems = list.slice(5);
+            setTimeout(() => loadRemainingFavorites(remainingItems), 100);
+        }
+
     } catch (e) {
         console.error("Error rendering favorites:", e);
         box.innerHTML = `<div class="no-results fade-in">
@@ -1492,6 +1377,60 @@ async function renderFavoritesPage() {
             <p style="color:var(--gray);font-size:.9rem">${e.message}</p>
         </div>`;
     }
+}
+
+window.loadRemainingFavorites = async function(items) {
+    const operationId = 'favorites_' + Date.now();
+    currentLoadingOperations.add(operationId);
+    
+    const grid = $("#favoritesGrid");
+    if (!grid) {
+        currentLoadingOperations.delete(operationId);
+        return;
+    }
+
+    const BATCH_SIZE = 3;
+    let loadedCount = 0;
+
+    // Добавляем индикатор загрузки
+    grid.insertAdjacentHTML('afterend', createLoadingIndicator());
+
+    async function loadNextBatch() {
+        if (!currentLoadingOperations.has(operationId)) return;
+
+        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        
+        try {
+            const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
+            
+            batchCards.forEach((card, index) => {
+                setTimeout(() => {
+                    if (currentLoadingOperations.has(operationId)) {
+                        grid.insertAdjacentHTML('beforeend', card);
+                    }
+                }, index * 50);
+            });
+
+            loadedCount += batch.length;
+
+            if (loadedCount < items.length && currentLoadingOperations.has(operationId)) {
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(loadNextBatch);
+                } else {
+                    setTimeout(loadNextBatch, 200);
+                }
+            } else {
+                removeLoadingIndicator();
+                currentLoadingOperations.delete(operationId);
+            }
+        } catch (error) {
+            console.error('Error loading favorites batch:', error);
+            removeLoadingIndicator();
+            currentLoadingOperations.delete(operationId);
+        }
+    }
+
+    loadNextBatch();
 }
 
 window.clearFavorites = async () => {
@@ -1515,98 +1454,348 @@ window.clearFavorites = async () => {
 async function renderWeekly() {
     const box = $("resultsBox");
     if (!box) return;
+    
     box.innerHTML = '<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка новинок...</p></div>';
-    const hasHist = await (async () => {
-        try {
-            const hist = await dbGetAll(STORE_SEARCH_HISTORY, "timestamp");
-            const list = hist.sort((a, b) => b.t - a.t).slice(0, 10);
-            if (!list.length) return false;
-            let h = `<section class="history-section"><h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2><div class="search-history-buttons">`;
-            list.forEach(
-                (i) =>
-                    (h += `<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g, "\\'")}')"><i class="fas fa-search"></i> ${i.query}<span class="remove-history" onclick="removeFromHistory(event,${i.id})"><i class="fas fa-times"></i></span></button>`)
-            );
-            h += `</div><div class="history-actions"><button onclick="clearSearchHistory()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить историю</button></div></section>`;
-            box.innerHTML = h;
-            return true;
-        } catch {
-            return false;
-        }
-    })();
+
+    // Загружаем историю и новинки параллельно
+    const [historyData, weeklyData] = await Promise.allSettled([
+        loadHistorySection(),
+        loadWeeklyData()
+    ]);
+
+    let finalHTML = '';
+    
+    if (historyData.status === 'fulfilled' && historyData.value) {
+        finalHTML += historyData.value;
+    }
+
+    if (weeklyData.status === 'fulfilled' && weeklyData.value) {
+        if (finalHTML) finalHTML += '<div class="content-separator"></div>';
+        finalHTML += weeklyData.value;
+    }
+
+    if (!finalHTML) {
+        finalHTML = `<div class="no-results fade-in">
+            <i class="fas fa-search fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
+            <h2>Добро пожаловать в AniFox!</h2>
+            <p>Начните с поиска аниме</p>
+            <ul>
+                <li><i class="fas fa-search"></i> Используйте поиск для нахождения аниме</li>
+                <li><i class="fas fa-history"></i> Просматривайте историю поиска</li>
+                <li><i class="fas fa-bolt"></i> Смотрите свежие обновления</li>
+                <li><i class="fas fa-heart"></i> Добавляйте аниме в избранное</li>
+            </ul>
+        </div>`;
+    }
+
+    box.innerHTML = finalHTML;
+}
+
+async function loadHistorySection() {
+    try {
+        const hist = await dbGetAll(STORE_SEARCH_HISTORY, "timestamp");
+        const list = hist.sort((a, b) => b.t - a.t).slice(0, 10);
+        if (!list.length) return '';
+
+        let html = `<section class="history-section">
+            <h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2>
+            <div class="search-history-buttons">`;
+        
+        list.forEach(i => {
+            html += `<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g, "\\'")}')">
+                <i class="fas fa-search"></i> ${escapeHtml(i.query)}
+                <span class="remove-history" onclick="removeFromHistory(event,${i.id})">
+                    <i class="fas fa-times"></i>
+                </span>
+            </button>`;
+        });
+        
+        html += `</div>
+            <div class="history-actions">
+                <button onclick="clearSearchHistory()" class="clear-history-btn">
+                    <i class="fas fa-trash"></i> Очистить историю
+                </button>
+            </div>
+        </section>`;
+        
+        return html;
+    } catch {
+        return '';
+    }
+}
+
+async function loadWeeklyData() {
     try {
         const data = await apiWeekly();
         updateSEOMeta(data);
+        
         const seen = new Set();
-        const list = (data.results || []).filter((i) => {
+        const list = (data.results || []).filter(i => {
             const k = i.title.trim().toLowerCase();
             if (seen.has(k)) return false;
             seen.add(k);
             return true;
         });
-        if (list.length) {
-            let html = (hasHist ? box.innerHTML : "") + `<section class="weekly-section"><h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2><div class="results-grid">`;
-            html += (await Promise.all(list.map(createAnimeCard))).join("");
-            html += `</div></section>`;
-            box.innerHTML = html;
-        } else if (!hasHist) {
-            box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-search fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Добро пожаловать в AniFox!</h2><p>Начните с поиска аниме</p><ul><li><i class="fas fa-search"></i> Используйте поиск для нахождения аниме</li><li><i class="fas fa-history"></i> Просматривайте историю поиска</li><li><i class="fas fa-bolt"></i> Смотрите свежие обновления</li><li><i class="fas fa-heart"></i> Добавляйте аниме в избранное</li></ul></div>`;
+
+        if (!list.length) return '';
+
+        let html = `<section class="weekly-section">
+            <h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2>
+            <div class="results-grid" id="weeklyGrid">`;
+        
+        // Рендерим первые 6 карточек сразу
+        const initialBatch = list.slice(0, 6);
+        const initialCards = await Promise.all(initialBatch.map(safeCreateAnimeCard));
+        html += initialCards.join('');
+        html += `</div>`;
+        
+        // Контейнер для оставшихся карточек
+        if (shouldUseProgressiveLoading(list.length)) {
+            html += `<div id="remainingWeeklyContainer"></div>`;
         }
+        
+        html += `</section>`;
+        
+        // Запускаем прогрессивную загрузку оставшихся карточек
+        if (shouldUseProgressiveLoading(list.length)) {
+            const remainingBatch = list.slice(6);
+            setTimeout(() => loadRemainingWeekly(remainingBatch), 300);
+        }
+        
+        return html;
     } catch (e) {
-        if (!hasHist)
-            box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки</h2><p>Попробуйте перезагрузить страницу</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
+        console.error("Weekly data loading error:", e);
+        return '';
     }
+}
+
+window.loadRemainingWeekly = async function(items) {
+    const operationId = 'weekly_' + Date.now();
+    currentLoadingOperations.add(operationId);
+    
+    const container = $("#remainingWeeklyContainer");
+    if (!container) {
+        currentLoadingOperations.delete(operationId);
+        return;
+    }
+
+    const BATCH_SIZE = 4;
+    let loadedCount = 0;
+
+    container.innerHTML = createLoadingIndicator();
+
+    async function loadNextBatch() {
+        if (!currentLoadingOperations.has(operationId)) return;
+
+        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        
+        try {
+            const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
+            
+            const grid = $("#weeklyGrid");
+            batchCards.forEach((card, index) => {
+                setTimeout(() => {
+                    if (currentLoadingOperations.has(operationId) && grid) {
+                        grid.insertAdjacentHTML('beforeend', card);
+                    }
+                }, index * 80);
+            });
+
+            loadedCount += batch.length;
+
+            if (loadedCount < items.length && currentLoadingOperations.has(operationId)) {
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(loadNextBatch);
+                } else {
+                    setTimeout(loadNextBatch, 150);
+                }
+            } else {
+                container.remove();
+                currentLoadingOperations.delete(operationId);
+            }
+        } catch (error) {
+            console.error('Error loading weekly batch:', error);
+            container.remove();
+            currentLoadingOperations.delete(operationId);
+        }
+    }
+
+    loadNextBatch();
 }
 
 async function search() {
     const input = $("searchInput"),
         q = input?.value.trim() || "",
         box = $("resultsBox");
+    
     if (!box) return;
+    
     if (!q) {
         renderWeekly();
         return;
     }
+
     box.innerHTML = '<div class="loading-container"><div class="loading"></div><p class="loading-text">Поиск аниме...</p></div>';
-    await addHistory(q);
+    
+    // Добавляем в историю без блокировки основного потока
+    addHistory(q).catch(console.error);
+
     try {
         const data = await apiSearch(q);
         const seen = new Set();
-        const results = (data.results || []).filter((i) => {
+        const results = (data.results || []).filter(i => {
             const k = i.title.trim().toLowerCase();
             if (seen.has(k)) return false;
             seen.add(k);
             return true;
         });
+
         if (!results.length) {
-            box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-search fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>По запросу «${q}» ничего не найдено</h2><p>Попробуйте изменить запрос:</p><ul><li><i class="fas fa-spell-check"></i> Проверить правильность написания</li><li><i class="fas fa-language"></i> Использовать английское название</li><li><i class="fas fa-filter"></i> Искать по жанру или году</li><li><i class="fas fa-simplify"></i> Упростить запрос</li></ul></div>`;
-            setTimeout(async () => {
-                try {
-                    const hist = await dbGetAll(STORE_SEARCH_HISTORY, "timestamp");
-                    const list = hist.sort((a, b) => b.t - a.t).slice(0, 10);
-                    if (list.length) {
-                        let html = `<section class="history-section"><h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2><div class="search-history-buttons">`;
-                        list.forEach(
-                            (i) =>
-                                (html += `<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g, "\\'")}')"><i class="fas fa-search"></i> ${i.query}<span class="remove-history" onclick="removeFromHistory(event,${i.id})"><i class="fas fa-times"></i></span></button>`)
-                        );
-                        html += `</div><div class="history-actions"><button onclick="clearSearchHistory()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить историю</button></div></section>`;
-                        box.innerHTML += '<div class="content-separator"></div>' + html;
-                    }
-                } catch {}
-            }, 100);
+            await renderNoResults(q);
             return;
         }
-        let html = `<section class="search-results-section"><div class="search-header"><h2 class="section-title fade-in"><i class="fas fa-search"></i> Результаты поиска: «${q}»</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${results.length} аниме</span> по запросу «${q}»</span></div></div><div class="results-grid">`;
-        html += (await Promise.all(results.map(createAnimeCard))).join("");
-        html += `</div></section>`;
-        box.innerHTML = html;
+
+        await renderSearchResults(q, results, data);
+        
         const slug = toSlug(q);
         history.replaceState(null, null, `/search/${slug}`);
         if (input) input.value = "";
         updateSEOMeta(data);
+        
     } catch (e) {
-        box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки</h2><p>Попробуйте повторить поиск позже</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
+        box.innerHTML = `<div class="no-results fade-in">
+            <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
+            <h2>Ошибка загрузки</h2>
+            <p>Попробуйте повторить поиск позже</p>
+            <p style="color:var(--gray);font-size:.9rem">${e.message}</p>
+        </div>`;
     }
+}
+
+async function renderSearchResults(query, results, data) {
+    const box = $("resultsBox");
+    
+    let html = `<section class="search-results-section">
+        <div class="search-header">
+            <h2 class="section-title fade-in"><i class="fas fa-search"></i> Результаты поиска: «${escapeHtml(query)}»</h2>
+            <div class="stats-info">
+                <span class="stats-text">
+                    <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${results.length} аниме</span> по запросу «${escapeHtml(query)}»
+                </span>
+            </div>
+        </div>
+        <div class="results-grid" id="searchGrid">`;
+
+    // Рендерим первые 8 карточек сразу
+    const initialBatch = results.slice(0, 8);
+    const initialCards = await Promise.all(initialBatch.map(safeCreateAnimeCard));
+    html += initialCards.join('');
+    
+    html += `</div>`;
+    
+    // Добавляем контейнер для оставшихся карточек
+    if (shouldUseProgressiveLoading(results.length)) {
+        html += `<div id="remainingSearchContainer"></div>`;
+    }
+    
+    html += `</section>`;
+    
+    box.innerHTML = html;
+    
+    // Прогрессивная загрузка оставшихся результатов
+    if (shouldUseProgressiveLoading(results.length)) {
+        const remainingResults = results.slice(8);
+        setTimeout(() => loadRemainingSearchResults(remainingResults), 200);
+    }
+}
+
+window.loadRemainingSearchResults = async function(items) {
+    const operationId = 'search_' + Date.now();
+    currentLoadingOperations.add(operationId);
+    
+    const container = $("#remainingSearchContainer");
+    if (!container) {
+        currentLoadingOperations.delete(operationId);
+        return;
+    }
+
+    const BATCH_SIZE = 4;
+    let loadedCount = 0;
+
+    container.innerHTML = createLoadingIndicator();
+
+    async function loadNextBatch() {
+        if (!currentLoadingOperations.has(operationId)) return;
+
+        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        
+        try {
+            const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
+            
+            const grid = $("#searchGrid");
+            batchCards.forEach((card, index) => {
+                setTimeout(() => {
+                    if (currentLoadingOperations.has(operationId) && grid) {
+                        grid.insertAdjacentHTML('beforeend', card);
+                    }
+                }, index * 60);
+            });
+
+            loadedCount += batch.length;
+
+            if (loadedCount < items.length && currentLoadingOperations.has(operationId)) {
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(loadNextBatch);
+                } else {
+                    setTimeout(loadNextBatch, 100);
+                }
+            } else {
+                container.remove();
+                currentLoadingOperations.delete(operationId);
+            }
+        } catch (error) {
+            console.error('Error loading search batch:', error);
+            container.remove();
+            currentLoadingOperations.delete(operationId);
+        }
+    }
+
+    loadNextBatch();
+}
+
+async function renderNoResults(query) {
+    const box = $("resultsBox");
+    
+    let html = `<div class="no-results fade-in">
+        <i class="fas fa-search fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
+        <h2>По запросу «${escapeHtml(query)}» ничего не найдено</h2>
+        <p>Попробуйте изменить запрос:</p>
+        <ul>
+            <li><i class="fas fa-spell-check"></i> Проверить правильность написания</li>
+            <li><i class="fas fa-language"></i> Использовать английское название</li>
+            <li><i class="fas fa-filter"></i> Искать по жанру или году</li>
+            <li><i class="fas fa-simplify"></i> Упростить запрос</li>
+        </ul>
+    </div>`;
+
+    // Добавляем историю поиска через некоторое время
+    setTimeout(async () => {
+        try {
+            const hist = await dbGetAll(STORE_SEARCH_HISTORY, "timestamp");
+            const list = hist.sort((a, b) => b.t - a.t).slice(0, 10);
+            if (list.length) {
+                let historyHTML = `<section class="history-section"><h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2><div class="search-history-buttons">`;
+                list.forEach(
+                    (i) =>
+                        (historyHTML += `<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g, "\\'")}')"><i class="fas fa-search"></i> ${i.query}<span class="remove-history" onclick="removeFromHistory(event,${i.id})"><i class="fas fa-times"></i></span></button>`)
+                );
+                historyHTML += `</div><div class="history-actions"><button onclick="clearSearchHistory()" class="clear-history-btn"><i class="fas fa-trash"></i> Очистить историю</button></div></section>`;
+                box.innerHTML += '<div class="content-separator"></div>' + historyHTML;
+            }
+        } catch {}
+    }, 100);
+
+    box.innerHTML = html;
 }
 
 /* ---------- HEADER ---------- */
@@ -1645,12 +1834,16 @@ function updateHeader() {
 
 window.navigateToHome = (e) => {
     if (e) e.preventDefault();
+    // Отменяем все текущие операции загрузки
+    currentLoadingOperations.clear();
     history.replaceState(null, null, "/");
     updateHeader();
     renderWeekly();
 };
 
 window.navigateToFavorites = () => {
+    // Отменяем все текущие операции загрузки
+    currentLoadingOperations.clear();
     const url = location.search
         ? `${location.pathname}${location.search}${location.search.includes("?") ? "&" : "?"}page=favorites`
         : `${location.pathname}?page=favorites`;
@@ -1666,11 +1859,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     try {
-        // Загружаем Font Awesome ПЕРВЫМ делом
-        loadFontAwesome();
-        
+        await loadFontAwesome();
         cacheManager.startCleanupInterval();
-        
         await initDB();
         updateHeader();
 
@@ -1708,6 +1898,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             );
         }
     } catch (e) {
+        console.error("Initialization error:", e);
         showNote("Ошибка загрузки приложения", "error");
     } finally {
         const p = document.getElementById("mainPreloader");
@@ -1723,6 +1914,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         fetchCache.clear();
+        // При скрытии вкладки отменяем все операции загрузки
+        currentLoadingOperations.clear();
     }
 });
 
@@ -1733,4 +1926,13 @@ setInterval(() => {
     }
 }, 60000);
 
-console.log(`🚀 AniFox ${CACHE_VERSION} loaded with performance optimizations`);
+// Глобальная функция для отладки
+window.getLoadingState = () => {
+    return {
+        progressiveLoadingEnabled,
+        currentLoadingOperations: Array.from(currentLoadingOperations),
+        fetchCacheSize: fetchCache.size
+    };
+};
+
+console.log(`🚀 AniFox ${CACHE_VERSION} loaded with progressive rendering optimizations`);
