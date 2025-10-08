@@ -27,7 +27,7 @@ function loadFontAwesome() {
         
         const faLink = document.createElement('link');
         faLink.rel = 'stylesheet';
-        faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+        faLink.href = '/ajax/libs/font-awesome/6.4.0/css/all.min.css';
         faLink.integrity = 'sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==';
         faLink.crossOrigin = 'anonymous';
         faLink.setAttribute('data-font-awesome', 'true');
@@ -43,7 +43,7 @@ function loadFontAwesomeFallback() {
     return new Promise((resolve, reject) => {
         const fallbackLink = document.createElement('link');
         fallbackLink.rel = 'stylesheet';
-        fallbackLink.href = 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css';
+        fallbackLink.href = '/ajax/libs/font-awesome/6.4.0/css/all.min.css';
         fallbackLink.setAttribute('data-font-awesome', 'true');
         
         fallbackLink.onload = () => resolve();
