@@ -38,9 +38,11 @@ class CacheManager {
 
     // Очистка старых стилей и скриптов
     clearOldAssets() {
-        // Очистка старых стилей
+        // Очистка старых стилей (кроме Font Awesome)
         document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-            if (link.href && !this.styleSheets.has(link.href) && link.getAttribute('data-dynamic')) {
+            if (link.href && !this.styleSheets.has(link.href) && 
+                link.getAttribute('data-dynamic') && 
+                !link.href.includes('font-awesome')) {
                 link.remove();
             }
         });
@@ -548,7 +550,7 @@ function getFallbackShikimoriData(title) {
         genres.push("школа");
 
     return {
-        description: `«${title}» - японское аниме. Подробное описание временно недоступно.`,
+        description: `«${title}» - аниме. Подробное описание временно недоступно.`,
         rating: null,
         duration: "24 мин.",
         status: "завершён",
@@ -1530,8 +1532,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     try {
+        // Загружаем Font Awesome ПЕРВЫМ делом
+        loadFontAwesome();
+        
         cacheManager.startCleanupInterval();
-        cacheManager.addStyle("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
         
         await initDB();
         updateHeader();
