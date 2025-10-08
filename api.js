@@ -228,10 +228,21 @@ window.shareAnime=(itemRaw)=>{
 };
 
 /* ---------- MODAL INFO ---------- */
-window.showAnimeInfo=(itemRaw)=>{
+window.showAnimeInfo=async(itemRaw)=>{
   const item=JSON.parse(itemRaw);
   const md=item.material_data||{};
   const screenshots=(item.screenshots||md.screenshots||[]).slice(0,6);
+  
+  // Получаем актуальный статус избранного
+  let favs = [];
+  try {
+    const favsResult = await dbGetAll(STORE_FAVORITES);
+    favs = Array.isArray(favsResult) ? favsResult : [];
+  } catch(e) {
+    favs = [];
+  }
+  const isFav=favs.some(f=>f.link===item.link);
+  
   const html=`
   <div class="modal-overlay" onclick="closeAnimeModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
@@ -240,9 +251,8 @@ window.showAnimeInfo=(itemRaw)=>{
         <div class="modal-left">
           <img src="${md.poster_url||'/resources/obl_web.jpg'}" alt="Постер" class="modal-poster">
           <div class="modal-btns">
-            <a class="modal-btn primary" href="${item.link}" target="_blank">Смотреть</a>
-            <button class="modal-btn secondary" onclick="toggleFavorite('${item.title.replace(/'/g,"\\'")}','${item.link}');closeAnimeModal();">
-              <i class="fas fa-heart"></i> Избранное
+            <button class="modal-btn ${isFav?'secondary':'primary'}" onclick="toggleFavorite('${item.title.replace(/'/g,"\\'")}','${item.link}');closeAnimeModal();">
+              <i class="${isFav?'fas':'far'} fa-heart"></i> ${isFav?'Удалить из избранного':'Добавить в избранное'}
             </button>
           </div>
         </div>
@@ -252,9 +262,11 @@ window.showAnimeInfo=(itemRaw)=>{
           <p class="modal-meta">Год: <b>${item.year||'—'}</b> | Тип: <b>${item.type||'—'}</b> | Качество: <b>${item.quality||'—'}</b></p>
           <div class="modal-genres">${(item.genres||[]).map(g=>`<span class="genre-tag">${g}</span>`).join('')}</div>
           <div class="modal-desc">${md.description||'Описание отсутствует.'}</div>
+          ${screenshots.length > 0 ? `
           <div class="modal-screens">
             ${screenshots.map(s=>`<img src="${s}" loading="lazy" class="scr">`).join('')}
           </div>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -430,17 +442,22 @@ document.addEventListener('DOMContentLoaded',async()=>{
     .modal-left{display:flex;flex-direction:column;gap:1rem;}
     .modal-poster{width:100%;border-radius:8px;object-fit:cover;background:#000;}
     .modal-btns{display:flex;flex-direction:column;gap:.5rem;}
-    .modal-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.6rem 1rem;border-radius:6px;border:none;font-weight:600;cursor:pointer;}
+    .modal-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.6rem 1rem;border-radius:6px;border:none;font-weight:600;cursor:pointer;transition:all 0.2s ease;}
     .modal-btn.primary{background:var(--accent);color:#fff;}
     .modal-btn.secondary{background:var(--bg-tertiary);color:var(--text-primary);}
+    .modal-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
     .modal-title{font-size:1.6rem;margin-bottom:.25rem;}
     .modal-orig{opacity:.7;margin-bottom:.5rem;}
     .modal-meta{margin-bottom:.75rem;font-size:.9rem;}
     .modal-genres{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:1rem;}
     .genre-tag{background:var(--bg-tertiary);padding:.25rem .55rem;border-radius:4px;font-size:.75rem;}
-    .modal-desc{line-height:1.5;margin-bottom:1rem;}
-    .modal-screens{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.5rem;}
-    .modal-screens .scr{width:100%;border-radius:6px;object-fit:cover;background:#000;}
+    .modal-desc{line-height:1.5;margin-bottom:1rem;max-height:200px;overflow-y:auto;padding-right:0.5rem;}
+    .modal-desc::-webkit-scrollbar{width:4px;}
+    .modal-desc::-webkit-scrollbar-track{background:var(--bg-tertiary);border-radius:2px;}
+    .modal-desc::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
+    .modal-screens{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.5rem;margin-top:1rem;}
+    .modal-screens .scr{width:100%;border-radius:6px;object-fit:cover;background:#000;transition:transform 0.2s ease;}
+    .modal-screens .scr:hover{transform:scale(1.05);}
     body.modal-open{overflow:hidden;}
     @keyframes fadeIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
     @media(max-width:700px){.modal-grid{grid-template-columns:1fr}.modal-left{align-items:center}}
