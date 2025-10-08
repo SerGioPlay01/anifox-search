@@ -11,22 +11,75 @@ const SHIKIMORI_API_BASE = "https://shikimori.one/api";
 const CACHE_VERSION = '2.3';
 
 /* ---------- FONT AWESOME FIX ---------- */
-// Принудительная загрузка Font Awesome
+// Надежная загрузка Font Awesome
 function loadFontAwesome() {
-    // Проверяем, не загружен ли уже Font Awesome
-    if (document.querySelector('link[href*="font-awesome"]')) {
-        return;
-    }
+    return new Promise((resolve, reject) => {
+        // Проверяем, не загружен ли уже Font Awesome
+        if (document.querySelector('link[href*="font-awesome"]') || 
+            document.querySelector('style[data-font-awesome]')) {
+            console.log('✅ Font Awesome already loaded');
+            resolve();
+            return;
+        }
+        
+        // Создаем элемент link для Font Awesome
+        const faLink = document.createElement('link');
+        faLink.rel = 'stylesheet';
+        faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+        faLink.integrity = 'sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==';
+        faLink.crossOrigin = 'anonymous';
+        faLink.setAttribute('data-font-awesome', 'true');
+        
+        faLink.onload = () => {
+            console.log('✅ Font Awesome loaded successfully');
+            resolve();
+        };
+        
+        faLink.onerror = (error) => {
+            console.error('❌ Font Awesome loading failed:', error);
+            // Fallback: пробуем альтернативный CDN
+            loadFontAwesomeFallback().then(resolve).catch(reject);
+        };
+        
+        document.head.appendChild(faLink);
+    });
+}
+
+// Fallback загрузка Font Awesome
+function loadFontAwesomeFallback() {
+    return new Promise((resolve, reject) => {
+        const fallbackLink = document.createElement('link');
+        fallbackLink.rel = 'stylesheet';
+        fallbackLink.href = 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css';
+        fallbackLink.setAttribute('data-font-awesome', 'true');
+        
+        fallbackLink.onload = () => {
+            console.log('✅ Font Awesome loaded from fallback CDN');
+            resolve();
+        };
+        
+        fallbackLink.onerror = (error) => {
+            console.error('❌ All Font Awesome CDNs failed');
+            reject(error);
+        };
+        
+        document.head.appendChild(fallbackLink);
+    });
+}
+
+// Проверка доступности Font Awesome
+function checkFontAwesomeLoaded() {
+    const testElement = document.createElement('i');
+    testElement.className = 'fas fa-heart';
+    testElement.style.display = 'none';
+    document.body.appendChild(testElement);
     
-    const faLink = document.createElement('link');
-    faLink.rel = 'stylesheet';
-    faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
-    faLink.integrity = 'sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==';
-    faLink.crossOrigin = 'anonymous';
-    faLink.setAttribute('data-dynamic', '');
-    document.head.appendChild(faLink);
+    const style = window.getComputedStyle(testElement);
+    const fontFamily = style.fontFamily || '';
+    const isLoaded = fontFamily.includes('Font Awesome');
     
-    console.log('✅ Font Awesome loaded');
+    testElement.remove();
+    return isLoaded;
 }
 
 /* ---------- CACHE MANAGEMENT ---------- */
