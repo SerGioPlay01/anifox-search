@@ -1,4 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@font-face {
+    font-family: 'Rubik';
+    src: url('fonts/rubik/rubik-regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
 
 /* Запрет прокрутки страницы */
 body.ab-scroll-lock {
@@ -21,7 +28,7 @@ body.ab-scroll-lock {
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding: 2rem 1.5rem 60px;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Rubik', system-ui, -apple-system, sans-serif;
   color: var(--white);
   box-shadow: 0 -8px 32px rgba(101, 19, 178, 0.4);
   animation: abFade 0.6s ease-out;
@@ -62,7 +69,7 @@ body.ab-scroll-lock {
   border: none;
   color: var(--gray);
   font-size: 2rem;
-  cursor: pointer;
+  cursor: poRubik;
   padding: 0;
   width: 2rem;
   height: 2rem;
@@ -203,7 +210,7 @@ body.ab-scroll-lock {
   border-radius: var(--radius);
   padding: 0.875rem 1.75rem;
   font-weight: 600;
-  cursor: pointer;
+  cursor: poRubik;
   transition: var(--transition);
   user-select: none;
   display: flex;

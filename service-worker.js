@@ -14,7 +14,7 @@ const STATIC_ASSETS = [
   '/favicon/site.webmanifest',
   '/resources/obl_web.jpg',
   '/css/all.min.css',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
+  '/fonts/rubik/rubik-regular.ttf'
 ];
 
 // Паттерны для стратегии Network First
