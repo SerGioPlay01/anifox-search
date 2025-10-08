@@ -520,7 +520,7 @@ window.checkFavorites = debugFavorites;
 window.shareAnime=(itemRaw)=>{
   const item=JSON.parse(itemRaw);
   const url=`${location.origin}/search/${toSlug(item.title_orig||item.title)}`;
-  const text=`Смотри «${item.title}» (${item.year}) на AniFox. Жанры: ${(item.genres||[]).join(', ')}. ${url}`;
+  const text=`Смотри «${item.title}» (${item.year}) на AniFox.`;
   if(navigator.share){ navigator.share({title:item.title,text,url}); }
   else { navigator.clipboard.writeText(url); showNote('Ссылка скопирована в буфер обмена','success'); }
 };
@@ -794,12 +794,70 @@ async function renderFavoritesPage(){
     
     // Создаем карточки для каждого избранного аниме
     for (const fav of list) {
-      const cardHtml = await createAnimeCard({
-        title: fav.title,
-        link: fav.link,
-        material_data: { poster_url: '/resources/obl_web.jpg' }
-      });
-      html += cardHtml;
+      try {
+        // Пытаемся найти полную информацию об аниме в кэше поиска
+        let fullItemData = null;
+        
+        // Ищем в кэше поисковых результатов
+        const searchQueries = await dbGetAll(STORE_SEARCH_RESULTS);
+        for (const cachedQuery of searchQueries) {
+          if (cachedQuery.data && cachedQuery.data.results) {
+            const found = cachedQuery.data.results.find(item => 
+              item.link === fav.link || item.title === fav.title
+            );
+            if (found) {
+              fullItemData = found;
+              break;
+            }
+          }
+        }
+        
+        // Если не нашли в кэше, создаем базовый объект
+        if (!fullItemData) {
+          fullItemData = {
+            title: fav.title,
+            link: fav.link,
+            year: fav.year || '—',
+            type: fav.type || '—',
+            quality: fav.quality || '—',
+            genres: fav.genres || [],
+            material_data: {
+              poster_url: fav.poster_url || '/resources/obl_web.jpg',
+              description: fav.description || 'Описание отсутствует.'
+            }
+          };
+        }
+        
+        const cardHtml = await createAnimeCard(fullItemData);
+        html += cardHtml;
+      } catch (cardError) {
+        console.error('Error creating card for favorite:', fav.title, cardError);
+        // Создаем карточку с минимальной информацией
+        const fallbackCard = `
+        <div class="card fade-in">
+          <div class="card-header">
+            <h3 class="h2_name">${fav.title}</h3>
+            <div class="info-links">
+              <a href="https://shikimori.one/animes?search=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
+              <a href="https://anilist.co/search/anime?search=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
+              <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
+            </div>
+          </div>
+          <iframe class="single-player" src="${fav.link}" allowfullscreen loading="lazy" title="Плеер: ${fav.title}"></iframe>
+          <div class="card-actions">
+            <button class="action-btn favorite-btn" data-link="${fav.link}" onclick="toggleFavorite('${fav.title.replace(/'/g,"\\'")}','${fav.link}')" title="Удалить из избранного">
+              <i class="fas fa-heart"></i>
+            </button>
+            <button class="action-btn" onclick="shareAnime('${JSON.stringify({title: fav.title, link: fav.link}).replace(/"/g,'&quot;')}')" title="Поделиться">
+              <i class="fas fa-share"></i>
+            </button>
+            <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify({title: fav.title, link: fav.link}).replace(/"/g,'&quot;')}')" title="Информация">
+              <i class="fas fa-info-circle"></i>
+            </button>
+          </div>
+        </div>`;
+        html += fallbackCard;
+      }
     }
     
     html += `</div>
