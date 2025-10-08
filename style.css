@@ -2019,6 +2019,10 @@ body.screenshot-viewer-open {
   }
 }
 @media (max-width: 700px) {
+  .modal-content {
+    max-width: 90%;
+    max-height: 90%;
+  }
   .modal-grid {
     grid-template-columns: 1fr;
   }
