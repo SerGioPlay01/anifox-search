@@ -509,9 +509,16 @@ async function fetchShikimoriInfo(title, attempt = 1) {
         }
 
         const finalInfo = detailedInfo || anime;
+        
+        // ИСПРАВЛЕНИЕ: безопасная обработка score
+        let ratingValue = null;
+        if (finalInfo.score && typeof finalInfo.score === 'number') {
+            ratingValue = finalInfo.score.toFixed(1);
+        }
+
         const result = {
             description: finalInfo.description || `«${finalInfo.russian || finalInfo.name}» - аниме. ${finalInfo.english || ""}`,
-            rating: finalInfo.score ? finalInfo.score.toFixed(1) : null,
+            rating: ratingValue,
             duration: getDurationFromShikimori(finalInfo),
             status: getStatusFromShikimori(finalInfo.status),
             studios: finalInfo.studios ? finalInfo.studios.map((s) => s.name) : [],
@@ -608,7 +615,8 @@ async function getAnimeExtendedInfo(item) {
     if (item.material_data) {
         const md = item.material_data;
         result.description = md.description || "";
-        result.rating = md.rating || null;
+        // ИСПРАВЛЕНИЕ: безопасная обработка rating
+        result.rating = (md.rating && typeof md.rating === 'number') ? md.rating.toFixed(1) : null;
         result.duration = md.duration || "";
         result.status = md.status || "";
         result.studios = md.studios || [];
@@ -1389,6 +1397,12 @@ window.loadRemainingFavorites = async function(items) {
         return;
     }
 
+    // ПРОВЕРКА: если items пустой, выходим
+    if (!items || items.length === 0) {
+        currentLoadingOperations.delete(operationId);
+        return;
+    }
+
     const BATCH_SIZE = 3;
     let loadedCount = 0;
 
@@ -1399,6 +1413,13 @@ window.loadRemainingFavorites = async function(items) {
         if (!currentLoadingOperations.has(operationId)) return;
 
         const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        
+        // ПРОВЕРКА: если batch пустой, завершаем
+        if (batch.length === 0) {
+            removeLoadingIndicator();
+            currentLoadingOperations.delete(operationId);
+            return;
+        }
         
         try {
             const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
@@ -1579,6 +1600,13 @@ window.loadRemainingWeekly = async function(items) {
         return;
     }
 
+    // ПРОВЕРКА: если items пустой, выходим
+    if (!items || items.length === 0) {
+        container.remove();
+        currentLoadingOperations.delete(operationId);
+        return;
+    }
+
     const BATCH_SIZE = 4;
     let loadedCount = 0;
 
@@ -1588,6 +1616,13 @@ window.loadRemainingWeekly = async function(items) {
         if (!currentLoadingOperations.has(operationId)) return;
 
         const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        
+        // ПРОВЕРКА: если batch пустой, завершаем
+        if (batch.length === 0) {
+            container.remove();
+            currentLoadingOperations.delete(operationId);
+            return;
+        }
         
         try {
             const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
@@ -1719,6 +1754,13 @@ window.loadRemainingSearchResults = async function(items) {
         return;
     }
 
+    // ПРОВЕРКА: если items пустой, выходим
+    if (!items || items.length === 0) {
+        container.remove();
+        currentLoadingOperations.delete(operationId);
+        return;
+    }
+
     const BATCH_SIZE = 4;
     let loadedCount = 0;
 
@@ -1728,6 +1770,13 @@ window.loadRemainingSearchResults = async function(items) {
         if (!currentLoadingOperations.has(operationId)) return;
 
         const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        
+        // ПРОВЕРКА: если batch пустой, завершаем
+        if (batch.length === 0) {
+            container.remove();
+            currentLoadingOperations.delete(operationId);
+            return;
+        }
         
         try {
             const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
