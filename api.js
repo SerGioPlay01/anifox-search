@@ -25,64 +25,96 @@ function loadFontAwesome() {
             return;
         }
         
-        const faLink = document.createElement('link');
-        faLink.rel = 'stylesheet';
-        // Убедитесь, что путь ведет к папке css относительно вашего HTML файла
-        faLink.href = './font_icon/all.min.css';
-        faLink.setAttribute('data-font-awesome', 'true');
-        
-        faLink.onload = () => {
-            console.log('Font Awesome CSS загружен');
-            resolve();
-        };
-        faLink.onerror = () => {
-            console.error('Ошибка загрузки Font Awesome CSS');
-            loadFontAwesomeFallback().then(resolve).catch(reject);
-        };
-        
-        document.head.appendChild(faLink);
+        // Сначала загрузим шрифты, потом CSS
+        preloadFonts()
+            .then(() => {
+                const faLink = document.createElement('link');
+                faLink.rel = 'stylesheet';
+                faLink.href = '/css/all.min.css';
+                faLink.setAttribute('data-font-awesome', 'true');
+                
+                faLink.onload = () => {
+                    console.log('Font Awesome загружен успешно');
+                    resolve();
+                };
+                faLink.onerror = () => {
+                    console.error('Ошибка загрузки CSS');
+                    reject(new Error('CSS не загружен'));
+                };
+                
+                document.head.appendChild(faLink);
+            })
+            .catch(reject);
     });
 }
 
-function loadFontAwesomeFallback() {
+// Функция предзагрузки шрифтов
+function preloadFonts() {
+    return new Promise((resolve) => {
+        const fonts = [
+            '/webfonts/fa-brands-400.woff2',
+            '/webfonts/fa-regular-400.woff2', 
+            '/webfonts/fa-solid-900.woff2'
+        ];
+        
+        let loaded = 0;
+        
+        fonts.forEach(fontPath => {
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.href = fontPath;
+            link.as = 'font';
+            link.type = 'font/woff2';
+            link.crossOrigin = 'anonymous';
+            
+            link.onload = () => {
+                loaded++;
+                if (loaded === fonts.length) resolve();
+            };
+            
+            link.onerror = () => {
+                loaded++;
+                if (loaded === fonts.length) resolve();
+            };
+            
+            document.head.appendChild(link);
+        });
+    });
+}
+
+// Альтернативная версия с исправлением путей в CSS
+function loadFontAwesomeWithFix() {
     return new Promise((resolve, reject) => {
-        const fallbackLink = document.createElement('link');
-        fallbackLink.rel = 'stylesheet';
-        fallbackLink.href = 'font_icon/all.min.css';
-        fallbackLink.setAttribute('data-font-awesome', 'true');
-        
-        fallbackLink.onload = () => {
-            console.log('Font Awesome загружен через fallback');
+        if (document.querySelector('style[data-font-awesome-fixed]')) {
             resolve();
-        };
-        fallbackLink.onerror = () => {
-            console.error('Все пути к Font Awesome недоступны');
-            reject(new Error('Font Awesome не загружен'));
-        };
+            return;
+        }
         
-        document.head.appendChild(fallbackLink);
+        // Загружаем CSS файл и исправляем пути
+        fetch('/css/all.min.css')
+            .then(response => response.text())
+            .then(cssText => {
+                // Исправляем пути к шрифтам
+                const fixedCSS = cssText.replace(/url\(\.\.\/webfonts\//g, 'url(/webfonts/');
+                
+                const style = document.createElement('style');
+                style.textContent = fixedCSS;
+                style.setAttribute('data-font-awesome-fixed', 'true');
+                document.head.appendChild(style);
+                
+                console.log('Font Awesome загружен с исправленными путями');
+                resolve();
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки Font Awesome:', error);
+                reject(error);
+            });
     });
 }
 
-// Дополнительная функция для проверки загрузки шрифтов
-function checkFontAwesomeLoaded() {
-    const testIcon = document.createElement('i');
-    testIcon.className = 'fas fa-check';
-    document.body.appendChild(testIcon);
-    
-    setTimeout(() => {
-        const styles = window.getComputedStyle(testIcon);
-        const fontFamily = styles.fontFamily.toLowerCase();
-        const isLoaded = fontFamily.includes('font awesome') || 
-                        fontFamily.includes('fa-') ||
-                        styles.content !== 'none';
-        
-        console.log('Font Family:', fontFamily);
-        console.log('Font Awesome загружен:', isLoaded);
-        
-        document.body.removeChild(testIcon);
-    }, 100);
-}
+loadFontAwesomeWithFix()
+    .then(() => console.log('✅ Font Awesome готов (пути исправлены)'))
+    .catch(error => console.error('❌ Ошибка:', error));
 
 /* ---------- CACHE MANAGEMENT ---------- */
 class CacheManager {
