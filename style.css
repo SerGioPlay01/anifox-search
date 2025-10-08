@@ -2154,6 +2154,7 @@ html {
 }
 
 .screenshots-grid {
+  padding-top: 20px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 1rem;
