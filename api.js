@@ -1648,6 +1648,7 @@ window.navigateToHome = (e) => {
     history.replaceState(null, null, "/");
     updateHeader();
     renderWeekly();
+    location.reload();
 };
 
 window.navigateToFavorites = () => {
