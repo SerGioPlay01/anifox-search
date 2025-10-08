@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/cookie-banner.css">
     <link rel="stylesheet" href="/adblock-banner.css">
+    <link rel="stylesheet" href="/preloader-site-full.css">
   </noscript>
 
   <!-- Structured Data (Schema.org) -->
@@ -71,6 +72,13 @@
 </head>
 
 <body>
+
+      <!-- Прелоадер -->
+  <div id="preloader-site-full">
+    <div class="loader-site"></div>
+    <p>Загрузка...</p>
+  </div>
+
   <!-- Header -->
   <header class="top">
     <a class="logo-link" href="/" aria-label="AniFox — главная">
@@ -160,6 +168,7 @@
   </footer>
 
   <!-- Defer non-critical JS -->
+   <script src="/preloader-site-full.js"></script>
   <script src="/api.js" defer></script>
   <script src="/seo.js" defer></script>
   <script src="/cookie-banner.js" defer></script>
