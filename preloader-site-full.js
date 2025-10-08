@@ -24,8 +24,18 @@
   let isHidden = false;
   const startTime = Date.now();
 
+  // Фолбек по таймауту
+  const timeoutId = setTimeout(() => {
+    if (!isHidden) {
+      console.warn('Preloader hidden due to timeout');
+      hidePreloader();
+    }
+  }, timeout);
+
   const hidePreloader = () => {
     if (isHidden) return;
+    
+    clearTimeout(timeoutId);
     
     const elapsed = Date.now() - startTime;
     const remainingTime = Math.max(0, minDisplayTime - elapsed);
@@ -59,22 +69,7 @@
   // Отслеживаем загрузку ресурсов
   trackResources(criticalResources, handleResourceLoad, handleResourceError);
 
-  // Фолбек по таймауту
-  const timeoutId = setTimeout(() => {
-    if (!isHidden) {
-      console.warn('Preloader hidden due to timeout');
-      hidePreloader();
-    }
-  }, timeout);
-
-  // Очистка таймаута при успешной загрузке
-  const originalHide = hidePreloader;
-  hidePreloader = () => {
-    clearTimeout(timeoutId);
-    originalHide();
-  };
-
-})(window.preloaderConfig); // Можно передать конфиг извне
+})(window.preloaderConfig);
 
 /**
  * Получает критические ресурсы для отслеживания
