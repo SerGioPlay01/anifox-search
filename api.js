@@ -1087,8 +1087,15 @@ window.showAnimeInfo = async (itemRaw) => {
                         <img src="${md.poster_url || "/resources/obl_web.jpg"}" alt="Постер" class="modal-poster">
                         ${rating ? `<div class="modal-rating"><i class="fas fa-star"></i> ${rating}</div>` : ""}
                         <div class="modal-btns">
-                            <button class="modal-btn ${isFav ? "secondary" : "primary"}" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}','${item.link}')">
-                                <i class="${isFav ? "fas" : "far"} fa-heart"></i> ${isFav ? "Удалить из избранного" : "Добавить в избранное"}
+                            <button class="modal-btn ${isFav ? "secondary" : "primary"}" 
+                                    id="favorite-btn" 
+                                    onclick="handleFavoriteClick('${item.title.replace(/'/g, "\\'")}','${item.link}')"
+                                    data-is-favorite="${isFav}">
+                                <i class="${isFav ? "fas" : "far"} fa-heart"></i> 
+                                <span class="btn-text">${isFav ? "Удалить из избранного" : "Добавить в избранное"}</span>
+                                <span class="btn-loading" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i> Загрузка...
+                                </span>
                             </button>
                         </div>
                         ${extendedInfo.shikimoriData ? '<div class="modal-source-info"><i class="fas fa-database"></i> Данные дополнены Shikimori</div>' : ""}
@@ -1145,8 +1152,15 @@ window.showAnimeInfo = async (itemRaw) => {
                     <div class="modal-left">
                         <img src="${md.poster_url || "/resources/obl_web.jpg"}" alt="Постер" class="modal-poster">
                         <div class="modal-btns">
-                            <button class="modal-btn primary" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}','${item.link}')">
-                                <i class="far fa-heart"></i> Добавить в избранное
+                            <button class="modal-btn primary" 
+                                    id="favorite-btn"
+                                    onclick="handleFavoriteClick('${item.title.replace(/'/g, "\\'")}','${item.link}')"
+                                    data-is-favorite="false">
+                                <i class="far fa-heart"></i> 
+                                <span class="btn-text">Добавить в избранное</span>
+                                <span class="btn-loading" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i> Загрузка...
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -1165,6 +1179,65 @@ window.showAnimeInfo = async (itemRaw) => {
         if (modalOverlay) {
             modalOverlay.outerHTML = basicHTML;
         }
+    }
+};
+
+// Новая функция для обработки клика с улучшенной интерактивностью
+window.handleFavoriteClick = async (title, link) => {
+    const btn = document.getElementById('favorite-btn');
+    if (!btn) return;
+
+    // Сохраняем исходное состояние
+    const originalText = btn.querySelector('.btn-text').textContent;
+    const originalIcon = btn.querySelector('i').className;
+    const isCurrentlyFavorite = btn.getAttribute('data-is-favorite') === 'true';
+
+    // Блокируем кнопку и показываем индикатор загрузки
+    btn.disabled = true;
+    btn.querySelector('.btn-text').style.display = 'none';
+    btn.querySelector('.btn-loading').style.display = 'inline';
+
+    try {
+        // Вызываем оригинальную функцию
+        await toggleFavorite(title, link);
+        
+        // Обновляем состояние кнопки после успешного выполнения
+        const newFavState = !isCurrentlyFavorite;
+        btn.setAttribute('data-is-favorite', newFavState);
+        
+        // Обновляем внешний вид кнопки
+        if (newFavState) {
+            btn.classList.remove('primary');
+            btn.classList.add('secondary');
+            btn.querySelector('i').className = 'fas fa-heart';
+            btn.querySelector('.btn-text').textContent = 'Удалить из избранного';
+        } else {
+            btn.classList.remove('secondary');
+            btn.classList.add('primary');
+            btn.querySelector('i').className = 'far fa-heart';
+            btn.querySelector('.btn-text').textContent = 'Добавить в избранное';
+        }
+
+        // Добавляем анимацию подтверждения
+        btn.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+            btn.style.transform = 'scale(1)';
+        }, 200);
+
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+        
+        // В случае ошибки возвращаем исходное состояние
+        btn.querySelector('.btn-text').textContent = originalText;
+        btn.querySelector('i').className = originalIcon;
+        
+        // Показываем сообщение об ошибке
+        alert('Произошла ошибка при изменении избранного. Попробуйте еще раз.');
+    } finally {
+        // Восстанавливаем кнопку в любом случае
+        btn.disabled = false;
+        btn.querySelector('.btn-text').style.display = 'inline';
+        btn.querySelector('.btn-loading').style.display = 'none';
     }
 };
 
