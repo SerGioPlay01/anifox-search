@@ -36,7 +36,6 @@ async function initDB(){
       ];
       stores.forEach(n=>{
         if(!d.objectStoreNames.contains(n)){
-          console.log('Creating store:', n);
           const s = d.createObjectStore(n,{
             keyPath: n===STORE_SEARCH_RESULTS?'query':
                     n===STORE_ANIME_INFO?'title':
@@ -108,7 +107,6 @@ async function dbGetAll(s,index){
       const request = store.getAll();
       request.onsuccess = () => {
         const result = request.result || [];
-        console.log(`dbGetAll from ${s}:`, result.length, 'items');
         resolve(result);
       };
       request.onerror = () => reject(request.error);
@@ -148,7 +146,6 @@ async function dbClear(s){
 function promisifyTX(tx){ 
   return new Promise((res,rej)=>{ 
     tx.oncomplete=()=>{
-      console.log('Transaction completed');
       res();
     }; 
     tx.onerror=(e)=>{
@@ -162,10 +159,8 @@ function promisifyTX(tx){
 async function debugFavorites() {
   try {
     const favs = await dbGetAll(STORE_FAVORITES);
-    console.log('📁 Все избранные в IndexedDB:', favs);
     return favs;
   } catch(e) {
-    console.error('Debug favorites error:', e);
     return [];
   }
 }
@@ -196,7 +191,6 @@ async function fetchShikimoriInfo(title, attempt=1) {
   try {
     const cached = await dbGet(STORE_SHIKIMORI_CACHE, cacheKey);
     if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
-      console.log('✅ Shikimori данные из кэша для:', title);
       return cached.data;
     }
   } catch(e) {}
@@ -207,7 +201,6 @@ async function fetchShikimoriInfo(title, attempt=1) {
   try {
     // Поиск аниме на Shikimori API
     const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(title)}&limit=1`;
-    console.log('🔍 Поиск на Shikimori:', title);
     
     const response = await fetch(searchUrl, {
       signal: ctrl.signal,
@@ -226,12 +219,10 @@ async function fetchShikimoriInfo(title, attempt=1) {
     const data = await response.json();
     
     if (!data || data.length === 0) {
-      console.log('❌ Аниме не найдено на Shikimori:', title);
       return getFallbackShikimoriData(title);
     }
     
     const anime = data[0];
-    console.log('✅ Найдено аниме на Shikimori:', anime.russian || anime.name);
     
     // Получаем детальную информацию
     let detailedInfo = null;
@@ -545,13 +536,10 @@ async function getFavorites() {
   if (favoritesCache) return favoritesCache;
   
   try {
-    console.log('🔄 Загрузка избранного из IndexedDB...');
     const favs = await dbGetAll(STORE_FAVORITES);
     favoritesCache = Array.isArray(favs) ? favs : [];
-    console.log('✅ Избранные загружены:', favoritesCache.length, 'элементов');
     return favoritesCache;
   } catch(e) {
-    console.error('❌ Error getting favorites:', e);
     favoritesCache = [];
     return favoritesCache;
   }
@@ -559,7 +547,6 @@ async function getFavorites() {
 
 // Функция для сброса кэша избранного
 function clearFavoritesCache() {
-  console.log('🧹 Сброс кэша избранного');
   favoritesCache = null;
 }
 
@@ -568,7 +555,6 @@ async function createAnimeCard(item){
   const t=item.title;
   const favs = await getFavorites();
   const isFav = favs.some(f=>f.link===item.link);
-  console.log(`🎬 Создание карточки: "${t}", избранное: ${isFav}`);
   
   return `
   <div class="card fade-in">
@@ -597,13 +583,11 @@ async function createAnimeCard(item){
 
 /* ---------- FAVORITES ---------- */
 window.toggleFavorite=async(title,link)=>{
-  console.log('❤️ Toggle favorite:', title, link);
   try{
     const favs = await getFavorites();
     const old = favs.find(f=>f.link===link);
     
     if(old){ 
-      console.log('🗑️ Удаление из избранного:', old);
       await dbDel(STORE_FAVORITES, old.id); 
       showNote(`«${title}» удалено из избранного`,'info'); 
     } else { 
@@ -614,7 +598,6 @@ window.toggleFavorite=async(title,link)=>{
         t: Date.now(),
         addedAt: new Date().toISOString()
       };
-      console.log('💾 Сохранение в избранное:', newFavorite);
       await dbAdd(STORE_FAVORITES, newFavorite); 
       showNote(`«${title}» добавлено в избранное`,'success'); 
     }
@@ -638,13 +621,11 @@ window.toggleFavorite=async(title,link)=>{
 
 // Функция для обновления ВСЕХ кнопок избранного
 async function refreshAllFavoriteButtons() {
-  console.log('🔄 Обновление кнопок избранного...');
   const favs = await getFavorites();
   const favoriteLinks = new Set(favs.map(f => f.link));
   
   // Обновляем кнопки в карточках
   const favoriteBtns = document.querySelectorAll('.favorite-btn');
-  console.log('Найдено кнопок:', favoriteBtns.length);
   
   favoriteBtns.forEach(btn => {
     const link = btn.dataset.link;
@@ -655,7 +636,6 @@ async function refreshAllFavoriteButtons() {
       icon.className = isFav ? 'fas fa-heart' : 'far fa-heart';
     }
     btn.title = isFav ? 'Удалить из избранного' : 'Добавить в избранное';
-    console.log(`Кнопка для ${link}: ${isFav ? 'заполнена' : 'пустая'}`);
   });
   
   // Обновляем кнопку в модальном окне
@@ -674,7 +654,6 @@ async function refreshAllFavoriteButtons() {
         modalBtn.innerHTML = `<i class="${isFav ? 'fas' : 'far'} fa-heart"></i> ${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}`;
         
         modalBtn.setAttribute('onclick', `toggleFavorite('${title.replace(/'/g, "\\'")}','${link}')`);
-        console.log(`Модальная кнопка для ${link}: ${isFav ? 'удалить' : 'добавить'}`);
       }
     }
   }
@@ -1134,7 +1113,13 @@ async function search(){
 
 /* ---------- HEADER ---------- */
 function updateHeader(){
-  const h=document.querySelector('.top'); if(!h) return;
+  const h=document.querySelector('.top'); 
+  if(!h) return;
+  
+  // Определяем активную страницу
+  const isFavoritesPage = location.search.includes('page=favorites');
+  const isSearchPage = !isFavoritesPage;
+  
   h.innerHTML=`
   <a class="logo-link" href="/" onclick="navigateToHome(event)">
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none">
@@ -1152,8 +1137,12 @@ function updateHeader(){
     <span class="logo-text">AniFox</span>
   </a>
   <nav class="header-nav">
-    <button class="nav-btn ${!location.search.includes('page=favorites')?'active':''}" onclick="navigateToHome()"><i class="fas fa-search"></i> Поиск</button>
-    <button class="nav-btn ${location.search.includes('page=favorites')?'active':''}" onclick="navigateToFavorites()"><i class="fas fa-heart"></i> Избранное</button>
+    <button class="nav-btn ${isSearchPage?'active':''}" onclick="navigateToHome()">
+      <i class="fas fa-search"></i> Поиск
+    </button>
+    <button class="nav-btn ${isFavoritesPage?'active':''}" onclick="navigateToFavorites()">
+      <i class="fas fa-heart"></i> Избранное
+    </button>
   </nav>`;
   
 }
@@ -1177,22 +1166,53 @@ window.navigateToFavorites=()=>{
 /* ---------- INIT ---------- */
 document.addEventListener('DOMContentLoaded',async()=>{
   document.body.insertAdjacentHTML('afterbegin','<div id="mainPreloader" class="preloader-overlay"><div class="preloader-content"><div class="preloader-spinner"></div><p class="preloader-text">Загрузка AniFox...</p></div></div>');
+  
   try{
     await initDB();
-    const fa=document.createElement('link'); fa.rel='stylesheet'; fa.href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'; document.head.appendChild(fa);
+    
+    // Загружаем Font Awesome
+    const fa=document.createElement('link'); 
+    fa.rel='stylesheet'; 
+    fa.href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'; 
+    document.head.appendChild(fa);
+    
+    // Инициализируем заголовок
+    updateHeader();
 
     const form=$('searchForm'), input=$('searchInput'), btn=$('scrollToTop');
-    if(form) form.addEventListener('submit',e=>{ e.preventDefault(); search(); });
+    
+    if(form) {
+      form.addEventListener('submit',e=>{ 
+        e.preventDefault(); 
+        search(); 
+      });
+    }
+    
     if(input){
       const path=location.pathname;
+      
       if(path.startsWith('/search/')){
         const slug=path.replace('/search/','');
         input.value=slug.replace(/-/g,' ');
         search();
-      }else if(location.search.includes('page=favorites')) renderFavoritesPage();
-      else renderWeekly();
+      } else if(location.search.includes('page=favorites')) {
+        renderFavoritesPage();
+      } else {
+        renderWeekly();
+      }
+    } else {
     }
-    if(btn){ window.addEventListener('scroll',()=>btn.classList.toggle('show',window.scrollY>300)); btn.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'})); }
-  }catch(e){ console.error(e); showNote('Ошибка загрузки приложения','error'); }
-  finally{ const p=document.getElementById('mainPreloader'); if(p) p.remove(); }
+    
+    if(btn){ 
+      window.addEventListener('scroll',()=>btn.classList.toggle('show',window.scrollY>300)); 
+      btn.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'})); 
+    }
+    
+  } catch(e){ 
+    showNote('Ошибка загрузки приложения','error'); 
+  }
+  finally{ 
+    const p=document.getElementById('mainPreloader'); 
+    if(p) p.remove(); 
+  }
 });
