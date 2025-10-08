@@ -427,6 +427,10 @@ body {
   font-size: 0.8rem;
 }
 
+.load-more-btn {
+  margin-top: 20px;
+}
+
 /* Loading State */
 .loading {
   display: inline-block;
