@@ -196,12 +196,19 @@ window.toggleFavorite=async(title,link)=>{
       favs = [];
     }
     const old=favs.find(f=>f.link===link);
-    if(old){ await dbDel(STORE_FAVORITES,old.id); showNote(`«${title}» удалено из избранного`,'info'); }
-    else { await dbAdd(STORE_FAVORITES,{id:Date.now(),title,link,t:Date.now()}); showNote(`«${title}» добавлено в избранное`,'success'); }
+    if(old){ 
+      await dbDel(STORE_FAVORITES,old.id); 
+      showNote(`«${title}» удалено из избранного`,'info'); 
+    } else { 
+      await dbAdd(STORE_FAVORITES,{id:Date.now(),title,link,t:Date.now()}); 
+      showNote(`«${title}» добавлено в избранное`,'success'); 
+    }
     refreshFavoriteIcons();
+    refreshModalFavoriteButton(link);
     if(location.hash==='#favorites'||location.search.includes('page=favorites')) renderFavoritesPage();
   }catch(e){ console.error(e); showNote('Ошибка при работе с избранным','error'); }
 };
+
 window.refreshFavoriteIcons=async()=>{
   let favs = [];
   try {
@@ -216,6 +223,31 @@ window.refreshFavoriteIcons=async()=>{
     btn.querySelector('i').className=is?'fas fa-heart':'far fa-heart';
     btn.title=is?'Удалить из избранного':'Добавить в избранное';
   });
+};
+
+// Функция для обновления кнопки в модальном окне
+window.refreshModalFavoriteButton=async(link)=>{
+  const modalBtn = document.querySelector('.modal-btn');
+  if(modalBtn){
+    let favs = [];
+    try {
+      const favsResult = await dbGetAll(STORE_FAVORITES);
+      favs = Array.isArray(favsResult) ? favsResult : [];
+    } catch(e) {
+      favs = [];
+    }
+    const isFav=favs.some(f=>f.link===link);
+    
+    modalBtn.className = `modal-btn ${isFav?'secondary':'primary'}`;
+    modalBtn.innerHTML = `<i class="${isFav?'fas':'far'} fa-heart"></i> ${isFav?'Удалить из избранного':'Добавить в избранное'}`;
+    
+    // Обновляем обработчик события
+    const title = modalBtn.closest('.modal-content').querySelector('.modal-title').textContent;
+    modalBtn.onclick = () => {
+      toggleFavorite(title, link);
+      closeAnimeModal();
+    };
+  }
 };
 
 /* ---------- SHARE ---------- */
@@ -264,7 +296,17 @@ window.showAnimeInfo=async(itemRaw)=>{
           <div class="modal-desc">${md.description||'Описание отсутствует.'}</div>
           ${screenshots.length > 0 ? `
           <div class="modal-screens">
-            ${screenshots.map(s=>`<img src="${s}" loading="lazy" class="scr">`).join('')}
+            <h3 class="modal-screens-title">Скриншоты</h3>
+            <div class="screenshots-grid">
+              ${screenshots.map((s, index)=>`
+                <div class="screenshot-item" onclick="openScreenshotViewer('${screenshots.join('|')}', ${index})">
+                  <img src="${s}" loading="lazy" class="scr">
+                  <div class="screenshot-overlay">
+                    <i class="fas fa-expand"></i>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
           </div>
           ` : ''}
         </div>
@@ -274,6 +316,89 @@ window.showAnimeInfo=async(itemRaw)=>{
   document.body.insertAdjacentHTML('beforeend',html);
   document.body.classList.add('modal-open');
 };
+
+/* ---------- SCREENSHOT VIEWER ---------- */
+window.openScreenshotViewer=(screenshotsString, startIndex)=>{
+  const screenshots = screenshotsString.split('|');
+  let currentIndex = startIndex;
+  
+  const viewerHTML = `
+  <div class="screenshot-viewer-overlay" onclick="closeScreenshotViewer()">
+    <div class="screenshot-viewer-content" onclick="event.stopPropagation()">
+      <button class="screenshot-viewer-close" onclick="closeScreenshotViewer()">&times;</button>
+      <button class="screenshot-viewer-nav screenshot-viewer-prev" onclick="navigateScreenshot(-1)">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <button class="screenshot-viewer-nav screenshot-viewer-next" onclick="navigateScreenshot(1)">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+      <div class="screenshot-viewer-image-container">
+        <img src="${screenshots[currentIndex]}" class="screenshot-viewer-image" id="screenshotViewerImage">
+        <div class="screenshot-viewer-counter">
+          ${currentIndex + 1} / ${screenshots.length}
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', viewerHTML);
+  document.body.classList.add('screenshot-viewer-open');
+  
+  // Сохраняем данные для навигации
+  window.screenshotViewerData = {
+    screenshots,
+    currentIndex
+  };
+  
+  // Добавляем обработчики клавиатуры
+  document.addEventListener('keydown', handleScreenshotKeyboard);
+};
+
+window.closeScreenshotViewer=()=>{
+  const viewer = document.querySelector('.screenshot-viewer-overlay');
+  if(viewer){
+    viewer.remove();
+    document.body.classList.remove('screenshot-viewer-open');
+    document.removeEventListener('keydown', handleScreenshotKeyboard);
+    delete window.screenshotViewerData;
+  }
+};
+
+window.navigateScreenshot=(direction)=>{
+  if(!window.screenshotViewerData) return;
+  
+  const { screenshots, currentIndex } = window.screenshotViewerData;
+  let newIndex = currentIndex + direction;
+  
+  if(newIndex < 0) newIndex = screenshots.length - 1;
+  if(newIndex >= screenshots.length) newIndex = 0;
+  
+  window.screenshotViewerData.currentIndex = newIndex;
+  
+  const image = document.getElementById('screenshotViewerImage');
+  const counter = document.querySelector('.screenshot-viewer-counter');
+  
+  image.src = screenshots[newIndex];
+  counter.textContent = `${newIndex + 1} / ${screenshots.length}`;
+};
+
+function handleScreenshotKeyboard(e){
+  if(!window.screenshotViewerData) return;
+  
+  switch(e.key){
+    case 'ArrowLeft':
+      navigateScreenshot(-1);
+      break;
+    case 'ArrowRight':
+      navigateScreenshot(1);
+      break;
+    case 'Escape':
+      closeScreenshotViewer();
+      break;
+  }
+}
+
 window.closeAnimeModal=(e)=>{
   if(e&&e.target!==document.querySelector('.modal-overlay')) return;
   const mo=document.querySelector('.modal-overlay');
@@ -455,12 +580,37 @@ document.addEventListener('DOMContentLoaded',async()=>{
     .modal-desc::-webkit-scrollbar{width:4px;}
     .modal-desc::-webkit-scrollbar-track{background:var(--bg-tertiary);border-radius:2px;}
     .modal-desc::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
-    .modal-screens{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.5rem;margin-top:1rem;}
-    .modal-screens .scr{width:100%;border-radius:6px;object-fit:cover;background:#000;transition:transform 0.2s ease;}
-    .modal-screens .scr:hover{transform:scale(1.05);}
+    .modal-screens-title{font-size:1.1rem;margin-bottom:0.5rem;color:var(--text-primary);}
+    .screenshots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.5rem;margin-top:0.5rem;}
+    .screenshot-item{position:relative;cursor:pointer;border-radius:6px;overflow:hidden;transition:transform 0.2s ease;}
+    .screenshot-item:hover{transform:scale(1.05);}
+    .screenshot-item .scr{width:100%;height:80px;object-fit:cover;background:#000;}
+    .screenshot-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s ease;}
+    .screenshot-item:hover .screenshot-overlay{opacity:1;}
+    .screenshot-overlay i{color:white;font-size:1.5rem;}
     body.modal-open{overflow:hidden;}
+    
+    /* --- SCREENSHOT VIEWER --- */
+    .screenshot-viewer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;padding:2rem;}
+    .screenshot-viewer-content{position:relative;max-width:90vw;max-height:90vh;display:flex;align-items:center;justify-content:center;}
+    .screenshot-viewer-close{position:absolute;top:-40px;right:0;background:none;border:none;font-size:2rem;color:white;cursor:pointer;z-index:1;}
+    .screenshot-viewer-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.2);border:none;color:white;width:50px;height:50px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.5rem;transition:background 0.2s ease;}
+    .screenshot-viewer-nav:hover{background:rgba(255,255,255,0.3);}
+    .screenshot-viewer-prev{left:20px;}
+    .screenshot-viewer-next{right:20px;}
+    .screenshot-viewer-image-container{display:flex;flex-direction:column;align-items:center;gap:1rem;}
+    .screenshot-viewer-image{max-width:100%;max-height:80vh;object-fit:contain;border-radius:8px;}
+    .screenshot-viewer-counter{color:white;font-size:1rem;background:rgba(0,0,0,0.5);padding:0.5rem 1rem;border-radius:20px;}
+    body.screenshot-viewer-open{overflow:hidden;}
+    
     @keyframes fadeIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
-    @media(max-width:700px){.modal-grid{grid-template-columns:1fr}.modal-left{align-items:center}}
+    @media(max-width:700px){
+      .modal-grid{grid-template-columns:1fr}
+      .modal-left{align-items:center}
+      .screenshot-viewer-nav{width:40px;height:40px;font-size:1.2rem;}
+      .screenshot-viewer-prev{left:10px;}
+      .screenshot-viewer-next{right:10px;}
+    }
     `;
     document.head.appendChild(style);
     updateHeader();
