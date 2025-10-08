@@ -1,20 +1,22 @@
 /* =========================================================
-   AniFox 2.1  (fixed)
-   Улучшения: модальное окно информации об аниме + share по title_orig + worldart backup
+   AniFox 2.2 (enhanced)
+   Улучшения: интеграция с Shikimori API + улучшенное кэширование + оптимизация производительности
    ========================================================= */
 
 /* ---------- CONFIG ---------- */
 const TOKEN   = 'a036c8a4c59b43e72e212e4d0388ef7d';
 const BASE    = 'https://kodikapi.com/search';
-const TTL     = 10 * 60 * 1000;                                       // 10-мин кэш
+const TTL     = 10 * 60 * 1000; // 10-мин кэш
+const SHIKIMORI_API_BASE = 'https://shikimori.one/api';
 
 /* ---------- INDEXEDDB ---------- */
 const DB_NAME = 'AniFoxDB';
-const DB_VERSION = 2; // Увеличиваем версию для добавления нового store
+const DB_VERSION = 3; // Увеличиваем версию для улучшенного хранения данных
 const STORE_SEARCH_HISTORY = 'search_history';
 const STORE_FAVORITES      = 'favorites';
 const STORE_SEARCH_RESULTS = 'search_results';
 const STORE_ANIME_INFO     = 'anime_info';
+const STORE_SHIKIMORI_CACHE = 'shikimori_cache'; // Новый store для кэширования Shikimori
 
 let db = null;
 async function initDB(){
@@ -25,17 +27,28 @@ async function initDB(){
     r.onsuccess = ()=>{ db = r.result; resolve(db); };
     r.onupgradeneeded = e=>{
       const d = e.target.result;
-      const stores = [STORE_SEARCH_HISTORY,STORE_FAVORITES,STORE_SEARCH_RESULTS,STORE_ANIME_INFO];
+      const stores = [
+        STORE_SEARCH_HISTORY, 
+        STORE_FAVORITES, 
+        STORE_SEARCH_RESULTS, 
+        STORE_ANIME_INFO,
+        STORE_SHIKIMORI_CACHE // Добавляем новый store
+      ];
       stores.forEach(n=>{
         if(!d.objectStoreNames.contains(n)){
           console.log('Creating store:', n);
           const s = d.createObjectStore(n,{
-            keyPath: n===STORE_SEARCH_RESULTS?'query':n===STORE_ANIME_INFO?'title':'id'
+            keyPath: n===STORE_SEARCH_RESULTS?'query':
+                    n===STORE_ANIME_INFO?'title':
+                    n===STORE_SHIKIMORI_CACHE?'query':'id'
           });
           s.createIndex('timestamp','t',{unique:false});
           if(n===STORE_FAVORITES) {
             s.createIndex('title','title',{unique:false});
-            s.createIndex('link','link',{unique:true}); // Уникальный индекс для ссылки
+            s.createIndex('link','link',{unique:true});
+          }
+          if(n===STORE_SHIKIMORI_CACHE) {
+            s.createIndex('cachedAt','cachedAt',{unique:false});
           }
         }
       });
@@ -174,33 +187,158 @@ async function fetchKodik(url,attempt=1){
   }
 }
 
-// Функция для поиска на WorldArt
-async function fetchWorldArtInfo(title, attempt=1) {
-  const ctrl = new AbortController(), t=setTimeout(()=>ctrl.abort(),8000);
+// Функция для поиска на Shikimori
+async function fetchShikimoriInfo(title, attempt=1) {
+  const cacheKey = `shikimori_${title.toLowerCase().trim()}`;
+  const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа кэш для Shikimori
+  
+  // Проверяем кэш
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const genres = ['приключения', 'фэнтези', 'комедия', 'драма', 'романтика', 'экшен'];
-    const randomGenres = [...new Set([...Array(2)].map(() => genres[Math.floor(Math.random() * genres.length)]))];
-    
-    return {
-      description: `«${title}» - увлекательное аниме, которое покорило сердца миллионов зрителей по всему миру. Захватывающий сюжет, яркие персонажи и качественная анимация делают этот проект одним из лучших в своем жанре.`,
-      rating: (Math.random() * 2 + 6).toFixed(1),
-      duration: '24 мин.',
-      status: 'завершён',
-      studios: ['Studio Ghibli', 'Madhouse', 'Kyoto Animation'][Math.floor(Math.random() * 3)],
-      genres: randomGenres,
-      poster_url: null
-    };
-  } catch(e) {
-    clearTimeout(t);
-    if(attempt>=2) {
-      console.warn('WorldArt request failed:', e);
-      return null;
+    const cached = await dbGet(STORE_SHIKIMORI_CACHE, cacheKey);
+    if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
+      console.log('✅ Shikimori данные из кэша для:', title);
+      return cached.data;
     }
-    await new Promise(r=>setTimeout(r,attempt*500));
-    return fetchWorldArtInfo(title, attempt+1);
+  } catch(e) {}
+  
+  const ctrl = new AbortController();
+  const timeout = setTimeout(()=>ctrl.abort(), 8000);
+  
+  try {
+    // Поиск аниме на Shikimori API
+    const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(title)}&limit=1`;
+    console.log('🔍 Поиск на Shikimori:', title);
+    
+    const response = await fetch(searchUrl, {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent': 'AniFox/2.2 (https://anifox.example.com)',
+        'Accept': 'application/json'
+      }
+    });
+    
+    clearTimeout(timeout);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data || data.length === 0) {
+      console.log('❌ Аниме не найдено на Shikimori:', title);
+      return getFallbackShikimoriData(title);
+    }
+    
+    const anime = data[0];
+    console.log('✅ Найдено аниме на Shikimori:', anime.russian || anime.name);
+    
+    // Получаем детальную информацию
+    let detailedInfo = null;
+    try {
+      const detailUrl = `${SHIKIMORI_API_BASE}/animes/${anime.id}`;
+      const detailResponse = await fetch(detailUrl, {
+        signal: ctrl.signal,
+        headers: {
+          'User-Agent': 'AniFox/2.2 (https://anifox.example.com)',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (detailResponse.ok) {
+        detailedInfo = await detailResponse.json();
+      }
+    } catch (detailError) {
+      console.warn('Не удалось получить детальную информацию:', detailError);
+    }
+    
+    const finalInfo = detailedInfo || anime;
+    
+    // Форматируем данные для нашего приложения
+    const result = {
+      description: finalInfo.description || `«${finalInfo.russian || finalInfo.name}» - японское аниме. ${finalInfo.english || ''}`,
+      rating: finalInfo.score ? finalInfo.score.toFixed(1) : null,
+      duration: getDurationFromShikimori(finalInfo),
+      status: getStatusFromShikimori(finalInfo.status),
+      studios: finalInfo.studios ? finalInfo.studios.map(s => s.name) : [],
+      genres: finalInfo.genres ? finalInfo.genres.map(g => g.russian || g.name) : [],
+      poster_url: finalInfo.image ? `https://shikimori.one${finalInfo.image.original}` : null,
+      shikimoriId: finalInfo.id,
+      shikimoriUrl: `https://shikimori.one${finalInfo.url}`
+    };
+    
+    // Кэшируем результат
+    try {
+      await dbPut(STORE_SHIKIMORI_CACHE, {
+        query: cacheKey,
+        data: result,
+        cachedAt: Date.now()
+      });
+    } catch(e) {
+      console.warn('Не удалось сохранить в кэш Shikimori:', e);
+    }
+    
+    return result;
+    
+  } catch(e) {
+    clearTimeout(timeout);
+    console.warn('Shikimori request failed:', e);
+    
+    if(attempt >= 2) {
+      return getFallbackShikimoriData(title);
+    }
+    
+    await new Promise(r=>setTimeout(r, attempt * 1000));
+    return fetchShikimoriInfo(title, attempt + 1);
   }
+}
+
+// Вспомогательные функции для Shikimori
+function getDurationFromShikimori(anime) {
+  if (!anime.duration) return null;
+  
+  const duration = anime.duration;
+  if (duration < 10) return `${duration} мин.`;
+  if (duration < 60) return `${duration} мин.`;
+  
+  const hours = Math.floor(duration / 60);
+  const minutes = duration % 60;
+  return minutes > 0 ? `${hours} ч. ${minutes} мин.` : `${hours} ч.`;
+}
+
+function getStatusFromShikimori(status) {
+  const statusMap = {
+    'released': 'завершён',
+    'ongoing': 'выходит',
+    'anons': 'анонсировано',
+    'latest': 'недавно вышедшее'
+  };
+  return statusMap[status] || status;
+}
+
+function getFallbackShikimoriData(title) {
+  // Резервные данные на основе анализа названия
+  const titleLower = title.toLowerCase();
+  
+  let genres = ['аниме'];
+  if (titleLower.includes('приключ') || titleLower.includes('adventure')) genres.push('приключения');
+  if (titleLower.includes('фэнтези') || titleLower.includes('fantasy')) genres.push('фэнтези');
+  if (titleLower.includes('роман') || titleLower.includes('love') || titleLower.includes('romance')) genres.push('романтика');
+  if (titleLower.includes('комеди') || titleLower.includes('comedy')) genres.push('комедия');
+  if (titleLower.includes('драм') || titleLower.includes('drama')) genres.push('драма');
+  if (titleLower.includes('экшен') || titleLower.includes('action')) genres.push('экшен');
+  if (titleLower.includes('школ') || titleLower.includes('school')) genres.push('школа');
+  
+  return {
+    description: `«${title}» - японское аниме. Подробное описание временно недоступно.`,
+    rating: null,
+    duration: '24 мин.',
+    status: 'завершён',
+    studios: [],
+    genres: genres.slice(0, 4),
+    poster_url: null,
+    isFallback: true
+  };
 }
 
 // Функция для получения расширенной информации об аниме
@@ -221,7 +359,7 @@ async function getAnimeExtendedInfo(item) {
     status: '',
     studios: [],
     additionalScreenshots: [],
-    worldartData: null
+    shikimoriData: null
   };
   
   if (item.material_data) {
@@ -233,53 +371,83 @@ async function getAnimeExtendedInfo(item) {
     result.studios = md.studios || [];
   }
   
-  if (!result.description || result.description === 'Описание отсутствует.' || result.description.length < 50) {
+  // Если данных недостаточно, запрашиваем с Shikimori
+  const needsMoreData = !result.description || 
+                       result.description === 'Описание отсутствует.' || 
+                       result.description.length < 50 ||
+                       !result.rating ||
+                       !result.studios.length;
+  
+  if (needsMoreData) {
     try {
-      const worldartData = await fetchWorldArtInfo(item.title);
-      if (worldartData) {
-        result.worldartData = worldartData;
+      const shikimoriData = await fetchShikimoriInfo(item.title);
+      if (shikimoriData) {
+        result.shikimoriData = shikimoriData;
         
         if (!result.description || result.description.length < 50) {
-          result.description = worldartData.description;
+          result.description = shikimoriData.description;
         }
         if (!result.rating) {
-          result.rating = worldartData.rating;
+          result.rating = shikimoriData.rating;
         }
         if (!result.duration) {
-          result.duration = worldartData.duration;
+          result.duration = shikimoriData.duration;
         }
         if (!result.status) {
-          result.status = worldartData.status;
+          result.status = shikimoriData.status;
         }
         if (!result.studios.length) {
-          result.studios = worldartData.studios || [];
+          result.studios = shikimoriData.studios || [];
         }
-        if (worldartData.genres && (!item.genres || item.genres.length === 0)) {
-          item.genres = worldartData.genres;
+        if (shikimoriData.genres && (!item.genres || item.genres.length === 0)) {
+          item.genres = shikimoriData.genres;
         }
       }
     } catch(e) {
-      console.warn('Failed to fetch WorldArt data:', e);
+      console.warn('Failed to fetch Shikimori data:', e);
     }
   }
   
-  if ((!item.screenshots || item.screenshots.length < 3) && (!item.material_data?.screenshots || item.material_data.screenshots.length < 3)) {
-    result.additionalScreenshots = [
-      '/resources/screen1.jpg',
-      '/resources/screen2.jpg', 
-      '/resources/screen3.jpg'
-    ].filter(url => url !== item.material_data?.poster_url);
+  // Добавляем скриншоты если их недостаточно
+  if ((!item.screenshots || item.screenshots.length < 3) && 
+      (!item.material_data?.screenshots || item.material_data.screenshots.length < 3)) {
+    result.additionalScreenshots = generateRelevantScreenshots(item.genres || []);
   }
   
+  // Сохраняем в кэш
   try {
     await dbPut(STORE_ANIME_INFO, {
       title: cacheKey,
       data: result,
       t: Date.now()
     });
-  } catch(e) {}
+  } catch(e) {
+    console.warn('Не удалось сохранить в кэш аниме:', e);
+  }
   
   return result;
+}
+
+// Генерация релевантных скриншотов на основе жанров
+function generateRelevantScreenshots(genres) {
+  const genreScreenshots = {
+    'приключения': ['/resources/adventure1.jpg', '/resources/adventure2.jpg'],
+    'фэнтези': ['/resources/fantasy1.jpg', '/resources/fantasy2.jpg'],
+    'романтика': ['/resources/romance1.jpg', '/resources/romance2.jpg'],
+    'комедия': ['/resources/comedy1.jpg', '/resources/comedy2.jpg'],
+    'драма': ['/resources/drama1.jpg', '/resources/drama2.jpg'],
+    'экшен': ['/resources/action1.jpg', '/resources/action2.jpg']
+  };
+  
+  let screenshots = [];
+  genres.forEach(genre => {
+    if (genreScreenshots[genre]) {
+      screenshots = [...screenshots, ...genreScreenshots[genre]];
+    }
+  });
+  
+  // Убираем дубликаты и ограничиваем количество
+  return [...new Set(screenshots)].slice(0, 3);
 }
 
 /* ---------- API ---------- */
@@ -292,6 +460,7 @@ async function apiSearch(q){
   dbPut(STORE_SEARCH_RESULTS,{query:key,data,t:Date.now()}).catch(()=>{});
   return data;
 }
+
 async function apiWeekly(){
   const key='weekly_all';
   try{ const cached=await dbGet(STORE_SEARCH_RESULTS,key); if(cached && Date.now()-cached.t<TTL) return cached.data; }catch{}
@@ -575,7 +744,7 @@ window.showAnimeInfo=async(itemRaw)=>{
                 <i class="${isFav?'fas':'far'} fa-heart"></i> ${isFav?'Удалить из избранного':'Добавить в избранное'}
               </button>
             </div>
-            ${extendedInfo.worldartData ? '<div class="modal-source-info"><i class="fas fa-database"></i> Данные дополнены WorldArt</div>' : ''}
+            ${extendedInfo.shikimoriData ? '<div class="modal-source-info"><i class="fas fa-database"></i> Данные дополнены Shikimori</div>' : ''}
           </div>
           <div class="modal-right">
             <h2 class="modal-title">${item.title}</h2>
