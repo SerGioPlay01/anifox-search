@@ -1412,11 +1412,9 @@ async function renderFavoritesPage() {
                     </span>
                 </div>
             </div>
-            <div class="results-grid" id="favoritesGrid">`;
+            <div class="results-grid">`;
 
-        // Рендерим первые 5 карточек сразу
-        const initialBatch = list.slice(0, 5);
-        for (const fav of initialBatch) {
+        for (const fav of list) {
             try {
                 let fullItemData = null;
 
@@ -1485,13 +1483,6 @@ async function renderFavoritesPage() {
         </section>`;
 
         box.innerHTML = html;
-
-        // Прогрессивная загрузка оставшихся карточек
-        if (list.length > 5) {
-            const remainingItems = list.slice(5);
-            setTimeout(() => loadRemainingFavorites(remainingItems), 100);
-        }
-
     } catch (e) {
         console.error("Error rendering favorites:", e);
         box.innerHTML = `<div class="no-results fade-in">
@@ -1501,90 +1492,6 @@ async function renderFavoritesPage() {
             <p style="color:var(--gray);font-size:.9rem">${e.message}</p>
         </div>`;
     }
-}
-
-async function loadRemainingFavorites(items) {
-    const grid = $("#favoritesGrid");
-    if (!grid) return;
-
-    const BATCH_SIZE = 3;
-    let loadedCount = 0;
-
-    async function loadNextBatch() {
-        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
-        
-        for (const fav of batch) {
-            try {
-                let fullItemData = null;
-
-                const searchQueries = await dbGetAll(STORE_SEARCH_RESULTS);
-                for (const cachedQuery of searchQueries) {
-                    if (cachedQuery.data && cachedQuery.data.results) {
-                        const found = cachedQuery.data.results.find(
-                            (item) => item.link === fav.link || item.title === fav.title
-                        );
-                        if (found) {
-                            fullItemData = found;
-                            break;
-                        }
-                    }
-                }
-
-                if (!fullItemData) {
-                    fullItemData = {
-                        title: fav.title,
-                        link: fav.link,
-                        year: fav.year || "—",
-                        type: fav.type || "—",
-                        quality: fav.quality || "—",
-                        genres: fav.genres || [],
-                        material_data: {
-                            poster_url: fav.poster_url || "/resources/obl_web.jpg",
-                            description: fav.description || "Описание отсутствует.",
-                        },
-                    };
-                }
-
-                const cardHtml = await createAnimeCard(fullItemData);
-                grid.insertAdjacentHTML('beforeend', cardHtml);
-                
-                await new Promise(resolve => setTimeout(resolve, 50));
-                
-            } catch (cardError) {
-                console.error("Error creating card for favorite:", fav.title, cardError);
-                const fallbackCard = `
-                <div class="card fade-in">
-                    <div class="card-header">
-                        <h3 class="h2_name">${fav.title}</h3>
-                        <div class="info-links">
-                            <a href="https://shikimori.one/animes?search=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
-                            <a href="https://anilist.co/search/anime?search=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
-                            <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(fav.title)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
-                        </div>
-                    </div>
-                    <iframe class="single-player" src="${fav.link}" allowfullscreen loading="lazy" title="Плеер: ${fav.title}"></iframe>
-                    <div class="card-actions">
-                        <button class="action-btn favorite-btn" data-link="${fav.link}" onclick="toggleFavorite('${fav.title.replace(/'/g, "\\'")}','${fav.link}')" title="Удалить из избранного">
-                            <i class="fas fa-heart"></i>
-                        </button>
-                    </div>
-                </div>`;
-                grid.insertAdjacentHTML('beforeend', fallbackCard);
-            }
-        }
-
-        loadedCount += batch.length;
-
-        if (loadedCount < items.length) {
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(loadNextBatch);
-            } else {
-                setTimeout(loadNextBatch, 200);
-            }
-        }
-    }
-
-    loadNextBatch();
 }
 
 window.clearFavorites = async () => {
@@ -1637,20 +1544,10 @@ async function renderWeekly() {
             return true;
         });
         if (list.length) {
-            let html = (hasHist ? box.innerHTML : "") + `<section class="weekly-section"><h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2><div class="results-grid" id="weeklyGrid">`;
-            
-            // Рендерим первые 6 карточек сразу
-            const initialBatch = list.slice(0, 6);
-            const initialCards = await Promise.all(initialBatch.map(createAnimeCard));
-            html += initialCards.join("");
+            let html = (hasHist ? box.innerHTML : "") + `<section class="weekly-section"><h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2><div class="results-grid">`;
+            html += (await Promise.all(list.map(createAnimeCard))).join("");
             html += `</div></section>`;
             box.innerHTML = html;
-
-            // Прогрессивная загрузка оставшихся карточек
-            if (list.length > 6) {
-                const remainingItems = list.slice(6);
-                setTimeout(() => loadRemainingWeekly(remainingItems), 200);
-            }
         } else if (!hasHist) {
             box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-search fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Добро пожаловать в AniFox!</h2><p>Начните с поиска аниме</p><ul><li><i class="fas fa-search"></i> Используйте поиск для нахождения аниме</li><li><i class="fas fa-history"></i> Просматривайте историю поиска</li><li><i class="fas fa-bolt"></i> Смотрите свежие обновления</li><li><i class="fas fa-heart"></i> Добавляйте аниме в избранное</li></ul></div>`;
         }
@@ -1658,37 +1555,6 @@ async function renderWeekly() {
         if (!hasHist)
             box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки</h2><p>Попробуйте перезагрузить страницу</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
     }
-}
-
-async function loadRemainingWeekly(items) {
-    const grid = $("#weeklyGrid");
-    if (!grid) return;
-
-    const BATCH_SIZE = 4;
-    let loadedCount = 0;
-
-    async function loadNextBatch() {
-        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
-        const batchCards = await Promise.all(batch.map(createAnimeCard));
-        
-        batchCards.forEach((card, index) => {
-            setTimeout(() => {
-                grid.insertAdjacentHTML('beforeend', card);
-            }, index * 80);
-        });
-
-        loadedCount += batch.length;
-
-        if (loadedCount < items.length) {
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(loadNextBatch);
-            } else {
-                setTimeout(loadNextBatch, 150);
-            }
-        }
-    }
-
-    loadNextBatch();
 }
 
 async function search() {
@@ -1730,21 +1596,10 @@ async function search() {
             }, 100);
             return;
         }
-        let html = `<section class="search-results-section"><div class="search-header"><h2 class="section-title fade-in"><i class="fas fa-search"></i> Результаты поиска: «${q}»</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${results.length} аниме</span> по запросу «${q}»</span></div></div><div class="results-grid" id="searchGrid">`;
-        
-        // Рендерим первые 8 карточек сразу
-        const initialBatch = results.slice(0, 8);
-        const initialCards = await Promise.all(initialBatch.map(createAnimeCard));
-        html += initialCards.join("");
+        let html = `<section class="search-results-section"><div class="search-header"><h2 class="section-title fade-in"><i class="fas fa-search"></i> Результаты поиска: «${q}»</h2><div class="stats-info"><span class="stats-text"><i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${results.length} аниме</span> по запросу «${q}»</span></div></div><div class="results-grid">`;
+        html += (await Promise.all(results.map(createAnimeCard))).join("");
         html += `</div></section>`;
         box.innerHTML = html;
-
-        // Прогрессивная загрузка оставшихся результатов
-        if (results.length > 8) {
-            const remainingResults = results.slice(8);
-            setTimeout(() => loadRemainingSearchResults(remainingResults), 200);
-        }
-
         const slug = toSlug(q);
         history.replaceState(null, null, `/search/${slug}`);
         if (input) input.value = "";
@@ -1752,37 +1607,6 @@ async function search() {
     } catch (e) {
         box.innerHTML = `<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки</h2><p>Попробуйте повторить поиск позже</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`;
     }
-}
-
-async function loadRemainingSearchResults(items) {
-    const grid = $("#searchGrid");
-    if (!grid) return;
-
-    const BATCH_SIZE = 4;
-    let loadedCount = 0;
-
-    async function loadNextBatch() {
-        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
-        const batchCards = await Promise.all(batch.map(createAnimeCard));
-        
-        batchCards.forEach((card, index) => {
-            setTimeout(() => {
-                grid.insertAdjacentHTML('beforeend', card);
-            }, index * 60);
-        });
-
-        loadedCount += batch.length;
-
-        if (loadedCount < items.length) {
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(loadNextBatch);
-            } else {
-                setTimeout(loadNextBatch, 100);
-            }
-        }
-    }
-
-    loadNextBatch();
 }
 
 /* ---------- HEADER ---------- */
