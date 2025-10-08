@@ -10,6 +10,25 @@ const TTL = 10 * 60 * 1000; // 10-мин кэш
 const SHIKIMORI_API_BASE = "https://shikimori.one/api";
 const CACHE_VERSION = '2.3';
 
+/* ---------- FONT AWESOME FIX ---------- */
+// Принудительная загрузка Font Awesome
+function loadFontAwesome() {
+    // Проверяем, не загружен ли уже Font Awesome
+    if (document.querySelector('link[href*="font-awesome"]')) {
+        return;
+    }
+    
+    const faLink = document.createElement('link');
+    faLink.rel = 'stylesheet';
+    faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+    faLink.integrity = 'sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==';
+    faLink.crossOrigin = 'anonymous';
+    faLink.setAttribute('data-dynamic', '');
+    document.head.appendChild(faLink);
+    
+    console.log('✅ Font Awesome loaded');
+}
+
 /* ---------- CACHE MANAGEMENT ---------- */
 class CacheManager {
     constructor() {
@@ -400,7 +419,7 @@ async function fetchShikimoriInfo(title, attempt = 1) {
         const response = await fetch(searchUrl, {
             signal: ctrl.signal,
             headers: {
-                "User-Agent": "AniFox/2.3 (https://anifox.example.com)",
+                "User-Agent": "AniFox/2.3 (https://anifox-search.vercel.app)",
                 Accept: "application/json",
             },
         });
@@ -425,7 +444,7 @@ async function fetchShikimoriInfo(title, attempt = 1) {
             const detailResponse = await fetch(detailUrl, {
                 signal: ctrl.signal,
                 headers: {
-                    "User-Agent": "AniFox/2.3 (https://anifox.example.com)",
+                    "User-Agent": "AniFox/2.3 (https://anifox-search.vercel.app)",
                     Accept: "application/json",
                 },
             });
@@ -442,7 +461,7 @@ async function fetchShikimoriInfo(title, attempt = 1) {
         const result = {
             description:
                 finalInfo.description ||
-                `«${finalInfo.russian || finalInfo.name}» - японское аниме. ${
+                `«${finalInfo.russian || finalInfo.name}» - аниме. ${
                     finalInfo.english || ""
                 }`,
             rating: finalInfo.score ? finalInfo.score.toFixed(1) : null,
