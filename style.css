@@ -2265,8 +2265,8 @@ body.modal-open {
 
 .screenshot-viewer-close {
   position: absolute;
-  top: -70px;
-  right: 0;
+  top: 20px;
+  right: 20px;
   background: rgba(145, 21, 234, 0.9);
   border: none;
   width: 55px;
