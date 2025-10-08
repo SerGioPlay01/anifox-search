@@ -1,6 +1,6 @@
 /* =========================================================
    AniFox 2.4 (optimized)
-   Улучшения: прогрессивная загрузка + оптимизация производительности + подготовка к деплою
+   Улучшения: кнопки загрузки вместо прогрессивной загрузки + исправление JSON ошибок
    ========================================================= */
 
 /* ---------- CONFIG ---------- */
@@ -11,8 +11,10 @@ const SHIKIMORI_API_BASE = "https://shikimori.one/api";
 const CACHE_VERSION = '2.4';
 
 /* ---------- GLOBAL STATE ---------- */
-let progressiveLoadingEnabled = true;
-let currentLoadingOperations = new Set();
+let currentSearchResults = [];
+let currentFavorites = [];
+let currentWeeklyResults = [];
+let currentSearchQuery = '';
 
 /* ---------- FONT AWESOME FIX ---------- */
 function loadFontAwesome() {
@@ -386,11 +388,7 @@ async function optimizedFetch(url, options = {}) {
     }
 }
 
-/* ---------- PROGRESSIVE LOADING UTILS ---------- */
-function shouldUseProgressiveLoading(itemCount) {
-    return progressiveLoadingEnabled && itemCount > 5;
-}
-
+/* ---------- UTILS ---------- */
 function createLoadingIndicator() {
     return `<div class="loading-indicator" id="loadingIndicator">
         <div class="preloader-spinner small"></div>
@@ -401,6 +399,18 @@ function createLoadingIndicator() {
 function removeLoadingIndicator() {
     const indicator = document.getElementById('loadingIndicator');
     if (indicator) indicator.remove();
+}
+
+function createLoadMoreButton(text, onClick, id = 'loadMoreBtn') {
+    return `<button class="load-more-btn" id="${id}" onclick="${onClick}">
+        <i class="fas fa-arrow-down"></i> ${text}
+    </button>`;
+}
+
+function createShowMoreButton(text, onClick, id = 'showMoreBtn') {
+    return `<button class="show-more-btn" id="${id}" onclick="${onClick}">
+        <i class="fas fa-chevron-down"></i> ${text}
+    </button>`;
 }
 
 async function safeCreateAnimeCard(item) {
@@ -433,12 +443,26 @@ function createFallbackCard(item) {
 }
 
 function escapeHtml(unsafe) {
+    if (!unsafe) return '';
     return unsafe
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+// Функция для безопасного парсинга JSON
+function safeJsonParse(jsonString) {
+    try {
+        // Очищаем строку от недопустимых управляющих символов
+        const cleanedString = jsonString.replace(/[\x00-\x1F\x7F]/g, '');
+        return JSON.parse(cleanedString);
+    } catch (error) {
+        console.error('JSON parse error:', error);
+        console.error('Problematic JSON string:', jsonString);
+        throw new Error('Не удалось обработать данные аниме');
+    }
 }
 
 /* ---------- FETCH ---------- */
@@ -988,7 +1012,15 @@ window.checkFavorites = async () => {
 
 /* ---------- SHARE ---------- */
 window.shareAnime = (itemRaw) => {
-    const item = JSON.parse(itemRaw);
+    let item;
+    try {
+        item = safeJsonParse(itemRaw);
+    } catch (error) {
+        console.error('Error parsing anime data for sharing:', error);
+        showNote('Ошибка при подготовке данных для sharing', 'error');
+        return;
+    }
+    
     const url = `${location.origin}/search/${toSlug(item.title_orig || item.title)}`;
     const text = `Смотри «${item.title}» (${item.year}) на AniFox.`;
     if (navigator.share) {
@@ -1001,7 +1033,15 @@ window.shareAnime = (itemRaw) => {
 
 /* ---------- MODAL INFO ---------- */
 window.showAnimeInfo = async (itemRaw) => {
-    const item = JSON.parse(itemRaw);
+    let item;
+    try {
+        item = safeJsonParse(itemRaw);
+    } catch (error) {
+        console.error('Error parsing anime data for info:', error);
+        showNote('Ошибка при загрузке информации об аниме', 'error');
+        return;
+    }
+    
     const md = item.material_data || {};
 
     const loadingHTML = `
@@ -1318,7 +1358,19 @@ window.clearSearchHistory = async () => {
     }
 };
 
-/* ---------- PROGRESSIVE RENDERING ---------- */
+/* ---------- КНОПКИ ЗАГРУЗКИ ВМЕСТО ПРОГРЕССИВНОЙ ЗАГРУЗКИ ---------- */
+const ITEMS_PER_PAGE = {
+    search: 8,
+    weekly: 6,
+    favorites: 5
+};
+
+let currentDisplayCount = {
+    search: 0,
+    weekly: 0,
+    favorites: 0
+};
+
 async function renderFavoritesPage() {
     const box = $("resultsBox");
     if (!box) return;
@@ -1327,9 +1379,10 @@ async function renderFavoritesPage() {
 
     try {
         const favs = await getFavorites();
-        const list = favs.sort((a, b) => b.t - a.t);
+        currentFavorites = favs.sort((a, b) => b.t - a.t);
+        currentDisplayCount.favorites = ITEMS_PER_PAGE.favorites;
 
-        if (!list.length) {
+        if (!currentFavorites.length) {
             box.innerHTML = `<div class="no-results fade-in">
                 <i class="fas fa-heart fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
                 <h2>В избранном пока ничего нет</h2>
@@ -1341,23 +1394,33 @@ async function renderFavoritesPage() {
             return;
         }
 
+        const displayedFavorites = currentFavorites.slice(0, currentDisplayCount.favorites);
+        const cards = await Promise.all(displayedFavorites.map(safeCreateAnimeCard));
+
         let html = `<section class="favorites-section">
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-heart"></i> Избранное</h2>
                 <div class="stats-info">
                     <span class="stats-text">
-                        <i class="fas fa-film"></i> Всего: <span class="stats-highlight">${list.length} аниме</span>
+                        <i class="fas fa-film"></i> Всего: <span class="stats-highlight">${currentFavorites.length} аниме</span>
+                        | Показано: <span class="stats-highlight">${displayedFavorites.length}</span>
                     </span>
                 </div>
             </div>
-            <div class="results-grid" id="favoritesGrid">`;
+            <div class="results-grid" id="favoritesGrid">
+                ${cards.join('')}
+            </div>`;
 
-        // Рендерим первые 5 карточек сразу
-        const initialBatch = list.slice(0, 5);
-        const initialCards = await Promise.all(initialBatch.map(safeCreateAnimeCard));
-        html += initialCards.join('');
-        
-        html += `</div>
+        // Добавляем кнопку "Показать еще" если есть еще элементы
+        if (currentDisplayCount.favorites < currentFavorites.length) {
+            html += createLoadMoreButton(
+                `Показать еще (${currentFavorites.length - currentDisplayCount.favorites})`,
+                'loadMoreFavorites()',
+                'loadMoreFavoritesBtn'
+            );
+        }
+
+        html += `
             <div class="favorites-actions">
                 <button onclick="clearFavorites()" class="clear-history-btn">
                     <i class="fas fa-trash"></i> Очистить избранное
@@ -1370,12 +1433,6 @@ async function renderFavoritesPage() {
 
         box.innerHTML = html;
 
-        // Прогрессивная загрузка оставшихся карточек
-        if (shouldUseProgressiveLoading(list.length)) {
-            const remainingItems = list.slice(5);
-            setTimeout(() => loadRemainingFavorites(remainingItems), 100);
-        }
-
     } catch (e) {
         console.error("Error rendering favorites:", e);
         box.innerHTML = `<div class="no-results fade-in">
@@ -1387,71 +1444,57 @@ async function renderFavoritesPage() {
     }
 }
 
-window.loadRemainingFavorites = async function(items) {
-    const operationId = 'favorites_' + Date.now();
-    currentLoadingOperations.add(operationId);
+window.loadMoreFavorites = async function() {
+    const btn = document.getElementById('loadMoreFavoritesBtn');
+    const grid = document.getElementById('favoritesGrid');
     
-    const grid = $("#favoritesGrid");
-    if (!grid) {
-        currentLoadingOperations.delete(operationId);
-        return;
-    }
+    if (!btn || !grid) return;
 
-    // ПРОВЕРКА: если items пустой, выходим
-    if (!items || items.length === 0) {
-        currentLoadingOperations.delete(operationId);
-        return;
-    }
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+    btn.disabled = true;
 
-    const BATCH_SIZE = 3;
-    let loadedCount = 0;
+    try {
+        currentDisplayCount.favorites += ITEMS_PER_PAGE.favorites;
+        const newFavorites = currentFavorites.slice(
+            currentDisplayCount.favorites - ITEMS_PER_PAGE.favorites,
+            currentDisplayCount.favorites
+        );
 
-    // Добавляем индикатор загрузки
-    grid.insertAdjacentHTML('afterend', createLoadingIndicator());
-
-    async function loadNextBatch() {
-        if (!currentLoadingOperations.has(operationId)) return;
-
-        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        const newCards = await Promise.all(newFavorites.map(safeCreateAnimeCard));
         
-        // ПРОВЕРКА: если batch пустой, завершаем
-        if (batch.length === 0) {
-            removeLoadingIndicator();
-            currentLoadingOperations.delete(operationId);
-            return;
-        }
-        
-        try {
-            const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
-            
-            batchCards.forEach((card, index) => {
-                setTimeout(() => {
-                    if (currentLoadingOperations.has(operationId)) {
-                        grid.insertAdjacentHTML('beforeend', card);
-                    }
-                }, index * 50);
-            });
+        newCards.forEach(card => {
+            grid.insertAdjacentHTML('beforeend', card);
+        });
 
-            loadedCount += batch.length;
-
-            if (loadedCount < items.length && currentLoadingOperations.has(operationId)) {
-                if ('requestIdleCallback' in window) {
-                    requestIdleCallback(loadNextBatch);
-                } else {
-                    setTimeout(loadNextBatch, 200);
-                }
-            } else {
-                removeLoadingIndicator();
-                currentLoadingOperations.delete(operationId);
-            }
-        } catch (error) {
-            console.error('Error loading favorites batch:', error);
-            removeLoadingIndicator();
-            currentLoadingOperations.delete(operationId);
+        // Обновляем статистику
+        const statsInfo = document.querySelector('.favorites-section .stats-info');
+        if (statsInfo) {
+            statsInfo.innerHTML = `
+                <span class="stats-text">
+                    <i class="fas fa-film"></i> Всего: <span class="stats-highlight">${currentFavorites.length} аниме</span>
+                    | Показано: <span class="stats-highlight">${Math.min(currentDisplayCount.favorites, currentFavorites.length)}</span>
+                </span>
+            `;
         }
+
+        // Обновляем или удаляем кнопку
+        if (currentDisplayCount.favorites >= currentFavorites.length) {
+            btn.remove();
+        } else {
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще (${currentFavorites.length - currentDisplayCount.favorites})`;
+            btn.disabled = false;
+        }
+
+        await refreshAllFavoriteButtons();
+
+    } catch (error) {
+        console.error('Error loading more favorites:', error);
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Ошибка загрузки';
+        setTimeout(() => {
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще (${currentFavorites.length - currentDisplayCount.favorites + ITEMS_PER_PAGE.favorites})`;
+            btn.disabled = false;
+        }, 2000);
     }
-
-    loadNextBatch();
 }
 
 window.clearFavorites = async () => {
@@ -1459,6 +1502,8 @@ window.clearFavorites = async () => {
         try {
             await dbClear(STORE_FAVORITES);
             clearFavoritesCache();
+            currentFavorites = [];
+            currentDisplayCount.favorites = ITEMS_PER_PAGE.favorites;
             await refreshAllFavoriteButtons();
 
             if (location.search.includes("page=favorites")) {
@@ -1512,76 +1557,47 @@ async function renderWeekly() {
     box.innerHTML = finalHTML;
 }
 
-async function loadHistorySection() {
-    try {
-        const hist = await dbGetAll(STORE_SEARCH_HISTORY, "timestamp");
-        const list = hist.sort((a, b) => b.t - a.t).slice(0, 10);
-        if (!list.length) return '';
-
-        let html = `<section class="history-section">
-            <h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2>
-            <div class="search-history-buttons">`;
-        
-        list.forEach(i => {
-            html += `<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g, "\\'")}')">
-                <i class="fas fa-search"></i> ${escapeHtml(i.query)}
-                <span class="remove-history" onclick="removeFromHistory(event,${i.id})">
-                    <i class="fas fa-times"></i>
-                </span>
-            </button>`;
-        });
-        
-        html += `</div>
-            <div class="history-actions">
-                <button onclick="clearSearchHistory()" class="clear-history-btn">
-                    <i class="fas fa-trash"></i> Очистить историю
-                </button>
-            </div>
-        </section>`;
-        
-        return html;
-    } catch {
-        return '';
-    }
-}
-
 async function loadWeeklyData() {
     try {
         const data = await apiWeekly();
         updateSEOMeta(data);
         
         const seen = new Set();
-        const list = (data.results || []).filter(i => {
+        currentWeeklyResults = (data.results || []).filter(i => {
             const k = i.title.trim().toLowerCase();
             if (seen.has(k)) return false;
             seen.add(k);
             return true;
         });
 
-        if (!list.length) return '';
+        if (!currentWeeklyResults.length) return '';
+
+        currentDisplayCount.weekly = ITEMS_PER_PAGE.weekly;
+        const displayedWeekly = currentWeeklyResults.slice(0, currentDisplayCount.weekly);
+        const cards = await Promise.all(displayedWeekly.map(safeCreateAnimeCard));
 
         let html = `<section class="weekly-section">
             <h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2>
-            <div class="results-grid" id="weeklyGrid">`;
-        
-        // Рендерим первые 6 карточек сразу
-        const initialBatch = list.slice(0, 6);
-        const initialCards = await Promise.all(initialBatch.map(safeCreateAnimeCard));
-        html += initialCards.join('');
-        html += `</div>`;
-        
-        // Контейнер для оставшихся карточек
-        if (shouldUseProgressiveLoading(list.length)) {
-            html += `<div id="remainingWeeklyContainer"></div>`;
+            <div class="stats-info">
+                <span class="stats-text">
+                    <i class="fas fa-film"></i> Всего: <span class="stats-highlight">${currentWeeklyResults.length} аниме</span>
+                    | Показано: <span class="stats-highlight">${displayedWeekly.length}</span>
+                </span>
+            </div>
+            <div class="results-grid" id="weeklyGrid">
+                ${cards.join('')}
+            </div>`;
+
+        // Добавляем кнопку "Показать еще" если есть еще элементы
+        if (currentDisplayCount.weekly < currentWeeklyResults.length) {
+            html += createLoadMoreButton(
+                `Показать еще новинки (${currentWeeklyResults.length - currentDisplayCount.weekly})`,
+                'loadMoreWeekly()',
+                'loadMoreWeeklyBtn'
+            );
         }
-        
+
         html += `</section>`;
-        
-        // Запускаем прогрессивную загрузку оставшихся карточек
-        if (shouldUseProgressiveLoading(list.length)) {
-            const remainingBatch = list.slice(6);
-            setTimeout(() => loadRemainingWeekly(remainingBatch), 300);
-        }
         
         return html;
     } catch (e) {
@@ -1590,72 +1606,57 @@ async function loadWeeklyData() {
     }
 }
 
-window.loadRemainingWeekly = async function(items) {
-    const operationId = 'weekly_' + Date.now();
-    currentLoadingOperations.add(operationId);
+window.loadMoreWeekly = async function() {
+    const btn = document.getElementById('loadMoreWeeklyBtn');
+    const grid = document.getElementById('weeklyGrid');
     
-    const container = $("#remainingWeeklyContainer");
-    if (!container) {
-        currentLoadingOperations.delete(operationId);
-        return;
-    }
+    if (!btn || !grid) return;
 
-    // ПРОВЕРКА: если items пустой, выходим
-    if (!items || items.length === 0) {
-        container.remove();
-        currentLoadingOperations.delete(operationId);
-        return;
-    }
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+    btn.disabled = true;
 
-    const BATCH_SIZE = 4;
-    let loadedCount = 0;
+    try {
+        currentDisplayCount.weekly += ITEMS_PER_PAGE.weekly;
+        const newWeekly = currentWeeklyResults.slice(
+            currentDisplayCount.weekly - ITEMS_PER_PAGE.weekly,
+            currentDisplayCount.weekly
+        );
 
-    container.innerHTML = createLoadingIndicator();
-
-    async function loadNextBatch() {
-        if (!currentLoadingOperations.has(operationId)) return;
-
-        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        const newCards = await Promise.all(newWeekly.map(safeCreateAnimeCard));
         
-        // ПРОВЕРКА: если batch пустой, завершаем
-        if (batch.length === 0) {
-            container.remove();
-            currentLoadingOperations.delete(operationId);
-            return;
-        }
-        
-        try {
-            const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
-            
-            const grid = $("#weeklyGrid");
-            batchCards.forEach((card, index) => {
-                setTimeout(() => {
-                    if (currentLoadingOperations.has(operationId) && grid) {
-                        grid.insertAdjacentHTML('beforeend', card);
-                    }
-                }, index * 80);
-            });
+        newCards.forEach(card => {
+            grid.insertAdjacentHTML('beforeend', card);
+        });
 
-            loadedCount += batch.length;
-
-            if (loadedCount < items.length && currentLoadingOperations.has(operationId)) {
-                if ('requestIdleCallback' in window) {
-                    requestIdleCallback(loadNextBatch);
-                } else {
-                    setTimeout(loadNextBatch, 150);
-                }
-            } else {
-                container.remove();
-                currentLoadingOperations.delete(operationId);
-            }
-        } catch (error) {
-            console.error('Error loading weekly batch:', error);
-            container.remove();
-            currentLoadingOperations.delete(operationId);
+        // Обновляем статистику
+        const statsInfo = document.querySelector('.weekly-section .stats-info');
+        if (statsInfo) {
+            statsInfo.innerHTML = `
+                <span class="stats-text">
+                    <i class="fas fa-film"></i> Всего: <span class="stats-highlight">${currentWeeklyResults.length} аниме</span>
+                    | Показано: <span class="stats-highlight">${Math.min(currentDisplayCount.weekly, currentWeeklyResults.length)}</span>
+                </span>
+            `;
         }
+
+        // Обновляем или удаляем кнопку
+        if (currentDisplayCount.weekly >= currentWeeklyResults.length) {
+            btn.remove();
+        } else {
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще новинки (${currentWeeklyResults.length - currentDisplayCount.weekly})`;
+            btn.disabled = false;
+        }
+
+        await refreshAllFavoriteButtons();
+
+    } catch (error) {
+        console.error('Error loading more weekly:', error);
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Ошибка загрузки';
+        setTimeout(() => {
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще новинки (${currentWeeklyResults.length - currentDisplayCount.weekly + ITEMS_PER_PAGE.weekly})`;
+            btn.disabled = false;
+        }, 2000);
     }
-
-    loadNextBatch();
 }
 
 async function search() {
@@ -1678,19 +1679,21 @@ async function search() {
     try {
         const data = await apiSearch(q);
         const seen = new Set();
-        const results = (data.results || []).filter(i => {
+        currentSearchResults = (data.results || []).filter(i => {
             const k = i.title.trim().toLowerCase();
             if (seen.has(k)) return false;
             seen.add(k);
             return true;
         });
 
-        if (!results.length) {
+        currentSearchQuery = q;
+
+        if (!currentSearchResults.length) {
             await renderNoResults(q);
             return;
         }
 
-        await renderSearchResults(q, results, data);
+        await renderSearchResults(q, currentSearchResults, data);
         
         const slug = toSlug(q);
         history.replaceState(null, null, `/search/${slug}`);
@@ -1710,106 +1713,89 @@ async function search() {
 async function renderSearchResults(query, results, data) {
     const box = $("resultsBox");
     
+    currentDisplayCount.search = ITEMS_PER_PAGE.search;
+    const displayedResults = results.slice(0, currentDisplayCount.search);
+    const cards = await Promise.all(displayedResults.map(safeCreateAnimeCard));
+    
     let html = `<section class="search-results-section">
         <div class="search-header">
             <h2 class="section-title fade-in"><i class="fas fa-search"></i> Результаты поиска: «${escapeHtml(query)}»</h2>
             <div class="stats-info">
                 <span class="stats-text">
                     <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${results.length} аниме</span> по запросу «${escapeHtml(query)}»
+                    | Показано: <span class="stats-highlight">${displayedResults.length}</span>
                 </span>
             </div>
         </div>
-        <div class="results-grid" id="searchGrid">`;
+        <div class="results-grid" id="searchGrid">
+            ${cards.join('')}
+        </div>`;
 
-    // Рендерим первые 8 карточек сразу
-    const initialBatch = results.slice(0, 8);
-    const initialCards = await Promise.all(initialBatch.map(safeCreateAnimeCard));
-    html += initialCards.join('');
-    
-    html += `</div>`;
-    
-    // Добавляем контейнер для оставшихся карточек
-    if (shouldUseProgressiveLoading(results.length)) {
-        html += `<div id="remainingSearchContainer"></div>`;
+    // Добавляем кнопку "Показать еще" если есть еще элементы
+    if (currentDisplayCount.search < results.length) {
+        html += createLoadMoreButton(
+            `Показать еще результаты (${results.length - currentDisplayCount.search})`,
+            'loadMoreSearchResults()',
+            'loadMoreSearchBtn'
+        );
     }
-    
+
     html += `</section>`;
     
     box.innerHTML = html;
-    
-    // Прогрессивная загрузка оставшихся результатов
-    if (shouldUseProgressiveLoading(results.length)) {
-        const remainingResults = results.slice(8);
-        setTimeout(() => loadRemainingSearchResults(remainingResults), 200);
-    }
 }
 
-window.loadRemainingSearchResults = async function(items) {
-    const operationId = 'search_' + Date.now();
-    currentLoadingOperations.add(operationId);
+window.loadMoreSearchResults = async function() {
+    const btn = document.getElementById('loadMoreSearchBtn');
+    const grid = document.getElementById('searchGrid');
     
-    const container = $("#remainingSearchContainer");
-    if (!container) {
-        currentLoadingOperations.delete(operationId);
-        return;
-    }
+    if (!btn || !grid) return;
 
-    // ПРОВЕРКА: если items пустой, выходим
-    if (!items || items.length === 0) {
-        container.remove();
-        currentLoadingOperations.delete(operationId);
-        return;
-    }
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+    btn.disabled = true;
 
-    const BATCH_SIZE = 4;
-    let loadedCount = 0;
+    try {
+        currentDisplayCount.search += ITEMS_PER_PAGE.search;
+        const newResults = currentSearchResults.slice(
+            currentDisplayCount.search - ITEMS_PER_PAGE.search,
+            currentDisplayCount.search
+        );
 
-    container.innerHTML = createLoadingIndicator();
-
-    async function loadNextBatch() {
-        if (!currentLoadingOperations.has(operationId)) return;
-
-        const batch = items.slice(loadedCount, loadedCount + BATCH_SIZE);
+        const newCards = await Promise.all(newResults.map(safeCreateAnimeCard));
         
-        // ПРОВЕРКА: если batch пустой, завершаем
-        if (batch.length === 0) {
-            container.remove();
-            currentLoadingOperations.delete(operationId);
-            return;
-        }
-        
-        try {
-            const batchCards = await Promise.all(batch.map(safeCreateAnimeCard));
-            
-            const grid = $("#searchGrid");
-            batchCards.forEach((card, index) => {
-                setTimeout(() => {
-                    if (currentLoadingOperations.has(operationId) && grid) {
-                        grid.insertAdjacentHTML('beforeend', card);
-                    }
-                }, index * 60);
-            });
+        newCards.forEach(card => {
+            grid.insertAdjacentHTML('beforeend', card);
+        });
 
-            loadedCount += batch.length;
-
-            if (loadedCount < items.length && currentLoadingOperations.has(operationId)) {
-                if ('requestIdleCallback' in window) {
-                    requestIdleCallback(loadNextBatch);
-                } else {
-                    setTimeout(loadNextBatch, 100);
-                }
-            } else {
-                container.remove();
-                currentLoadingOperations.delete(operationId);
-            }
-        } catch (error) {
-            console.error('Error loading search batch:', error);
-            container.remove();
-            currentLoadingOperations.delete(operationId);
+        // Обновляем статистику
+        const statsInfo = document.querySelector('.search-results-section .stats-info');
+        if (statsInfo) {
+            statsInfo.innerHTML = `
+                <span class="stats-text">
+                    <i class="fas fa-film"></i> Найдено: <span class="stats-highlight">${currentSearchResults.length} аниме</span> по запросу «${escapeHtml(currentSearchQuery)}»
+                    | Показано: <span class="stats-highlight">${Math.min(currentDisplayCount.search, currentSearchResults.length)}</span>
+                </span>
+            `;
         }
+
+        // Обновляем или удаляем кнопку
+        if (currentDisplayCount.search >= currentSearchResults.length) {
+            btn.remove();
+        } else {
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще результаты (${currentSearchResults.length - currentDisplayCount.search})`;
+            btn.disabled = false;
+        }
+
+        await refreshAllFavoriteButtons();
+
+    } catch (error) {
+        console.error('Error loading more search results:', error);
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Ошибка загрузки';
+        setTimeout(() => {
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще результаты (${currentSearchResults.length - currentDisplayCount.search + ITEMS_PER_PAGE.search})`;
+            btn.disabled = false;
+        }, 2000);
     }
-
-    loadNextBatch();
 }
 
 async function renderNoResults(query) {
@@ -1883,16 +1869,12 @@ function updateHeader() {
 
 window.navigateToHome = (e) => {
     if (e) e.preventDefault();
-    // Отменяем все текущие операции загрузки
-    currentLoadingOperations.clear();
     history.replaceState(null, null, "/");
     updateHeader();
     renderWeekly();
 };
 
 window.navigateToFavorites = () => {
-    // Отменяем все текущие операции загрузки
-    currentLoadingOperations.clear();
     const url = location.search
         ? `${location.pathname}${location.search}${location.search.includes("?") ? "&" : "?"}page=favorites`
         : `${location.pathname}?page=favorites`;
@@ -1963,8 +1945,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         fetchCache.clear();
-        // При скрытии вкладки отменяем все операции загрузки
-        currentLoadingOperations.clear();
     }
 });
 
@@ -1975,13 +1955,4 @@ setInterval(() => {
     }
 }, 60000);
 
-// Глобальная функция для отладки
-window.getLoadingState = () => {
-    return {
-        progressiveLoadingEnabled,
-        currentLoadingOperations: Array.from(currentLoadingOperations),
-        fetchCacheSize: fetchCache.size
-    };
-};
-
-console.log(`🚀 AniFox ${CACHE_VERSION} loaded with progressive rendering optimizations`);
+console.log(`🚀 AniFox ${CACHE_VERSION} loaded with button-based loading system`);
