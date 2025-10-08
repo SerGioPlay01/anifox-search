@@ -1155,13 +1155,16 @@ function updateHeader(){
     <button class="nav-btn ${!location.search.includes('page=favorites')?'active':''}" onclick="navigateToHome()"><i class="fas fa-search"></i> Поиск</button>
     <button class="nav-btn ${location.search.includes('page=favorites')?'active':''}" onclick="navigateToFavorites()"><i class="fas fa-heart"></i> Избранное</button>
   </nav>`;
+  
 }
+
 window.navigateToHome=(e)=>{
   if(e) e.preventDefault();
   history.replaceState(null,null,'/');
   updateHeader();
   renderWeekly();
 };
+
 window.navigateToFavorites=()=>{
   const url=location.search
     ?`${location.pathname}${location.search}${location.search.includes('?')?'&':'?'}page=favorites`
