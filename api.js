@@ -848,9 +848,6 @@ async function renderFavoritesPage(){
             <button class="action-btn favorite-btn" data-link="${fav.link}" onclick="toggleFavorite('${fav.title.replace(/'/g,"\\'")}','${fav.link}')" title="Удалить из избранного">
               <i class="fas fa-heart"></i>
             </button>
-            <button class="action-btn" onclick="shareAnime('${JSON.stringify({title: fav.title, link: fav.link}).replace(/"/g,'&quot;')}')" title="Поделиться">
-              <i class="fas fa-share"></i>
-            </button>
             <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify({title: fav.title, link: fav.link}).replace(/"/g,'&quot;')}')" title="Информация">
               <i class="fas fa-info-circle"></i>
             </button>
