@@ -81,8 +81,7 @@ body {
       align-items: center;
       justify-content: space-between;
       padding: 1rem 2rem;
-      background: var(--black);
-      opacity: 0.5;
+      background: #26034292;
       border-bottom: 1px solid rgba(145, 21, 234, 0.3);
       position: sticky;
       top: 0;
