@@ -903,11 +903,13 @@ function updateSEOMeta(apiData) {
 
 /* ---------- CARD ---------- */
 async function createAnimeCard(item) {
-    const t = item.title;
+    const t   = item.title;
     const favs = await getFavorites();
-    const isFav = favs.some((f) => f.link === item.link);
+    const isFav = favs.some(f => f.link === item.link);
 
     const hasInfoData = checkSimpleInfoData(item);
+    const hasShareData = !!(item.link && t);          // ← минимально нужное для шаринга
+    const hasFavData   = !!(item.link && t);          // ← минимально нужное для избранного
 
     return `
     <div class="card fade-in">
@@ -926,18 +928,24 @@ async function createAnimeCard(item) {
             </div>
         </div>
         <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+
         <div class="card-actions">
-            <button class="action-btn favorite-btn" data-link="${item.link}" onclick="toggleFavorite('${t.replace(/'/g, "\\'")}','${item.link}')" 
-                title="${isFav ? "Удалить из избранного" : "Добавить в избранное"}">
-                <i class="${isFav ? "fas" : "far"} fa-heart"></i>
+            ${hasFavData ? `
+            <button class="action-btn favorite-btn" data-link="${item.link}"
+                    onclick="toggleFavorite('${t.replace(/'/g, "\\'")}','${item.link}')"
+                    title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
+                <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
             </button>
-            
-            <button class="action-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, "&quot;")}')" title="Поделиться">
+            ` : ''}
+
+            ${hasShareData ? `
+            <button class="action-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
                 <i class="fas fa-share"></i>
             </button>
-            
+            ` : ''}
+
             ${hasInfoData ? `
-            <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify(item).replace(/"/g, "&quot;")}')" title="Информация">
+            <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Информация">
                 <i class="fas fa-info-circle"></i>
             </button>
             ` : ''}
@@ -946,7 +954,7 @@ async function createAnimeCard(item) {
 }
 
 function checkSimpleInfoData(item) {
-    return !!(item.material_data || item.year || (item.genres && item.genres.length > 0));
+    return !!(item.material_data || item.year || (item.genres && item.genres.length));
 }
 
 /* ---------- FAVORITES ---------- */
