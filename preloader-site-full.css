@@ -1,4 +1,18 @@
 /* Прелоадер — уникальный ID для изоляции */
+
+:root {
+  --red: #5b0a99;
+  --black: #0a0a0a;
+  --white: #f2f2f2;
+  --gray: #666;
+  --dark-gray: #333;
+  --radius: 16px;
+  --transition: 0.3s;
+  --accent: #9115ea;
+  --shadow: 0 8px 32px rgba(101, 19, 178, 0.4);
+  --gradient: linear-gradient(135deg, var(--red) 0%, #a31aff 100%);
+}
+
 #preloader-site-full {
   position: fixed;
   top: 0;
