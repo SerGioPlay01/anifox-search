@@ -27,11 +27,18 @@ function loadFontAwesome() {
         
         const faLink = document.createElement('link');
         faLink.rel = 'stylesheet';
-        faLink.href = 'font_icon/all.css';
+        // Убедитесь, что путь ведет к папке css относительно вашего HTML файла
+        faLink.href = './font_icon/all.min.css';
         faLink.setAttribute('data-font-awesome', 'true');
         
-        faLink.onload = () => resolve();
-        faLink.onerror = () => loadFontAwesomeFallback().then(resolve).catch(reject);
+        faLink.onload = () => {
+            console.log('Font Awesome CSS загружен');
+            resolve();
+        };
+        faLink.onerror = () => {
+            console.error('Ошибка загрузки Font Awesome CSS');
+            loadFontAwesomeFallback().then(resolve).catch(reject);
+        };
         
         document.head.appendChild(faLink);
     });
@@ -41,14 +48,40 @@ function loadFontAwesomeFallback() {
     return new Promise((resolve, reject) => {
         const fallbackLink = document.createElement('link');
         fallbackLink.rel = 'stylesheet';
-        fallbackLink.href = './font_icon/all.css';
+        fallbackLink.href = 'font_icon/all.min.css';
         fallbackLink.setAttribute('data-font-awesome', 'true');
         
-        fallbackLink.onload = () => resolve();
-        fallbackLink.onerror = reject;
+        fallbackLink.onload = () => {
+            console.log('Font Awesome загружен через fallback');
+            resolve();
+        };
+        fallbackLink.onerror = () => {
+            console.error('Все пути к Font Awesome недоступны');
+            reject(new Error('Font Awesome не загружен'));
+        };
         
         document.head.appendChild(fallbackLink);
     });
+}
+
+// Дополнительная функция для проверки загрузки шрифтов
+function checkFontAwesomeLoaded() {
+    const testIcon = document.createElement('i');
+    testIcon.className = 'fas fa-check';
+    document.body.appendChild(testIcon);
+    
+    setTimeout(() => {
+        const styles = window.getComputedStyle(testIcon);
+        const fontFamily = styles.fontFamily.toLowerCase();
+        const isLoaded = fontFamily.includes('font awesome') || 
+                        fontFamily.includes('fa-') ||
+                        styles.content !== 'none';
+        
+        console.log('Font Family:', fontFamily);
+        console.log('Font Awesome загружен:', isLoaded);
+        
+        document.body.removeChild(testIcon);
+    }, 100);
 }
 
 /* ---------- CACHE MANAGEMENT ---------- */
