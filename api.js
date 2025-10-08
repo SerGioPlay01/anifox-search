@@ -196,6 +196,7 @@ window.toggleFavorite=async(title,link)=>{
       favs = [];
     }
     const old=favs.find(f=>f.link===link);
+    
     if(old){ 
       await dbDel(STORE_FAVORITES,old.id); 
       showNote(`«${title}» удалено из избранного`,'info'); 
@@ -203,13 +204,21 @@ window.toggleFavorite=async(title,link)=>{
       await dbAdd(STORE_FAVORITES,{id:Date.now(),title,link,t:Date.now()}); 
       showNote(`«${title}» добавлено в избранное`,'success'); 
     }
-    refreshFavoriteIcons();
-    refreshModalFavoriteButton(link);
-    if(location.hash==='#favorites'||location.search.includes('page=favorites')) renderFavoritesPage();
-  }catch(e){ console.error(e); showNote('Ошибка при работе с избранным','error'); }
+    
+    // Обновляем все кнопки избранного
+    await refreshAllFavoriteButtons();
+    
+    if(location.hash==='#favorites'||location.search.includes('page=favorites')) {
+      renderFavoritesPage();
+    }
+  }catch(e){ 
+    console.error('Toggle favorite error:', e); 
+    showNote('Ошибка при работе с избранным','error'); 
+  }
 };
 
-window.refreshFavoriteIcons=async()=>{
+// Функция для обновления ВСЕХ кнопок избранного
+async function refreshAllFavoriteButtons() {
   let favs = [];
   try {
     const favsResult = await dbGetAll(STORE_FAVORITES);
@@ -217,37 +226,47 @@ window.refreshFavoriteIcons=async()=>{
   } catch(e) {
     favs = [];
   }
-  const set=new Set(favs.map(f=>f.link));
-  document.querySelectorAll('.favorite-btn').forEach(btn=>{
-    const is=set.has(btn.dataset.link);
-    btn.querySelector('i').className=is?'fas fa-heart':'far fa-heart';
-    btn.title=is?'Удалить из избранного':'Добавить в избранное';
-  });
-};
-
-// Функция для обновления кнопки в модальном окне
-window.refreshModalFavoriteButton=async(link)=>{
-  const modalBtn = document.querySelector('.modal-btn');
-  if(modalBtn){
-    let favs = [];
-    try {
-      const favsResult = await dbGetAll(STORE_FAVORITES);
-      favs = Array.isArray(favsResult) ? favsResult : [];
-    } catch(e) {
-      favs = [];
+  
+  const favoriteLinks = new Set(favs.map(f => f.link));
+  
+  // Обновляем кнопки в карточках
+  document.querySelectorAll('.favorite-btn').forEach(btn => {
+    const link = btn.dataset.link;
+    const isFav = favoriteLinks.has(link);
+    
+    const icon = btn.querySelector('i');
+    if (icon) {
+      icon.className = isFav ? 'fas fa-heart' : 'far fa-heart';
     }
-    const isFav=favs.some(f=>f.link===link);
+    btn.title = isFav ? 'Удалить из избранного' : 'Добавить в избранное';
+  });
+  
+  // Обновляем кнопку в модальном окне
+  const modalBtn = document.querySelector('.modal-btn');
+  if (modalBtn) {
+    const modalTitle = document.querySelector('.modal-title');
+    const modalLink = modalBtn.closest('.modal-content').querySelector('.modal-btn');
     
-    modalBtn.className = `modal-btn ${isFav?'secondary':'primary'}`;
-    modalBtn.innerHTML = `<i class="${isFav?'fas':'far'} fa-heart"></i> ${isFav?'Удалить из избранного':'Добавить в избранное'}`;
-    
-    // Обновляем обработчик события
-    const title = modalBtn.closest('.modal-content').querySelector('.modal-title').textContent;
-    modalBtn.onclick = () => {
-      toggleFavorite(title, link);
-      closeAnimeModal();
-    };
+    if (modalTitle && modalLink) {
+      const title = modalTitle.textContent;
+      const link = modalBtn.getAttribute('onclick')?.match(/'([^']+)'\)/)?.[1];
+      
+      if (link) {
+        const isFav = favoriteLinks.has(link);
+        modalBtn.className = `modal-btn ${isFav ? 'secondary' : 'primary'}`;
+        modalBtn.innerHTML = `<i class="${isFav ? 'fas' : 'far'} fa-heart"></i> ${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}`;
+        
+        // Обновляем обработчик
+        modalBtn.onclick = function() {
+          toggleFavorite(title, link);
+        };
+      }
+    }
   }
+}
+
+window.refreshFavoriteIcons=async()=>{
+  await refreshAllFavoriteButtons();
 };
 
 /* ---------- SHARE ---------- */
@@ -283,7 +302,7 @@ window.showAnimeInfo=async(itemRaw)=>{
         <div class="modal-left">
           <img src="${md.poster_url||'/resources/obl_web.jpg'}" alt="Постер" class="modal-poster">
           <div class="modal-btns">
-            <button class="modal-btn ${isFav?'secondary':'primary'}" onclick="toggleFavorite('${item.title.replace(/'/g,"\\'")}','${item.link}');closeAnimeModal();">
+            <button class="modal-btn ${isFav?'secondary':'primary'}" onclick="toggleFavorite('${item.title.replace(/'/g,"\\'")}','${item.link}')">
               <i class="${isFav?'fas':'far'} fa-heart"></i> ${isFav?'Удалить из избранного':'Добавить в избранное'}
             </button>
           </div>
@@ -446,7 +465,19 @@ async function renderFavoritesPage(){
   }catch(e){ box.innerHTML=`<div class="no-results fade-in"><i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>Ошибка загрузки избранного</h2><p>Попробуйте перезагрузить страницу</p><p style="color:var(--gray);font-size:.9rem">${e.message}</p></div>`; }
 }
 window.clearFavorites=async()=>{
-  if(confirm('Очистить всё избранное?')){ try{ await dbClear(STORE_FAVORITES); renderFavoritesPage(); showNote('Избранное очищено','success'); }catch{ showNote('Ошибка при очистке избранного','error'); } }
+  if(confirm('Очистить всё избранное?')){ 
+    try{ 
+      await dbClear(STORE_FAVORITES); 
+      await refreshAllFavoriteButtons();
+      if(location.search.includes('page=favorites')) {
+        renderFavoritesPage();
+      }
+      showNote('Избранное очищено','success'); 
+    }catch(e){ 
+      console.error('Clear favorites error:', e);
+      showNote('Ошибка при очистке избранного','error'); 
+    } 
+  }
 };
 
 async function renderWeekly(){
