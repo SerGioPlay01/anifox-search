@@ -152,7 +152,13 @@ function updateSEOMeta(apiData){
 /* ---------- CARD ---------- */
 async function createAnimeCard(item){
   const t=item.title;
-  const favs=(await dbGetAll(STORE_FAVORITES))||[];        // ← fix
+  let favs = [];
+  try {
+    const favsResult = await dbGetAll(STORE_FAVORITES);
+    favs = Array.isArray(favsResult) ? favsResult : [];
+  } catch(e) {
+    favs = [];
+  }
   const isFav=favs.some(f=>f.link===item.link);
   return `
   <div class="card fade-in">
@@ -182,7 +188,13 @@ async function createAnimeCard(item){
 /* ---------- FAVORITES ---------- */
 window.toggleFavorite=async(title,link)=>{
   try{
-    const favs=(await dbGetAll(STORE_FAVORITES))||[];
+    let favs = [];
+    try {
+      const favsResult = await dbGetAll(STORE_FAVORITES);
+      favs = Array.isArray(favsResult) ? favsResult : [];
+    } catch(e) {
+      favs = [];
+    }
     const old=favs.find(f=>f.link===link);
     if(old){ await dbDel(STORE_FAVORITES,old.id); showNote(`«${title}» удалено из избранного`,'info'); }
     else { await dbAdd(STORE_FAVORITES,{id:Date.now(),title,link,t:Date.now()}); showNote(`«${title}» добавлено в избранное`,'success'); }
@@ -191,7 +203,13 @@ window.toggleFavorite=async(title,link)=>{
   }catch(e){ console.error(e); showNote('Ошибка при работе с избранным','error'); }
 };
 window.refreshFavoriteIcons=async()=>{
-  const favs=(await dbGetAll(STORE_FAVORITES))||[];
+  let favs = [];
+  try {
+    const favsResult = await dbGetAll(STORE_FAVORITES);
+    favs = Array.isArray(favsResult) ? favsResult : [];
+  } catch(e) {
+    favs = [];
+  }
   const set=new Set(favs.map(f=>f.link));
   document.querySelectorAll('.favorite-btn').forEach(btn=>{
     const is=set.has(btn.dataset.link);
@@ -272,7 +290,13 @@ async function renderFavoritesPage(){
   const box=$('resultsBox'); if(!box) return;
   box.innerHTML='<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка избранного...</p></div>';
   try{
-    const favs=(await dbGetAll(STORE_FAVORITES,'timestamp'))||[];
+    let favs = [];
+    try {
+      const favsResult = await dbGetAll(STORE_FAVORITES,'timestamp');
+      favs = Array.isArray(favsResult) ? favsResult : [];
+    } catch(e) {
+      favs = [];
+    }
     const list=favs.sort((a,b)=>b.t-a.t);
     if(!list.length){
       box.innerHTML=`<div class="no-results fade-in"><i class="fas fa-heart fa-3x" style="margin-bottom:1rem;opacity:.5"></i><h2>В избранном пока ничего нет</h2><p>Добавляйте аниме в избранное с помощью <i class="fas fa-heart"></i></p><button onclick="navigateToHome()" class="clear-history-btn" style="margin-top:1rem"><i class="fas fa-arrow-left"></i> Вернуться к поиску</button></div>`;
