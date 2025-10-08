@@ -116,6 +116,7 @@ loadFontAwesomeWithFix()
     .then(() => console.log('✅ Font Awesome готов (пути исправлены)'))
     .catch(error => console.error('❌ Ошибка:', error));
 
+    
 /* ---------- CACHE MANAGEMENT ---------- */
 class CacheManager {
     constructor() {
