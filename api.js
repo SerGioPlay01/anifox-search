@@ -1517,6 +1517,41 @@ window.clearFavorites = async () => {
     }
 };
 
+/* ---------- HISTORY SECTION ---------- */
+async function loadHistorySection() {
+    try {
+        const hist = await dbGetAll(STORE_SEARCH_HISTORY, "timestamp");
+        const list = hist.sort((a, b) => b.t - a.t).slice(0, 10);
+        if (!list.length) return '';
+
+        let html = `<section class="history-section">
+            <h2 class="section-title fade-in"><i class="fas fa-history"></i> История поиска</h2>
+            <div class="search-history-buttons">`;
+        
+        list.forEach(i => {
+            html += `<button class="history-query-btn" onclick="searchFromHistory('${i.query.replace(/'/g, "\\'")}')">
+                <i class="fas fa-search"></i> ${escapeHtml(i.query)}
+                <span class="remove-history" onclick="removeFromHistory(event,${i.id})">
+                    <i class="fas fa-times"></i>
+                </span>
+            </button>`;
+        });
+        
+        html += `</div>
+            <div class="history-actions">
+                <button onclick="clearSearchHistory()" class="clear-history-btn">
+                    <i class="fas fa-trash"></i> Очистить историю
+                </button>
+            </div>
+        </section>`;
+        
+        return html;
+    } catch {
+        return '';
+    }
+}
+
+/* ---------- RENDER WEEKLY ---------- */
 async function renderWeekly() {
     const box = $("resultsBox");
     if (!box) return;
