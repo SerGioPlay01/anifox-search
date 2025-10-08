@@ -1,16 +1,60 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" class="preloader-active">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <!-- Verification -->
-    <meta name="google-site-verification" content="egPDfS40HGTB97OHt3aWiauBnAvX2zJ3m8sAMBIb40A" />
-    <meta name="yandex-verification" content="e21d42ad747a078b" />
+    <!-- Critical CSS Inline -->
+    <style>
+        #preloader-site-full {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--black);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
 
-    <!-- SEO -->
+        #preloader-site-full.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loader-site {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(145, 21, 234, 0.3);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        #preloader-site-full p {
+            font-size: 1rem;
+            color: var(--gray);
+            letter-spacing: 1px;
+        }
+    </style>
+
+    <!-- SEO Meta -->
     <title>Смотреть аниме онлайн бесплатно в HD — AniFox</title>
     <meta name="description"
         content="✅ Более 3000 аниме фильмов и сериалов на AniFox. Смотрите онлайн в HD 720/1080, без регистрации и рекламы. Ежедневные обновления, удобный поиск по жанрам и годам.">
@@ -45,6 +89,7 @@
 
     <!-- Preload critical resources -->
     <link rel="preload" href="/style.css" as="style">
+    <link rel="preconnect" href="https://mc.yandex.ru">
 
     <!-- Non-critical CSS deferred -->
     <link rel="stylesheet" href="/style.css" media="print" onload="this.media='all'">
@@ -54,30 +99,29 @@
         <link rel="stylesheet" href="/style.css">
         <link rel="stylesheet" href="/cookie-banner.css">
         <link rel="stylesheet" href="/adblock-banner.css">
-        <link rel="stylesheet" href="/preloader-site-full.css">
     </noscript>
 
-    <!-- Structured Data (Schema.org) -->
+    <!-- Structured Data -->
     <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "AniFox - Смотреть аниме онлайн",
-    "url": "https://anifox-search.vercel.app/",
-    "description": "Бесплатная платформа для просмотра аниме онлайн в HD качестве. Тысячи сериалов и фильмов без регистрации на русском языке.",
-    "inLanguage": "ru",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://anifox-search.vercel.app/?q={search_term_string}",
-      "query-input": "required name=search_term_string"
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "AniFox - Смотреть аниме онлайн",
+        "url": "https://anifox-search.vercel.app/",
+        "description": "Бесплатная платформа для просмотра аниме онлайн в HD качестве.",
+        "inLanguage": "ru",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://anifox-search.vercel.app/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
     }
-  }
-  </script>
+    </script>
 </head>
 
 <body>
 
-    <!-- Прелоадер -->
+    <!-- Прелоадер - виден сразу благодаря инлайн стилям -->
     <div id="preloader-site-full">
         <div class="loader-site"></div>
     </div>
@@ -85,41 +129,35 @@
     <!-- Header -->
     <header class="top">
         <a class="logo-link" href="/" aria-label="AniFox — главная">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none">
-                <!-- SVG content unchanged, but cleaned (removed extra spaces in attributes) -->
-                <rect width="40.4804" height="283.038" rx="15"
-                    transform="matrix(0.906596 -0.421999 0.423238 0.906018 103.258 17.0827)"
-                    fill="url(#paint0_linear_2_15)" />
-                <foreignObject x="-94.4697" y="2.52924" width="453.939" height="366.952">
+            <!-- Оптимизированный SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none"
+                aria-hidden="true">
+                <rect width="40.48" height="283.04" rx="15" transform="matrix(.9066 -.422 .42324 .90602 103.258 17.083)"
+                    fill="url(#paint0_linear)" />
+                <foreignObject x="-94.47" y="2.529" width="453.94" height="366.95">
                     <div xmlns="http://www.w3.org/1999/xhtml"
-                        style="backdrop-filter:blur(50px);clip-path:url(#bgblur_0_2_15_clip_path);height:100%;width:100%">
-                    </div>
+                        style="backdrop-filter:blur(50px);clip-path:url(#bgblur_clip);height:100%;width:100%"></div>
                 </foreignObject>
-                <rect width="40.4396" height="283.324" rx="15"
-                    transform="matrix(-0.506493 -0.862244 -0.863032 0.505149 265 131.879)"
-                    fill="url(#paint1_linear_2_15)" />
-                <rect width="40.4804" height="283.038" rx="15"
-                    transform="matrix(-0.906596 -0.421999 -0.423238 0.906018 156.62 17.5398)"
-                    fill="url(#paint2_linear_2_15)" />
+                <rect width="40.44" height="283.32" rx="15" transform="matrix(-.5065 -.86224 -.86303 .50515 265 131.88)"
+                    fill="url(#paint1_linear)" />
+                <rect width="40.48" height="283.04" rx="15" transform="matrix(-.9066 -.422 -.42324 .90602 156.62 17.54)"
+                    fill="url(#paint2_linear)" />
                 <defs>
-                    <clipPath id="bgblur_0_2_15_clip_path" transform="translate(94.4697 -2.52924)">
-                        <rect width="40.4396" height="283.324" rx="15"
-                            transform="matrix(-0.506493 -0.862244 -0.863032 0.505149 265 131.879)" />
+                    <clipPath id="bgblur_clip" transform="translate(94.47 -2.529)">
+                        <rect width="40.44" height="283.32" rx="15"
+                            transform="matrix(-.5065 -.86224 -.86303 .50515 265 131.88)" />
                     </clipPath>
-                    <linearGradient id="paint0_linear_2_15" x1="20.2402" y1="0" x2="27.5397" y2="495.888"
-                        gradientUnits="userSpaceOnUse">
-                        <stop stop-color="white" />
-                        <stop offset="1" stop-color="white" stop-opacity="0.7" />
+                    <linearGradient id="paint0_linear" x1="20.24" y1="0" x2="27.54" y2="495.89">
+                        <stop stop-color="#fff" />
+                        <stop offset="1" stop-color="#fff" stop-opacity=".7" />
                     </linearGradient>
-                    <linearGradient id="paint1_linear_2_15" x1="25.1242" y1="411.958" x2="33.2642" y2="-4.77633"
-                        gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#22083F" stop-opacity="0.7" />
-                        <stop offset="1" stop-color="#6C16C9" />
+                    <linearGradient id="paint1_linear" x1="25.124" y1="411.96" x2="33.264" y2="-4.776">
+                        <stop stop-color="#22083f" stop-opacity=".7" />
+                        <stop offset="1" stop-color="#6c16c9" />
                     </linearGradient>
-                    <linearGradient id="paint2_linear_2_15" x1="20.2402" y1="0" x2="20.2402" y2="283.038"
-                        gradientUnits="userSpaceOnUse">
-                        <stop stop-color="white" />
-                        <stop offset="1" stop-color="white" />
+                    <linearGradient id="paint2_linear" x1="20.24" y1="0" x2="20.24" y2="283.04">
+                        <stop stop-color="#fff" />
+                        <stop offset="1" stop-color="#fff" />
                     </linearGradient>
                 </defs>
             </svg>
@@ -136,13 +174,12 @@
         </form>
     </section>
 
-    <!-- Reserve space for dynamic content to prevent CLS -->
+    <!-- Main content -->
     <main id="resultsBox" class="player-lane" aria-live="polite">
-        <!-- Content will be loaded here dynamically -->
+        <!-- Content loaded dynamically -->
     </main>
 
-    <button id="scrollToTop" aria-label="Наверх">↑</button>
-
+    <!-- Footer -->
     <footer class="site-footer" aria-label="Футер сайта">
         <div class="footer-content">
             <div class="footer-main">
@@ -161,21 +198,19 @@
                     </ul>
                 </div>
             </div>
-
             <div class="footer-bottom">
                 <div class="footer-copyright">
                     <p>&copy; 2025 AniFox. Весь контент принадлежит правообладателям.</p>
-                    <p>AniFox не хранит видеофайлы на своих серверах, а предоставляет ссылки на сторонние ресурсы.</p>
                 </div>
                 <div class="footer-social">
-                    <a href="https://vk.com/anifox_ru" aria-label="ВКонтакте" target="_blank" rel="noopener noreferrer">
+                    <a href="https://vk.com/anifox_ru" aria-label="ВКонтакте" target="_blank" rel="noopener">
                         <i class="fab fa-vk"></i>
                     </a>
-                    <a href="https://t.me/anifoxru" aria-label="Telegram" target="_blank" rel="noopener noreferrer">
+                    <a href="https://t.me/anifoxru" aria-label="Telegram" target="_blank" rel="noopener">
                         <i class="fab fa-telegram"></i>
                     </a>
                     <a href="https://github.com/SerGioPlay01/anifox-search" aria-label="GitHub" target="_blank"
-                        rel="noopener noreferrer">
+                        rel="noopener">
                         <i class="fab fa-github"></i>
                     </a>
                 </div>
@@ -183,43 +218,92 @@
         </div>
     </footer>
 
+    <!-- Scroll to top button -->
+    <button id="scrollToTop" aria-label="Наверх" style="display:none;">↑</button>
+
+    <!-- Optimized preloader script -->
+    <script>
+        // Минимальный прелоадер - запускается мгновенно
+        (function () {
+            'use strict';
+
+            const preloader = document.getElementById('preloader-site-full');
+            if (!preloader) return;
+
+            let resourcesLoaded = false;
+            let domReady = false;
+
+            // Проверяем готовность DOM
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    domReady = true;
+                    checkHidePreloader();
+                });
+            } else {
+                domReady = true;
+            }
+
+            // Отслеживаем только критические ресурсы
+            const criticalResources = Array.from(document.querySelectorAll(
+                'link[rel="stylesheet"]:not([media="print"]), script[src]:not([async]):not([defer])'
+            ));
+
+            let loadedCount = 0;
+
+            function checkHidePreloader() {
+                if (domReady && (resourcesLoaded || loadedCount >= criticalResources.length)) {
+                    // Минимальная задержка для плавности
+                    setTimeout(() => {
+                        preloader.classList.add('hidden');
+                        document.documentElement.classList.remove('preloader-active');
+                    }, 300);
+                }
+            }
+
+            // Быстрая проверка ресурсов
+            criticalResources.forEach(resource => {
+                if (resource.tagName === 'LINK' && resource.rel === 'stylesheet') {
+                    if (resource.sheet) {
+                        loadedCount++;
+                    } else {
+                        resource.addEventListener('load', () => {
+                            loadedCount++;
+                            checkHidePreloader();
+                        }, { once: true });
+                    }
+                }
+            });
+
+            // Если нет критических ресурсов, скрываем сразу после DOM ready
+            if (criticalResources.length === 0) {
+                resourcesLoaded = true;
+            }
+
+            // Фолбек: скрыть через 3 секунды максимум
+            setTimeout(() => {
+                if (!preloader.classList.contains('hidden')) {
+                    preloader.classList.add('hidden');
+                    document.documentElement.classList.remove('preloader-active');
+                }
+            }, 3000);
+
+            // Запускаем проверку сразу
+            checkHidePreloader();
+        })();
+    </script>
+
     <!-- Defer non-critical JS -->
-    <script src="/preloader-site-full.js"></script>
     <script src="/api.js" defer></script>
     <script src="/seo.js" defer></script>
     <script src="/cookie-banner.js" defer></script>
     <script src="/adblock-banner.js" defer></script>
     <script src="/sw-register.js" defer></script>
 
-    <script>
-        window.preloaderConfig = {
-            timeout: 10000,
-            minDisplayTime: 1000,
-            excludeSelectors: [
-                'script[src*="google-analytics"]',
-                'img[data-lazy]',
-                'link[rel="preload"]'
-            ]
-        };
-    </script>
-
     <!-- Yandex.Metrika (async) -->
     <script defer>
-        (function (m, e, t, r, i, k, a) {
-            m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) };
-            m[i].l = 1 * new Date(); k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a)
-        })
-            (window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id=104428432', 'ym');
-        ym(104428432, 'init', {
-            clickmap: true,
-            trackLinks: true,
-            accurateTrackBounce: true,
-            webvisor: true
-        });
+        (function (m, e, t, r, i, k, a) { m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) }; m[i].l = 1 * new Date(); k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a) })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym'); ym(104428432, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true });
     </script>
-    <noscript>
-        <img src="https://mc.yandex.ru/watch/104428432" style="position:absolute; left:-9999px;" alt="" />
-    </noscript>
+    <noscript><img src="https://mc.yandex.ru/watch/104428432" style="position:absolute;left:-9999px" alt=""></noscript>
 </body>
 
 </html>
