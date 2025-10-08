@@ -11,12 +11,12 @@ const SHIKIMORI_API_BASE = "https://shikimori.one/api";
 
 /* ---------- INDEXEDDB ---------- */
 const DB_NAME = "AniFoxDB";
-const DB_VERSION = 3; // Увеличиваем версию для улучшенного хранения данных
+const DB_VERSION = 3;
 const STORE_SEARCH_HISTORY = "search_history";
 const STORE_FAVORITES = "favorites";
 const STORE_SEARCH_RESULTS = "search_results";
 const STORE_ANIME_INFO = "anime_info";
-const STORE_SHIKIMORI_CACHE = "shikimori_cache"; // Новый store для кэширования Shikimori
+const STORE_SHIKIMORI_CACHE = "shikimori_cache";
 
 let db = null;
 async function initDB() {
@@ -35,7 +35,7 @@ async function initDB() {
         STORE_FAVORITES,
         STORE_SEARCH_RESULTS,
         STORE_ANIME_INFO,
-        STORE_SHIKIMORI_CACHE, // Добавляем новый store
+        STORE_SHIKIMORI_CACHE,
       ];
       stores.forEach((n) => {
         if (!d.objectStoreNames.contains(n)) {
@@ -63,7 +63,6 @@ async function initDB() {
   });
 }
 
-// Улучшенные функции работы с IndexedDB
 async function dbAdd(s, data) {
   try {
     const db = await initDB();
@@ -163,7 +162,6 @@ function promisifyTX(tx) {
   });
 }
 
-// Функция для отладки - показать все избранные
 async function debugFavorites() {
   try {
     const favs = await dbGetAll(STORE_FAVORITES);
@@ -191,12 +189,10 @@ async function fetchKodik(url, attempt = 1) {
   }
 }
 
-// Функция для поиска на Shikimori
 async function fetchShikimoriInfo(title, attempt = 1) {
   const cacheKey = `shikimori_${title.toLowerCase().trim()}`;
-  const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа кэш для Shikimori
+  const CACHE_TTL = 24 * 60 * 60 * 1000;
 
-  // Проверяем кэш
   try {
     const cached = await dbGet(STORE_SHIKIMORI_CACHE, cacheKey);
     if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
@@ -208,7 +204,6 @@ async function fetchShikimoriInfo(title, attempt = 1) {
   const timeout = setTimeout(() => ctrl.abort(), 8000);
 
   try {
-    // Поиск аниме на Shikimori API
     const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(
       title
     )}&limit=1`;
@@ -235,7 +230,6 @@ async function fetchShikimoriInfo(title, attempt = 1) {
 
     const anime = data[0];
 
-    // Получаем детальную информацию
     let detailedInfo = null;
     try {
       const detailUrl = `${SHIKIMORI_API_BASE}/animes/${anime.id}`;
@@ -256,7 +250,6 @@ async function fetchShikimoriInfo(title, attempt = 1) {
 
     const finalInfo = detailedInfo || anime;
 
-    // Форматируем данные для нашего приложения
     const result = {
       description:
         finalInfo.description ||
@@ -277,7 +270,6 @@ async function fetchShikimoriInfo(title, attempt = 1) {
       shikimoriUrl: `https://shikimori.one${finalInfo.url}`,
     };
 
-    // Кэшируем результат
     try {
       await dbPut(STORE_SHIKIMORI_CACHE, {
         query: cacheKey,
@@ -302,7 +294,6 @@ async function fetchShikimoriInfo(title, attempt = 1) {
   }
 }
 
-// Вспомогательные функции для Shikimori
 function getDurationFromShikimori(anime) {
   if (!anime.duration) return null;
 
@@ -326,7 +317,6 @@ function getStatusFromShikimori(status) {
 }
 
 function getFallbackShikimoriData(title) {
-  // Резервные данные на основе анализа названия
   const titleLower = title.toLowerCase();
 
   let genres = ["аниме"];
@@ -361,7 +351,6 @@ function getFallbackShikimoriData(title) {
   };
 }
 
-// Функция для получения расширенной информации об аниме
 async function getAnimeExtendedInfo(item) {
   const cacheKey = item.title.toLowerCase().trim();
 
@@ -391,7 +380,6 @@ async function getAnimeExtendedInfo(item) {
     result.studios = md.studios || [];
   }
 
-  // Если данных недостаточно, запрашиваем с Shikimori
   const needsMoreData =
     !result.description ||
     result.description === "Описание отсутствует." ||
@@ -432,7 +420,6 @@ async function getAnimeExtendedInfo(item) {
     }
   }
 
-  // Добавляем скриншоты если их недостаточно
   if (
     (!item.screenshots || item.screenshots.length < 3) &&
     (!item.material_data?.screenshots ||
@@ -443,7 +430,6 @@ async function getAnimeExtendedInfo(item) {
     );
   }
 
-  // Сохраняем в кэш
   try {
     await dbPut(STORE_ANIME_INFO, {
       title: cacheKey,
@@ -457,7 +443,6 @@ async function getAnimeExtendedInfo(item) {
   return result;
 }
 
-// Генерация релевантных скриншотов на основе жанров
 function generateRelevantScreenshots(genres) {
   const genreScreenshots = {
     приключения: ["/resources/adventure1.jpg", "/resources/adventure2.jpg"],
@@ -475,7 +460,6 @@ function generateRelevantScreenshots(genres) {
     }
   });
 
-  // Убираем дубликаты и ограничиваем количество
   return [...new Set(screenshots)].slice(0, 3);
 }
 
@@ -533,7 +517,6 @@ function showNote(msg, type = "info") {
   setTimeout(() => n.remove(), 3000);
 }
 
-/* ---------- SEO ---------- */
 function toSlug(str) {
   const map = {
     а: "a",
@@ -682,10 +665,8 @@ function updateSEOMeta(apiData) {
   document.head.appendChild(scr);
 }
 
-// Глобальная переменная для хранения избранного
 let favoritesCache = null;
 
-// Функция для получения избранного с кэшированием
 async function getFavorites() {
   if (favoritesCache) return favoritesCache;
 
@@ -699,7 +680,6 @@ async function getFavorites() {
   }
 }
 
-// Функция для сброса кэша избранного
 function clearFavoritesCache() {
   favoritesCache = null;
 }
@@ -710,19 +690,11 @@ async function createAnimeCard(item) {
   const favs = await getFavorites();
   const isFav = favs.some((f) => f.link === item.link);
 
-  // Проверяем, есть ли данные для модального окна информации
-  const hasInfoData =
-    item.material_data &&
-    (item.material_data.description ||
-      item.material_data.rating ||
-      item.material_data.duration ||
-      item.material_data.status ||
-      (item.material_data.studios && item.material_data.studios.length > 0) ||
-      (item.genres && item.genres.length > 0) ||
-      item.year);
-
-  // Проверяем, есть ли данные для кнопки поделиться
-  const hasShareData = item.title && item.link;
+  // Проверяем, есть ли достаточно данных для информации
+  const hasInfoData = await hasSufficientInfoData(item);
+  
+  // Проверяем, работает ли кнопка поделиться
+  const hasShareData = item.title && item.link && item.title.length > 0;
 
   return `
   <div class="card fade-in">
@@ -777,6 +749,33 @@ async function createAnimeCard(item) {
   </div>`;
 }
 
+// Функция проверки достаточности данных для информации
+async function hasSufficientInfoData(item) {
+  // Если есть material_data с описанием - показываем кнопку
+  if (item.material_data && item.material_data.description && 
+      item.material_data.description.length > 10 && 
+      item.material_data.description !== 'Описание отсутствует.') {
+    return true;
+  }
+  
+  // Если есть год и жанры - тоже достаточно для базовой информации
+  if (item.year && item.genres && item.genres.length > 0) {
+    return true;
+  }
+  
+  // Проверяем через Shikimori API, есть ли данные
+  try {
+    const extendedInfo = await getAnimeExtendedInfo(item);
+    if (extendedInfo.description && extendedInfo.description.length > 50) {
+      return true;
+    }
+  } catch (e) {
+    console.log('No Shikimori data available for:', item.title);
+  }
+  
+  return false;
+}
+
 /* ---------- FAVORITES ---------- */
 window.toggleFavorite = async (title, link) => {
   try {
@@ -798,14 +797,11 @@ window.toggleFavorite = async (title, link) => {
       showNote(`«${title}» добавлено в избранное`, "success");
     }
 
-    // Сбрасываем кэш и обновляем все кнопки
     clearFavoritesCache();
     await refreshAllFavoriteButtons();
 
-    // Отладочная информация
     await debugFavorites();
 
-    // Если мы на странице избранного - перерисовываем
     if (location.search.includes("page=favorites")) {
       renderFavoritesPage();
     }
@@ -815,12 +811,10 @@ window.toggleFavorite = async (title, link) => {
   }
 };
 
-// Функция для обновления ВСЕХ кнопок избранного
 async function refreshAllFavoriteButtons() {
   const favs = await getFavorites();
   const favoriteLinks = new Set(favs.map((f) => f.link));
 
-  // Обновляем кнопки в карточках
   const favoriteBtns = document.querySelectorAll(".favorite-btn");
 
   favoriteBtns.forEach((btn) => {
@@ -834,7 +828,6 @@ async function refreshAllFavoriteButtons() {
     btn.title = isFav ? "Удалить из избранного" : "Добавить в избранное";
   });
 
-  // Обновляем кнопку в модальном окне
   const modalBtn = document.querySelector(".modal-btn");
   if (modalBtn && modalBtn.innerHTML.includes("fa-heart")) {
     const modalTitle = document.querySelector(".modal-title");
@@ -863,8 +856,6 @@ async function refreshAllFavoriteButtons() {
 }
 
 window.refreshFavoriteIcons = refreshAllFavoriteButtons;
-
-// Добавляем функцию для проверки состояния избранного в консоли
 window.checkFavorites = debugFavorites;
 
 /* ---------- SHARE ---------- */
@@ -922,101 +913,100 @@ window.showAnimeInfo = async (itemRaw) => {
     const favs = await getFavorites();
     const isFav = favs.some((f) => f.link === item.link);
 
+    // Проверяем, есть ли достаточно данных для показа
+    const hasEnoughData = 
+      description && description.length > 10 && 
+      description !== 'Описание отсутствует.' &&
+      (item.year || item.genres?.length > 0 || rating || duration);
+
+    if (!hasEnoughData) {
+      const minimalHTML = `
+      <div class="modal-overlay" onclick="closeAnimeModal(event)">
+        <div class="modal-content minimal-modal" onclick="event.stopPropagation()">
+          <button class="modal-close" onclick="closeAnimeModal()">&times;</button>
+          <div class="modal-grid">
+            <div class="modal-left">
+              <img src="${md.poster_url || "/resources/obl_web.jpg"}" alt="Постер" class="modal-poster">
+              <div class="modal-btns">
+                <button class="modal-btn ${isFav ? "secondary" : "primary"}" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}','${item.link}')">
+                  <i class="${isFav ? "fas" : "far"} fa-heart"></i> ${isFav ? "Удалить из избранного" : "Добавить в избранное"}
+                </button>
+              </div>
+            </div>
+            <div class="modal-right">
+              <h2 class="modal-title">${item.title}</h2>
+              <p class="modal-orig">${item.title_orig || ""}</p>
+              <div class="modal-meta-grid">
+                ${item.year ? `<div class="meta-item"><span class="meta-label">Год:</span> <b>${item.year}</b></div>` : ''}
+                ${item.type ? `<div class="meta-item"><span class="meta-label">Тип:</span> <b>${item.type}</b></div>` : ''}
+                ${item.quality ? `<div class="meta-item"><span class="meta-label">Качество:</span> <b>${item.quality}</b></div>` : ''}
+              </div>
+              ${item.genres && item.genres.length > 0 ? `<div class="modal-genres">${item.genres.map(g => `<span class="genre-tag">${g}</span>`).join('')}</div>` : ''}
+              <div class="modal-desc">
+                <p style="color: var(--gray); font-style: italic;">
+                  <i class="fas fa-info-circle"></i> Подробная информация об этом аниме временно недоступна.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+      const modalOverlay = document.querySelector(".modal-overlay");
+      if (modalOverlay) {
+        modalOverlay.outerHTML = minimalHTML;
+      }
+      return;
+    }
+
     const html = `
     <div class="modal-overlay" onclick="closeAnimeModal(event)">
       <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeAnimeModal()">&times;</button>
         <div class="modal-grid">
           <div class="modal-left">
-            <img src="${
-              md.poster_url || "/resources/obl_web.jpg"
-            }" alt="Постер" class="modal-poster">
-            ${
-              rating
-                ? `<div class="modal-rating"><i class="fas fa-star"></i> ${rating}</div>`
-                : ""
-            }
+            <img src="${md.poster_url || "/resources/obl_web.jpg"}" alt="Постер" class="modal-poster">
+            ${rating ? `<div class="modal-rating"><i class="fas fa-star"></i> ${rating}</div>` : ""}
             <div class="modal-btns">
-              <button class="modal-btn ${
-                isFav ? "secondary" : "primary"
-              }" onclick="toggleFavorite('${item.title.replace(
-      /'/g,
-      "\\'"
-    )}','${item.link}')">
-                <i class="${isFav ? "fas" : "far"} fa-heart"></i> ${
-      isFav ? "Удалить из избранного" : "Добавить в избранное"
-    }
+              <button class="modal-btn ${isFav ? "secondary" : "primary"}" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}','${item.link}')">
+                <i class="${isFav ? "fas" : "far"} fa-heart"></i> ${isFav ? "Удалить из избранного" : "Добавить в избранное"}
               </button>
             </div>
-            ${
-              extendedInfo.shikimoriData
-                ? '<div class="modal-source-info"><i class="fas fa-database"></i> Данные дополнены Shikimori</div>'
-                : ""
-            }
+            ${extendedInfo.shikimoriData ? '<div class="modal-source-info"><i class="fas fa-database"></i> Данные дополнены Shikimori</div>' : ""}
           </div>
           <div class="modal-right">
             <h2 class="modal-title">${item.title}</h2>
             <p class="modal-orig">${item.title_orig || ""}</p>
             <div class="modal-meta-grid">
-              <div class="meta-item"><span class="meta-label">Год:</span> <b>${
-                item.year || "—"
-              }</b></div>
-              <div class="meta-item"><span class="meta-label">Тип:</span> <b>${
-                item.type || "—"
-              }</b></div>
-              <div class="meta-item"><span class="meta-label">Качество:</span> <b>${
-                item.quality || "—"
-              }</b></div>
-              ${
-                duration
-                  ? `<div class="meta-item"><span class="meta-label">Длительность:</span> <b>${duration}</b></div>`
-                  : ""
-              }
-              ${
-                status
-                  ? `<div class="meta-item"><span class="meta-label">Статус:</span> <b>${status}</b></div>`
-                  : ""
-              }
+              <div class="meta-item"><span class="meta-label">Год:</span> <b>${item.year || "—"}</b></div>
+              <div class="meta-item"><span class="meta-label">Тип:</span> <b>${item.type || "—"}</b></div>
+              <div class="meta-item"><span class="meta-label">Качество:</span> <b>${item.quality || "—"}</b></div>
+              ${duration ? `<div class="meta-item"><span class="meta-label">Длительность:</span> <b>${duration}</b></div>` : ""}
+              ${status ? `<div class="meta-item"><span class="meta-label">Статус:</span> <b>${status}</b></div>` : ""}
             </div>
-            ${
-              studios.length > 0
-                ? `
+            ${studios.length > 0 ? `
             <div class="modal-studios">
               <span class="meta-label">Студии:</span> 
               <span class="studios-list">${studios.join(", ")}</span>
             </div>
-            `
-                : ""
-            }
-            <div class="modal-genres">${(item.genres || [])
-              .map((g) => `<span class="genre-tag">${g}</span>`)
-              .join("")}</div>
+            ` : ""}
+            <div class="modal-genres">${(item.genres || []).map(g => `<span class="genre-tag">${g}</span>`).join("")}</div>
             <div class="modal-desc">${description}</div>
-            ${
-              allScreenshots.length > 0
-                ? `
+            ${allScreenshots.length > 0 ? `
             <div class="modal-screens">
               <h3 class="modal-screens-title">Скриншоты</h3>
               <div class="screenshots-grid">
-                ${allScreenshots
-                  .map(
-                    (s, index) => `
-                  <div class="screenshot-item" onclick="openScreenshotViewer('${allScreenshots.join(
-                    "|"
-                  )}', ${index})">
+                ${allScreenshots.map((s, index) => `
+                  <div class="screenshot-item" onclick="openScreenshotViewer('${allScreenshots.join("|")}', ${index})">
                     <img src="${s}" loading="lazy" class="scr">
                     <div class="screenshot-overlay">
                       <i class="fas fa-expand"></i>
                     </div>
                   </div>
-                `
-                  )
-                  .join("")}
+                `).join("")}
               </div>
             </div>
-            `
-                : ""
-            }
+            ` : ""}
           </div>
         </div>
       </div>
@@ -1034,14 +1024,9 @@ window.showAnimeInfo = async (itemRaw) => {
         <button class="modal-close" onclick="closeAnimeModal()">&times;</button>
         <div class="modal-grid">
           <div class="modal-left">
-            <img src="${
-              md.poster_url || "/resources/obl_web.jpg"
-            }" alt="Постер" class="modal-poster">
+            <img src="${md.poster_url || "/resources/obl_web.jpg"}" alt="Постер" class="modal-poster">
             <div class="modal-btns">
-              <button class="modal-btn primary" onclick="toggleFavorite('${item.title.replace(
-                /'/g,
-                "\\'"
-              )}','${item.link}')">
+              <button class="modal-btn primary" onclick="toggleFavorite('${item.title.replace(/'/g, "\\'")}','${item.link}')">
                 <i class="far fa-heart"></i> Добавить в избранное
               </button>
             </div>
@@ -1100,13 +1085,11 @@ window.openScreenshotViewer = (screenshotsString, startIndex) => {
   document.body.insertAdjacentHTML("beforeend", viewerHTML);
   document.body.classList.add("screenshot-viewer-open");
 
-  // Сохраняем данные для навигации
   window.screenshotViewerData = {
     screenshots,
     currentIndex,
   };
 
-  // Добавляем обработчики клавиатуры
   document.addEventListener("keydown", handleScreenshotKeyboard);
 };
 
@@ -1237,13 +1220,10 @@ async function renderFavoritesPage() {
       </div>
       <div class="results-grid">`;
 
-    // Создаем карточки для каждого избранного аниме
     for (const fav of list) {
       try {
-        // Пытаемся найти полную информацию об аниме в кэше поиска
         let fullItemData = null;
 
-        // Ищем в кэше поисковых результатов
         const searchQueries = await dbGetAll(STORE_SEARCH_RESULTS);
         for (const cachedQuery of searchQueries) {
           if (cachedQuery.data && cachedQuery.data.results) {
@@ -1257,7 +1237,6 @@ async function renderFavoritesPage() {
           }
         }
 
-        // Если не нашли в кэше, создаем базовый объект
         if (!fullItemData) {
           fullItemData = {
             title: fav.title,
@@ -1281,7 +1260,6 @@ async function renderFavoritesPage() {
           fav.title,
           cardError
         );
-        // Создаем карточку с минимальной информацией
         const fallbackCard = `
 <div class="card fade-in">
   <div class="card-header">
@@ -1309,7 +1287,6 @@ async function renderFavoritesPage() {
         }')" title="Удалить из избранного">
       <i class="fas fa-heart"></i>
     </button>
-    <!-- Для fallback карточек скрываем кнопки информации и поделиться -->
   </div>
 </div>`;
         html += fallbackCard;
@@ -1477,7 +1454,6 @@ function updateHeader() {
   const h = document.querySelector(".top");
   if (!h) return;
 
-  // Определяем активную страницу
   const isFavoritesPage = location.search.includes("page=favorites");
   const isSearchPage = !isFavoritesPage;
 
@@ -1539,14 +1515,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initDB();
 
-    // Загружаем Font Awesome
     const fa = document.createElement("link");
     fa.rel = "stylesheet";
     fa.href =
       "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css";
     document.head.appendChild(fa);
 
-    // Инициализируем заголовок
     updateHeader();
 
     const form = $("searchForm"),
