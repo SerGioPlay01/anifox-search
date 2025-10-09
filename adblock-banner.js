@@ -222,6 +222,11 @@
     m.querySelector("#ab-mini-howto").onclick = () => showInstructions();
   }
 
+  /* ---------- удаление мини-баннера ---------- */
+  function removeMiniBanner() {
+    document.querySelector(".ab-mini-banner")?.remove();
+  }
+
   /* ---------- инструкции ---------- */
   function showInstructions() {
     const isBraveBrowser = navigator.brave && navigator.brave.isBrave;
@@ -327,6 +332,7 @@
         hideProgress();
         localStorage.setItem(STORAGE_KEY, "disable-adblock");
         localStorage.removeItem(STORAGE_KEY_WANT);
+        removeMiniBanner();          // <-- убираем баннер
         return;
       }
     }
@@ -382,10 +388,10 @@
 
   /* ---------- запуск (жёсткий детект) ---------- */
   function run() {
-    if (localStorage.getItem(STORAGE_KEY)) {
-      if (localStorage.getItem(STORAGE_KEY) === "with-adblock") {
-        insertMiniBanner();
-      }
+    const choice = localStorage.getItem(STORAGE_KEY);
+    if (choice) {
+      if (choice === "with-adblock") insertMiniBanner();
+      else removeMiniBanner();       // <-- убираем, если уже отключено
       return;
     }
     detectAdblockHard((blocked) => {
