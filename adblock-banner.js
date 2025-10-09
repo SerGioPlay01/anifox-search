@@ -390,13 +390,13 @@
 function run() {
   const choice = localStorage.getItem(STORAGE_KEY);
 
-  // <-- NEW: если ранее выбрали "с блокировщиком", но щас реклама разблокирована
+  /* 1.  Ранее выбрали «с блокировщиком» – проверим, не разблокировали ли рекламу */
   if (choice === 'with-adblock') {
     detectAdblockHard(blocked => {
-      if (!blocked) {                // блокировщик уже выключили
+      if (!blocked) {                // пользователь выключил блокировщик
         localStorage.setItem(STORAGE_KEY, 'disable-adblock');
         localStorage.removeItem(STORAGE_KEY_WANT);
-        removeMiniBanner();          // убираем баннер
+        removeMiniBanner();
       } else {
         insertMiniBanner();          // всё ещё блокирует – показываем
       }
@@ -404,12 +404,21 @@ function run() {
     return;
   }
 
-  // ранее не выбирали – запускаем обычную логику
-  if (choice) {
-    if (choice === 'disable-adblock') removeMiniBanner();
+  /* 2.  Ранее выбрали «отключил блокировщик» – проверим, не включил ли обратно */
+  if (choice === 'disable-adblock') {
+    detectAdblockHard(blocked => {
+      if (blocked) {                 // включил обратно → сбрасываем выбор
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY_WANT);
+        buildBanner();               // показываем полный баннер
+      } else {
+        removeMiniBanner();          // всё хорошо, реклама не блокируется
+      }
+    });
     return;
   }
 
+  /* 3.  Первый заход или сброшен выбор – обычная логика */
   detectAdblockHard(blocked => {
     if (blocked) buildBanner();
   });
