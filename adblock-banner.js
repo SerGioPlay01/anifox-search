@@ -326,7 +326,7 @@
       if (!stillBlocked) {
         hideProgress();
         localStorage.setItem(STORAGE_KEY, "disable-adblock");
-        localStorage.removeItem(STORAGE_KEY_WANT");
+        localStorage.removeItem(STORAGE_KEY_WANT);
         return;
       }
     }
