@@ -303,6 +303,7 @@ function showInstructions() {
     modal.remove();                        // убираем модалку
     localStorage.removeItem(STORAGE_KEY);  // сбрасываем старый выбор
     localStorage.removeItem(STORAGE_KEY_WANT);
+    location.reload();
 
     // перепроверяем реальное состояние
     detectAdblockHard(blocked => {
