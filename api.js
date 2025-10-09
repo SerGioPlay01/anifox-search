@@ -859,13 +859,21 @@ function buildKeywords(title, genres, year) {
 }
 
 function updateSEOMeta(apiData) {
-    clearOldDynamicMeta();
+    // Полная очистка
+    document.querySelectorAll('[data-dynamic]').forEach(el => el.remove());
+    
     const results = (apiData && apiData.results) || [];
     const query = new URLSearchParams(location.search).get("q") ||
                  (location.pathname.startsWith("/search/") ? 
                   location.pathname.replace("/search/", "").replace(/-/g, " ") : "");
     
     if (!query) return;
+    
+    // Обновление URL
+    if (history.replaceState) {
+        const newUrl = `${location.pathname}?q=${encodeURIComponent(query)}`;
+        history.replaceState(null, '', newUrl);
+    }
     
     const top = results[0];
     let title, desc, kw, ogTitle, ogDesc, ogImage;
@@ -888,50 +896,61 @@ function updateSEOMeta(apiData) {
         ogImage = "/resources/obl_web.jpg";
     }
     
+    // Установка всех мета-тегов
     document.title = title;
     setAttr('meta[name="description"]', "content", desc);
     setAttr('meta[name="keywords"]', "content", kw);
+    
+    // Open Graph
     setAttr('meta[property="og:title"]', "content", ogTitle);
     setAttr('meta[property="og:description"]', "content", ogDesc);
     setAttr('meta[property="og:image"]', "content", ogImage);
+    setAttr('meta[property="og:url"]', "content", location.href);
+    setAttr('meta[property="og:type"]', "content", "website");
+    
+    // Twitter
     setAttr('meta[name="twitter:title"]', "content", ogTitle);
     setAttr('meta[name="twitter:description"]', "content", ogDesc);
     setAttr('meta[name="twitter:image"]', "content", ogImage);
+    setAttr('meta[name="twitter:card"]', "content", "summary_large_image");
     
+    // Каноническая ссылка
     let canonical = location.origin + location.pathname + (query ? "?q=" + encodeURIComponent(query) : "");
-    let linkCanon = document.head.querySelector('link[rel="canonical"]');
-    if (!linkCanon) {
-        linkCanon = document.createElement("link");
-        linkCanon.rel = "canonical";
-        linkCanon.setAttribute("data-dynamic", "");
-        document.head.appendChild(linkCanon);
-    }
+    let linkCanon = document.createElement("link");
+    linkCanon.rel = "canonical";
     linkCanon.href = canonical;
+    linkCanon.setAttribute("data-dynamic", "");
+    document.head.appendChild(linkCanon);
     
+    // Микроразметка
+    addStructuredData(query, results, canonical);
+}
+
+function addStructuredData(query, results, canonical) {
     const jsonLd = {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        name: "AniFox",
-        url: location.origin,
-        potentialAction: {
-            "@type": "SearchAction",
-            target: `${location.origin}/?q={search_term_string}`,
-            "query-input": "required name=search_term_string",
-        },
+        "@type": "SearchResultsPage",
+        "name": `Результаты поиска: ${query}`,
+        "url": canonical,
+        "description": `Результаты поиска по запросу: ${query}`,
+        "mainEntity": {
+            "@type": "ItemList",
+            "numberOfItems": results.length,
+            "itemListElement": results.slice(0, 10).map((item, index) => ({
+                "@type": "ListItem",
+                "position": index + 1,
+                "item": {
+                    "@type": "TVSeries",
+                    "name": item.title,
+                    "datePublished": item.year,
+                    "genre": item.genres,
+                    "image": item.material_data?.poster_url,
+                    "url": `${location.origin}/?q=${encodeURIComponent(item.title)}`
+                }
+            }))
+        }
     };
     
-    if (results.length)
-        jsonLd.mainEntity = results
-            .slice(0, 10)
-            .map((r) => ({
-                "@type": "TVSeries",
-                name: r.title,
-                datePublished: r.year,
-                genre: r.genres,
-                image: r.material_data?.poster_url || ogImage,
-                url: `${location.origin}/?q=${encodeURIComponent(r.title)}`,
-            }));
-            
     const scr = document.createElement("script");
     scr.type = "application/ld+json";
     scr.textContent = JSON.stringify(jsonLd);
