@@ -386,18 +386,35 @@
     };
   }
 
-  /* ---------- запуск (жёсткий детект) ---------- */
-  function run() {
-    const choice = localStorage.getItem(STORAGE_KEY);
-    if (choice) {
-      if (choice === "with-adblock") insertMiniBanner();
-      else removeMiniBanner();       // <-- убираем, если уже отключено
-      return;
-    }
-    detectAdblockHard((blocked) => {
-      if (blocked) buildBanner();
+/* ---------- запуск (жёсткий детект) ---------- */
+function run() {
+  const choice = localStorage.getItem(STORAGE_KEY);
+
+  // <-- NEW: если ранее выбрали "с блокировщиком", но щас реклама разблокирована
+  if (choice === 'with-adblock') {
+    detectAdblockHard(blocked => {
+      if (!blocked) {                // блокировщик уже выключили
+        localStorage.setItem(STORAGE_KEY, 'disable-adblock');
+        localStorage.removeItem(STORAGE_KEY_WANT);
+        removeMiniBanner();          // убираем баннер
+      } else {
+        insertMiniBanner();          // всё ещё блокирует – показываем
+      }
     });
+    return;
   }
 
-  document.addEventListener("DOMContentLoaded", run);
+  // ранее не выбирали – запускаем обычную логику
+  if (choice) {
+    if (choice === 'disable-adblock') removeMiniBanner();
+    return;
+  }
+
+  detectAdblockHard(blocked => {
+    if (blocked) buildBanner();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', run);
+
 })();
