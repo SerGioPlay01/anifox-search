@@ -227,75 +227,93 @@
     document.querySelector(".ab-mini-banner")?.remove();
   }
 
-  /* ---------- инструкции ---------- */
-  function showInstructions() {
-    const isBraveBrowser = navigator.brave && navigator.brave.isBrave;
-    const isGhosteryActive = isGhostery();
-    const modal = document.createElement("div");
-    modal.className = "ab-instructions-modal";
-    modal.innerHTML = `
-      <div class="ab-instructions-content">
-        <h3><i class="fas fa-info-circle"></i> Как отключить блокировщик</h3>
-        <div class="ab-instructions-grid">
-          <div class="ab-instruction-item">
-            <h4>AdBlock / AdBlock Plus</h4>
-            <ol>
-              <li>Нажмите на иконку AdBlock в браузере</li>
-              <li>Выберите "Не выполнять на страницах этого сайта"</li>
-              <li>Обновите страницу</li>
-            </ol>
-          </div>
-          <div class="ab-instruction-item">
-            <h4>uBlock Origin</h4>
-            <ol>
-              <li>Нажмите на иконку uBlock</li>
-              <li>Кликните на большую кнопку питания</li>
-              <li>Обновите страницу</li>
-            </ol>
-          </div>
-          <div class="ab-instruction-item">
-            <h4>AdGuard</h4>
-            <ol>
-              <li>Нажмите на иконку AdGuard</li>
-              <li>Выключите защиту для этого сайта</li>
-              <li>Обновите страницу</li>
-            </ol>
-          </div>
-          ${
-            isBraveBrowser
-              ? `
-          <div class="ab-instruction-item brave-block">
-            <h4>Brave Browser</h4>
-            <ol>
-              <li>Нажмите на иконку льва в адресной строке</li>
-              <li>Включите переключатель "Блокировка рекламы: ВЫКЛ" для anifox-search.vercel.app</li>
-              <li>Обновите страницу</li>
-            </ol>
-            <div class="brave-hint">Brave блокирует рекламу по умолчанию. Отключите защиту именно для этого сайта.</div>
-          </div>`
-              : ""
-          }
-          ${
-            isGhosteryActive
-              ? `
-          <div class="ab-instruction-item ghostery-block">
-            <h4>Ghostery Tracker & Ad Blocker</h4>
-            <ol>
-              <li>Нажмите на иконку Ghostery (призрак) в панели инструментов</li>
-              <li>В открывшемся окне нажмите <b>«Доверять сайту»</b> или отключите <b>«Блокировка рекламы»</b></li>
-              <li>Обновите страницу</li>
-            </ol>
-            <div class="ghostery-hint">Ghostery автоматически блокирует рекламу и трекеры. Добавьте сайт в доверенные, чтобы отключить блокировку.</div>
-          </div>`
-              : ""
-          }
+/* ---------- инструкции ---------- */
+function showInstructions() {
+  const isBraveBrowser = navigator.brave && navigator.brave.isBrave;
+  const isGhosteryActive = isGhostery();
+  const modal = document.createElement("div");
+  modal.className = "ab-instructions-modal";
+  modal.innerHTML = `
+    <div class="ab-instructions-content">
+      <h3><i class="fas fa-info-circle"></i> Как отключить блокировщик</h3>
+      <div class="ab-instructions-grid">
+        <div class="ab-instruction-item">
+          <h4>AdBlock / AdBlock Plus</h4>
+          <ol>
+            <li>Нажмите на иконку AdBlock в браузере</li>
+            <li>Выберите "Не выполнять на страницах этого сайта"</li>
+            <li>Обновите страницу</li>
+          </ol>
         </div>
-        <button class="ab-btn ab-btn--main" onclick="this.closest('.ab-instructions-modal').remove(); window.location.reload();">
-          <i class="fas fa-sync"></i> Обновить страницу
-        </button>
-      </div>`;
-    document.body.appendChild(modal);
-  }
+        <div class="ab-instruction-item">
+          <h4>uBlock Origin</h4>
+          <ol>
+            <li>Нажмите на иконку uBlock</li>
+            <li>Кликните на большую кнопку питания</li>
+            <li>Обновите страницу</li>
+          </ol>
+        </div>
+        <div class="ab-instruction-item">
+          <h4>AdGuard</h4>
+          <ol>
+            <li>Нажмите на иконку AdGuard</li>
+            <li>Выключите защиту для этого сайта</li>
+            <li>Обновите страницу</li>
+          </ol>
+        </div>
+        ${
+          isBraveBrowser
+            ? `
+        <div class="ab-instruction-item brave-block">
+          <h4>Brave Browser</h4>
+          <ol>
+            <li>Нажмите на иконку льва в адресной строке</li>
+            <li>Включите переключатель "Блокировка рекламы: ВЫКЛ" для anifox-search.vercel.app</li>
+            <li>Обновите страницу</li>
+          </ol>
+          <div class="brave-hint">Brave блокирует рекламу по умолчанию. Отключите защиту именно для этого сайта.</div>
+        </div>`
+            : ""
+        }
+        ${
+          isGhosteryActive
+            ? `
+        <div class="ab-instruction-item ghostery-block">
+          <h4>Ghostery Tracker & Ad Blocker</h4>
+          <ol>
+            <li>Нажмите на иконку Ghostery (призрак) в панели инструментов</li>
+            <li>В открывшемся окне нажмите <b>«Доверять сайту»</b> или отключите <b>«Блокировка рекламы»</b></li>
+            <li>Обновите страницу</li>
+          </ol>
+          <div class="ghostery-hint">Ghostery автоматически блокирует рекламу и трекеры. Добавьте сайт в доверенные, чтобы отключить блокировку.</div>
+        </div>`
+            : ""
+        }
+      </div>
+
+      <!-- новая кнопка «Проверить снова» -->
+      <button class="ab-btn ab-btn--main" id="ab-check-again">
+        <i class="fas fa-sync"></i> Проверить снова
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // слушатель кнопки
+  modal.querySelector('#ab-check-again').onclick = () => {
+    modal.remove();                        // убираем модалку
+    localStorage.removeItem(STORAGE_KEY);  // сбрасываем старый выбор
+    localStorage.removeItem(STORAGE_KEY_WANT);
+
+    // перепроверяем реальное состояние
+    detectAdblockHard(blocked => {
+      if (blocked) {
+        buildBanner();              // реклама всё ещё блокируется → баннер
+      } else {
+        removeMiniBanner();         // разблокировали → убираем всё
+      }
+    });
+  };
+}
 
   function saveChoice(value, banner) {
     localStorage.setItem(STORAGE_KEY, value);
