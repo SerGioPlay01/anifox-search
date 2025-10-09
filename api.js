@@ -869,10 +869,10 @@ function updateSEOMeta(apiData) {
     
     if (!query) return;
     
-    // Обновление URL
+    // ОБНОВЛЕНО: Удаляем query parameters из URL
     if (history.replaceState) {
-        const newUrl = `${location.pathname}?q=${encodeURIComponent(query)}`;
-        history.replaceState(null, '', newUrl);
+        const cleanUrl = location.origin + location.pathname;
+        history.replaceState(null, '', cleanUrl);
     }
     
     const top = results[0];
@@ -896,6 +896,10 @@ function updateSEOMeta(apiData) {
         ogImage = "/resources/obl_web.jpg";
     }
     
+    // ОБНОВЛЕНО: Используем clean URL без параметров
+    const cleanCanonical = location.origin + location.pathname;
+    const currentUrl = location.origin + location.pathname; // Текущий URL без параметров
+    
     // Установка всех мета-тегов
     document.title = title;
     setAttr('meta[name="description"]', "content", desc);
@@ -905,7 +909,7 @@ function updateSEOMeta(apiData) {
     setAttr('meta[property="og:title"]', "content", ogTitle);
     setAttr('meta[property="og:description"]', "content", ogDesc);
     setAttr('meta[property="og:image"]', "content", ogImage);
-    setAttr('meta[property="og:url"]', "content", location.href);
+    setAttr('meta[property="og:url"]', "content", currentUrl); // ОБНОВЛЕНО: clean URL
     setAttr('meta[property="og:type"]', "content", "website");
     
     // Twitter
@@ -914,16 +918,15 @@ function updateSEOMeta(apiData) {
     setAttr('meta[name="twitter:image"]', "content", ogImage);
     setAttr('meta[name="twitter:card"]', "content", "summary_large_image");
     
-    // Каноническая ссылка
-    let canonical = location.origin + location.pathname + (query ? "?q=" + encodeURIComponent(query) : "");
+    // ОБНОВЛЕНО: Каноническая ссылка без query параметров
     let linkCanon = document.createElement("link");
     linkCanon.rel = "canonical";
-    linkCanon.href = canonical;
+    linkCanon.href = cleanCanonical; // ОБНОВЛЕНО: только pathname
     linkCanon.setAttribute("data-dynamic", "");
     document.head.appendChild(linkCanon);
     
-    // Микроразметка
-    addStructuredData(query, results, canonical);
+    // ОБНОВЛЕНО: Передаем clean URL в микроразметку
+    addStructuredData(query, results, cleanCanonical);
 }
 
 function addStructuredData(query, results, canonical) {
