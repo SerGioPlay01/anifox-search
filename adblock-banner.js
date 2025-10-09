@@ -19,9 +19,7 @@
     function checkCompletion() {
       testsCompleted++;
       if (testsCompleted >= totalTests) {
-        const blocked = blockedSignals >= 2; // Если 2+ теста показали блокировку
-
-        // Исключаем мобильные режимы
+        const blocked = blockedSignals >= 2;
         const isMobileBlocked =
           /Opera Mini|Chrome Lite|Yandex Turbo|Firefox Focus/.test(
             navigator.userAgent
@@ -124,7 +122,6 @@
 
   async function isGhostery() {
     return new Promise((resolve) => {
-      // Проверка через различные методы обнаружения Ghostery
       const checks = [
         () => typeof window._ghostery !== "undefined",
         () => typeof window.Ghostery !== "undefined",
@@ -138,7 +135,6 @@
         }
       }
 
-      // Дополнительная проверка
       const ghosteryTest = document.createElement("div");
       ghosteryTest.style.cssText = "display: none;";
       ghosteryTest.setAttribute("data-ghostery", "test");
@@ -152,7 +148,7 @@
     });
   }
 
-  /* ---------- баннер (без изменений) ---------- */
+  /* ---------- баннер ---------- */
   function buildBanner() {
     if (lock || document.querySelector(".ab-banner")) return;
     lock = true;
@@ -167,15 +163,13 @@
           <h3>Поддержите AniFox</h3>
         </div>
         <p class="ab-text"><i class="fas fa-shield-alt"></i> Обнаружен блокировщик. Реклама помогает проекту оставаться бесплатным.</p>
-        
-        <!-- СТАТИСТИКА (как было раньше) -->
+
         <div class="ab-stats">
           <div class="ab-stat"><i class="fas fa-users"></i><span>500K+ пользователей в месяц</span></div>
           <div class="ab-stat"><i class="fas fa-video"></i><span>10K+ аниме доступно</span></div>
           <div class="ab-stat"><i class="fas fa-clock"></i><span>24/7 без перебоев</span></div>
         </div>
 
-        <!-- ПРЕИМУЩЕСТВА (как было раньше) -->
         <div class="ab-info-grid">
           <div class="ab-info-block"><h4><i class="fas fa-server"></i> Зачем нужна реклама?</h4><ul>
             <li><i class="fas fa-check-circle"></i> Серверные расходы: хостинг, CDN, хранилище видео</li>
@@ -198,22 +192,37 @@
           </ul></div>
         </div>
 
-        <!-- КНОПКИ (центрированные) -->
         <div class="ab-actions">
           <button class="ab-btn ab-btn--soft" id="ab-continue"><i class="fas fa-shield-alt"></i> Продолжить с блокировщиком</button>
           <button class="ab-btn ab-btn--main" id="ab-disable"><i class="fas fa-ad"></i> Отключить блокировщик</button>
+          <button class="ab-btn ab-btn--link" id="ab-howto"><i class="fas fa-question-circle"></i> Как отключить?</button>
         </div>
       </div>`;
     document.body.appendChild(b);
 
     b.querySelector("#ab-continue").onclick = () => {
-      if (navigator.brave || isGhostery()) showInstructions();
       saveChoice("with-adblock", b);
+      insertMiniBanner();
     };
     b.querySelector("#ab-disable").onclick = () => onWantDisable(b);
+    b.querySelector("#ab-howto").onclick = () => showInstructions();
   }
 
-  /* ---------- инструкции (без изменений) ---------- */
+  /* ---------- компактный баннер-напоминание ---------- */
+  function insertMiniBanner() {
+    if (document.querySelector(".ab-mini-banner")) return;
+    const m = document.createElement("div");
+    m.className = "ab-mini-banner";
+    m.innerHTML = `
+      <div class="ab-mini-content">
+        <span><i class="fas fa-info-circle"></i> Реклама помогает проекту. Поддержите нас!</span>
+        <button class="ab-mini-btn" id="ab-mini-howto">Как отключить?</button>
+      </div>`;
+    document.body.appendChild(m);
+    m.querySelector("#ab-mini-howto").onclick = () => showInstructions();
+  }
+
+  /* ---------- инструкции ---------- */
   function showInstructions() {
     const isBraveBrowser = navigator.brave && navigator.brave.isBrave;
     const isGhosteryActive = isGhostery();
@@ -317,7 +326,7 @@
       if (!stillBlocked) {
         hideProgress();
         localStorage.setItem(STORAGE_KEY, "disable-adblock");
-        localStorage.removeItem(STORAGE_KEY_WANT);
+        localStorage.removeItem(STORAGE_KEY_WANT");
         return;
       }
     }
@@ -362,7 +371,7 @@
     r.querySelector("#ab-recheck").onclick = () => {
       r.remove();
       setTimeout(() => {
-        location.reload(); // Перезагрузка страницы
+        location.reload();
       }, 500);
     };
     r.querySelector("#ab-show-instructions").onclick = () => {
@@ -373,7 +382,12 @@
 
   /* ---------- запуск (жёсткий детект) ---------- */
   function run() {
-    if (localStorage.getItem(STORAGE_KEY)) return;
+    if (localStorage.getItem(STORAGE_KEY)) {
+      if (localStorage.getItem(STORAGE_KEY) === "with-adblock") {
+        insertMiniBanner();
+      }
+      return;
+    }
     detectAdblockHard((blocked) => {
       if (blocked) buildBanner();
     });

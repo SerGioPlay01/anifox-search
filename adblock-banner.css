@@ -527,3 +527,38 @@ body.ab-scroll-lock {
   border-radius: 50%; animation: spin 1s linear infinite;
 }
 @keyframes spin{ to{ transform: rotate(360deg); }}
+
+.ab-mini-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+  z-index: 9999;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 -2px 6px rgba(0,0,0,.4);
+}
+.ab-mini-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.ab-mini-btn {
+  margin-left: auto;
+  background: #ff5722;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ab-mini-btn:hover {
+  background: #e64a19;
+}
