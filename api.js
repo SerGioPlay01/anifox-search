@@ -2096,6 +2096,9 @@ window.navigateToHome = (e) => {
     history.replaceState(null, null, "/");
     updateHeader();
     renderWeekly();
+    
+    // ОБНОВЛЕНО: Добавлено обновление SEO мета-тегов для главной страницы
+    updateSEOMetaForHome();
 };
 
 window.navigateToFavorites = () => {
@@ -2105,7 +2108,170 @@ window.navigateToFavorites = () => {
     history.replaceState(null, null, url);
     updateHeader();
     renderFavoritesPage();
+    
+    // ОБНОВЛЕНО: Добавлено обновление SEO мета-тегов для страницы избранного
+    updateSEOMetaForFavorites();
 };
+
+// ДОБАВЛЕНО: Функция для обновления SEO на главной странице
+function updateSEOMetaForHome() {
+    // Очищаем старые динамические мета-теги
+    document.querySelectorAll('[data-dynamic]').forEach(el => el.remove());
+    
+    const title = "AniFox — смотреть аниме онлайн в HD";
+    const desc = "Большая база аниме: тысячи сериалов и фильмов в HD. Без регистрации, адаптировано под телефон и Smart-TV.";
+    const currentUrl = location.origin + "/";
+    
+    // Обновляем мета-теги
+    document.title = title;
+    updateMetaTag('name', 'description', desc);
+    updateMetaTag('name', 'keywords', 'аниме, смотреть аниме онлайн, аниме бесплатно, HD, русская озвучка');
+    
+    // Open Graph
+    updateMetaTag('property', 'og:title', title);
+    updateMetaTag('property', 'og:description', desc);
+    updateMetaTag('property', 'og:image', '/resources/obl_web.jpg');
+    updateMetaTag('property', 'og:url', currentUrl);
+    updateMetaTag('property', 'og:type', 'website');
+    
+    // Twitter
+    updateMetaTag('name', 'twitter:title', title);
+    updateMetaTag('name', 'twitter:description', desc);
+    updateMetaTag('name', 'twitter:image', '/resources/obl_web.jpg');
+    updateMetaTag('name', 'twitter:card', 'summary_large_image');
+    updateMetaTag('property', 'twitter:domain', 'anifox-search.vercel.app');
+    updateMetaTag('property', 'twitter:url', currentUrl);
+    
+    // Каноническая ссылка
+    updateCanonicalLink(currentUrl);
+    
+    // Микроразметка для главной страницы
+    addHomeStructuredData();
+}
+
+// ДОБАВЛЕНО: Функция для обновления SEO на странице избранного
+function updateSEOMetaForFavorites() {
+    // Очищаем старые динамические мета-теги
+    document.querySelectorAll('[data-dynamic]').forEach(el => el.remove());
+    
+    const title = "Избранное — AniFox";
+    const desc = "Ваша коллекция избранных аниме на AniFox. Сохраняйте любимые сериалы и следите за новыми сериями.";
+    const currentUrl = location.origin + location.pathname + "?page=favorites";
+    
+    // Обновляем мета-теги
+    document.title = title;
+    updateMetaTag('name', 'description', desc);
+    updateMetaTag('name', 'keywords', 'избранное аниме, моя коллекция, сохраненные аниме, список просмотра');
+    
+    // Open Graph
+    updateMetaTag('property', 'og:title', title);
+    updateMetaTag('property', 'og:description', desc);
+    updateMetaTag('property', 'og:image', '/resources/obl_web.jpg');
+    updateMetaTag('property', 'og:url', currentUrl);
+    updateMetaTag('property', 'og:type', 'website');
+    
+    // Twitter
+    updateMetaTag('name', 'twitter:title', title);
+    updateMetaTag('name', 'twitter:description', desc);
+    updateMetaTag('name', 'twitter:image', '/resources/obl_web.jpg');
+    updateMetaTag('name', 'twitter:card', 'summary_large_image');
+    updateMetaTag('property', 'twitter:domain', 'anifox-search.vercel.app');
+    updateMetaTag('property', 'twitter:url', currentUrl);
+    
+    // Каноническая ссылка
+    updateCanonicalLink(currentUrl);
+    
+    // Микроразметка для страницы избранного
+    addFavoritesStructuredData();
+}
+
+// ДОБАВЛЕНО: Функция для обновления канонической ссылки
+function updateCanonicalLink(url) {
+    let linkCanon = document.head.querySelector('link[rel="canonical"]');
+    if (!linkCanon) {
+        linkCanon = document.createElement("link");
+        linkCanon.rel = "canonical";
+        linkCanon.setAttribute("data-dynamic", "");
+        document.head.appendChild(linkCanon);
+    }
+    linkCanon.href = url;
+}
+
+// ДОБАВЛЕНО: Микроразметка для главной страницы
+function addHomeStructuredData() {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "AniFox",
+        "description": "Смотреть аниме онлайн в HD качестве бесплатно",
+        "url": location.origin,
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": `${location.origin}/search?q={search_term_string}`,
+            "query-input": "required name=search_term_string"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "AniFox",
+            "logo": {
+                "@type": "ImageObject",
+                "url": `${location.origin}/resources/logo.png`
+            }
+        }
+    };
+    
+    const scr = document.createElement("script");
+    scr.type = "application/ld+json";
+    scr.textContent = JSON.stringify(jsonLd);
+    scr.setAttribute("data-dynamic", "");
+    document.head.appendChild(scr);
+}
+
+// ДОБАВЛЕНО: Микроразметка для страницы избранного
+function addFavoritesStructuredData() {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Избранные аниме",
+        "description": "Коллекция избранных аниме пользователя",
+        "url": location.href,
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "AniFox",
+            "url": location.origin
+        }
+    };
+    
+    const scr = document.createElement("script");
+    scr.type = "application/ld+json";
+    scr.textContent = JSON.stringify(jsonLd);
+    scr.setAttribute("data-dynamic", "");
+    document.head.appendChild(scr);
+}
+
+// ДОБАВЛЕНО: Функция для обновления мета-тегов (если еще не добавлена)
+function updateMetaTag(attr, name, content) {
+    let metaTag;
+    
+    if (attr === 'property') {
+        metaTag = document.querySelector(`meta[property="${name}"]`);
+    } else {
+        metaTag = document.querySelector(`meta[name="${name}"]`);
+    }
+    
+    if (!metaTag) {
+        metaTag = document.createElement('meta');
+        if (attr === 'property') {
+            metaTag.setAttribute('property', name);
+        } else {
+            metaTag.setAttribute('name', name);
+        }
+        metaTag.setAttribute('data-dynamic', '');
+        document.head.appendChild(metaTag);
+    }
+    
+    metaTag.setAttribute('content', content);
+}
 
 /* ---------- INIT ---------- */
 document.addEventListener("DOMContentLoaded", async () => {
