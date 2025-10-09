@@ -869,7 +869,7 @@ function updateSEOMeta(apiData) {
     
     if (!query) return;
     
-    // ОБНОВЛЕНО: Удаляем query parameters из URL
+    // Удаляем query parameters из URL
     if (history.replaceState) {
         const cleanUrl = location.origin + location.pathname;
         history.replaceState(null, '', cleanUrl);
@@ -898,35 +898,138 @@ function updateSEOMeta(apiData) {
     
     // ОБНОВЛЕНО: Используем clean URL без параметров
     const cleanCanonical = location.origin + location.pathname;
-    const currentUrl = location.origin + location.pathname; // Текущий URL без параметров
-    
+    const currentUrl = location.origin + location.pathname;
+
     // Установка всех мета-тегов
     document.title = title;
-    setAttr('meta[name="description"]', "content", desc);
-    setAttr('meta[name="keywords"]', "content", kw);
+    
+    // Обновляем или создаем мета-теги
+    updateMetaTag('name', 'description', desc);
+    updateMetaTag('name', 'keywords', kw);
     
     // Open Graph
-    setAttr('meta[property="og:title"]', "content", ogTitle);
-    setAttr('meta[property="og:description"]', "content", ogDesc);
-    setAttr('meta[property="og:image"]', "content", ogImage);
-    setAttr('meta[property="og:url"]', "content", currentUrl); // ОБНОВЛЕНО: clean URL
-    setAttr('meta[property="og:type"]', "content", "website");
+    updateMetaTag('property', 'og:title', ogTitle);
+    updateMetaTag('property', 'og:description', ogDesc);
+    updateMetaTag('property', 'og:image', ogImage);
+    updateMetaTag('property', 'og:url', currentUrl);
+    updateMetaTag('property', 'og:type', 'website');
     
     // Twitter
-    setAttr('meta[name="twitter:title"]', "content", ogTitle);
-    setAttr('meta[name="twitter:description"]', "content", ogDesc);
-    setAttr('meta[name="twitter:image"]', "content", ogImage);
-    setAttr('meta[name="twitter:card"]', "content", "summary_large_image");
+    updateMetaTag('name', 'twitter:title', ogTitle);
+    updateMetaTag('name', 'twitter:description', ogDesc);
+    updateMetaTag('name', 'twitter:image', ogImage);
+    updateMetaTag('name', 'twitter:card', 'summary_large_image');
+    updateMetaTag('property', 'twitter:domain', 'anifox-search.vercel.app');
+    updateMetaTag('property', 'twitter:url', currentUrl);
     
-    // ОБНОВЛЕНО: Каноническая ссылка без query параметров
+    // Каноническая ссылка
     let linkCanon = document.createElement("link");
     linkCanon.rel = "canonical";
-    linkCanon.href = cleanCanonical; // ОБНОВЛЕНО: только pathname
+    linkCanon.href = cleanCanonical;
     linkCanon.setAttribute("data-dynamic", "");
     document.head.appendChild(linkCanon);
     
-    // ОБНОВЛЕНО: Передаем clean URL в микроразметку
+    // Микроразметка
     addStructuredData(query, results, cleanCanonical);
+}
+
+// ДОБАВЛЕНО: Функция для обновления или создания мета-тегов
+function updateMetaTag(attr, name, content) {
+    let metaTag;
+    
+    if (attr === 'property') {
+        metaTag = document.querySelector(`meta[property="${name}"]`);
+    } else {
+        metaTag = document.querySelector(`meta[name="${name}"]`);
+    }
+    
+    if (!metaTag) {
+        metaTag = document.createElement('meta');
+        if (attr === 'property') {
+            metaTag.setAttribute('property', name);
+        } else {
+            metaTag.setAttribute('name', name);
+        }
+        metaTag.setAttribute('data-dynamic', '');
+        document.head.appendChild(metaTag);
+    }
+    
+    metaTag.setAttribute('content', content);
+}
+
+// ДОБАВЛЕНО: Функция для установки атрибутов (если используется)
+function setAttr(selector, attr, value) {
+    const element = document.querySelector(selector);
+    if (element) {
+        element.setAttribute(attr, value);
+    }
+}
+
+// ДОБАВЛЕНО: Функция для очистки старых динамических элементов
+function clearOldDynamicMeta() {
+    document.querySelectorAll('[data-dynamic]').forEach(el => el.remove());
+}
+
+// ДОБАВЛЕНО: Функция построения ключевых слов
+function buildKeywords(title, genres, year) {
+    const baseKeywords = [
+        'аниме',
+        'смотреть аниме онлайн',
+        'аниме бесплатно',
+        'AniFox',
+        'аниме в HD'
+    ];
+    
+    const titleKeywords = title
+        .toLowerCase()
+        .split(' ')
+        .filter(word => word.length > 2);
+    
+    const genreKeywords = genres 
+        ? genres.split(',').map(g => g.trim().toLowerCase())
+        : [];
+    
+    return [...new Set([
+        ...titleKeywords,
+        ...genreKeywords,
+        ...baseKeywords,
+        `аниме ${year}`,
+        `${title} смотреть онлайн`
+    ])].slice(0, 20).join(', ');
+}
+
+// ДОБАВЛЕНО: Функция для микроразметки
+function addStructuredData(query, results, canonical) {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: "AniFox",
+        url: location.origin,
+        potentialAction: {
+            "@type": "SearchAction",
+            target: `${location.origin}/?q={search_term_string}`,
+            "query-input": "required name=search_term_string",
+        },
+    };
+    
+    if (results.length) {
+        jsonLd.mainEntity = results
+            .slice(0, 10)
+            .map((r) => ({
+                "@type": "TVSeries",
+                name: r.title,
+                datePublished: r.year,
+                genre: r.genres,
+                image: r.material_data?.poster_url || "/resources/obl_web.jpg",
+                url: `${location.origin}/search/${generateSlug(r.title)}`,
+            }));
+    }
+            
+    const scr = document.createElement("script");
+    scr.type = "application/ld+json";
+    scr.textContent = JSON.stringify(jsonLd);
+    scr.setAttribute("data-dynamic", "");
+    document.head.appendChild(scr);
 }
 
 function addStructuredData(query, results, canonical) {
