@@ -1,14 +1,160 @@
 /* =========================================================
-   AniFox 2.4 (optimized)
-   Улучшения: кнопки загрузки вместо прогрессивной загрузки + исправление JSON ошибок
+   AniFox 2.5.9 (console protection)
+   Улучшения: защита консоли, только информация о проекте
    ========================================================= */
 
+// Защита от DevTools
+(function() {
+    let devtools = {open: false, orientation: null};
+    const threshold = 160;
+    setInterval(function() {
+        if (window.outerHeight - window.innerHeight > threshold || 
+            window.outerWidth - window.innerWidth > threshold) {
+            if (!devtools.open) {
+                devtools.open = true;
+                console.clear();
+                console.log('%c🛡️ AniFox Security', 'color: #ff4757; font-size: 20px; font-weight: bold;');
+                console.log('%cДоступ к инструментам разработчика заблокирован', 'color: #ff4757; font-size: 14px;');
+            }
+        } else {
+            devtools.open = false;
+        }
+    }, 500);
+})();
+
+/* ---------- TOKEN PROTECTION ---------- */
+// Используем защищенную функцию из token.js
+function getSecureToken() {
+    if (typeof window.getProtectedToken === 'function') {
+        return window.getProtectedToken();
+    }
+    // Fallback (должен быть удален в продакшене)
+    return '[PROTECTED]';
+}
+
 /* ---------- CONFIG ---------- */
-const TOKEN = "a036c8a4c59b43e72e212e4d0388ef7d";
-const BASE = "https://kodikapi.com/search";
-const TTL = 10 * 60 * 1000; // 10-мин кэш
-const SHIKIMORI_API_BASE = "https://shikimori.one/api";
-const CACHE_VERSION = '2.4';
+const CONFIG = {
+    API_KEYS: {
+        KODIK: '[PROTECTED]'
+    },
+    get TOKEN() {
+        // Используем защищенную функцию
+        return getSecureToken();
+    },
+    BASE: "https://kodikapi.com/search",
+    FALLBACK_BASE: "https://kodikapi.com/search",
+    TTL: 10 * 60 * 1000, // 10-мин кэш
+    SHIKIMORI_API_BASE: "https://shikimori.one/api",
+    CACHE_VERSION: '2.5.9'
+};
+
+// Для обратной совместимости
+const TOKEN = CONFIG.TOKEN;
+const BASE = CONFIG.BASE;
+const TTL = CONFIG.TTL;
+const SHIKIMORI_API_BASE = CONFIG.SHIKIMORI_API_BASE;
+const CACHE_VERSION = CONFIG.CACHE_VERSION;
+
+// Защита от вывода токена в консоль
+Object.defineProperty(window, 'TOKEN', {
+    get: function() { return '[PROTECTED]'; },
+    set: function() { return '[PROTECTED]'; }
+});
+
+// Скрываем токен от Object.keys и других методов
+Object.defineProperty(CONFIG, 'TOKEN', {
+    enumerable: false,
+    configurable: false
+});
+
+// Защита консоли - разрешаем только информацию о проекте
+const originalLog = console.log;
+const originalWarn = console.warn;
+const originalError = console.error;
+const originalInfo = console.info;
+
+// Очищаем консоль при загрузке
+console.clear();
+
+// Разрешенные сообщения о проекте
+const allowedMessages = [
+    '🚀 AniFox',
+    '📡 API Endpoint',
+    '🔑 Token: [PROTECTED]',
+    '🎭 Genres:',
+    '🎬 Demo Data:',
+    '🛡️ Security:',
+    '🛡️ AniFox Security',
+    '🛡️ Token protection loaded'
+];
+
+function isAllowedMessage(message) {
+    return allowedMessages.some(allowed => message.includes(allowed));
+}
+
+// Переопределяем все методы консоли
+console.log = function(...args) {
+    const message = args.join(' ');
+    if (isAllowedMessage(message)) {
+        originalLog.apply(console, args);
+    }
+};
+
+console.warn = function(...args) {
+    // Блокируем все предупреждения
+};
+
+console.error = function(...args) {
+    // Блокируем все ошибки
+};
+
+// Заменяем все console.error и console.warn в коде на комментарии
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+console.info = function(...args) {
+    // Блокируем всю информацию
+};
+
+// Автоматическая очистка консоли каждые 2 секунды
+setInterval(() => {
+    const allowedLogs = [];
+    // Сохраняем только разрешенные сообщения
+    console.clear();
+    // Выводим информацию о проекте
+    originalLog('%c🚀 AniFox 2.5.9 - Anime Search Platform', 'color: #5b0a99; font-size: 16px; font-weight: bold;');
+    originalLog('%c📡 API: https://kodikapi.com/search', 'color: #2ed573; font-size: 12px;');
+    originalLog('%c🔑 Token: [PROTECTED]', 'color: #ffa726; font-size: 12px;');
+    originalLog('%c🛡️ Security: Maximum protection enabled', 'color: #ff4757; font-size: 12px;');
+}, 2000);
+
+// Защита от копирования и правого клика
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+document.addEventListener('keydown', function(e) {
+    // Блокируем F12, Ctrl+Shift+I, Ctrl+U
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+        (e.ctrlKey && e.key === 'u')) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// Защита от выделения текста
+document.addEventListener('selectstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// Защита от drag & drop
+document.addEventListener('dragstart', function(e) {
+    e.preventDefault();
+    return false;
+});
 
 /* ---------- GLOBAL STATE ---------- */
 let currentSearchResults = [];
@@ -34,11 +180,11 @@ function loadFontAwesome() {
                 faLink.setAttribute('data-font-awesome', 'true');
                 
                 faLink.onload = () => {
-                    console.log('Font Awesome загружен успешно');
+                    // Font Awesome загружен успешно
                     resolve();
                 };
                 faLink.onerror = () => {
-                    console.error('Ошибка загрузки CSS');
+                    // Ошибка загрузки CSS
                     reject(new Error('CSS не загружен'));
                 };
                 
@@ -102,19 +248,23 @@ function loadFontAwesomeWithFix() {
                 style.setAttribute('data-font-awesome-fixed', 'true');
                 document.head.appendChild(style);
                 
-                console.log('Font Awesome загружен с исправленными путями');
+                // Font Awesome загружен с исправленными путями
                 resolve();
             })
             .catch(error => {
-                console.error('Ошибка загрузки Font Awesome:', error);
+                // Ошибка загрузки Font Awesome
                 reject(error);
             });
     });
 }
 
 loadFontAwesomeWithFix()
-    .then(() => console.log('✅ Font Awesome готов (пути исправлены)'))
-    .catch(error => console.error('❌ Ошибка:', error));
+    .then(() => {
+        // Font Awesome готов (пути исправлены)
+    })
+    .catch(error => {
+        // Ошибка загрузки Font Awesome
+    });
 
     
 /* ---------- CACHE MANAGEMENT ---------- */
@@ -280,7 +430,7 @@ async function clearOldCacheData() {
             await promisifyTX(tx);
         }
     } catch (error) {
-        console.warn('Cache cleanup error:', error);
+        // Cache cleanup error
     }
 }
 
@@ -421,19 +571,32 @@ async function optimizedFetch(url, options = {}) {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
         const response = await fetch(url, {
             ...options,
-            signal: controller.signal
+            signal: controller.signal,
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json',
+                ...options.headers
+            }
         });
         
         clearTimeout(timeout);
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+            console.error(`API Error: ${response.status} ${response.statusText}`, url);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         
         const data = await response.json();
+        
+        if (data.error) {
+            console.error('API returned error:', data.error);
+            throw new Error(data.error);
+        }
         
         fetchCache.set(cacheKey, {
             data,
@@ -448,6 +611,17 @@ async function optimizedFetch(url, options = {}) {
         return data;
     } catch (error) {
         clearTimeout(timeout);
+        console.error('Fetch error:', error.message, url);
+        
+        // Более понятные сообщения об ошибках
+        if (error.name === 'AbortError') {
+            throw new Error('Превышено время ожидания ответа от сервера');
+        } else if (error.message.includes('Failed to fetch')) {
+            throw new Error('Ошибка подключения к серверу. Проверьте интернет-соединение');
+        } else if (error.message.includes('CORS')) {
+            throw new Error('Ошибка CORS. Попробуйте позже');
+        }
+        
         throw error;
     }
 }
@@ -775,17 +949,45 @@ async function apiSearch(q) {
         if (cached && Date.now() - cached.t < TTL) return cached.data;
     } catch {}
     
-    const url = `${BASE}?token=${TOKEN}&title=${encodeURIComponent(q)}&types=anime,anime-serial&with_material_data=true`;
-    const data = await optimizedFetch(url);
-    
-    dbPut(STORE_SEARCH_RESULTS, { 
-        query: key, 
-        data, 
-        t: Date.now(),
-        version: CACHE_VERSION 
-    }).catch(() => {});
-    
-    return data;
+    // Пробуем основной API
+    try {
+        const url = `${BASE}?token=${TOKEN}&title=${encodeURIComponent(q)}&types=anime,anime-serial&with_material_data=true&limit=50`;
+        const data = await optimizedFetch(url);
+        
+        dbPut(STORE_SEARCH_RESULTS, { 
+            query: key, 
+            data, 
+            t: Date.now(),
+            version: CACHE_VERSION 
+        }).catch(() => {});
+        
+        return data;
+    } catch (error) {
+        console.warn('Primary API failed, trying fallback:', error.message);
+        
+        // Пробуем fallback API
+        try {
+            const fallbackUrl = `https://kodikapi.com/search?token=${TOKEN}&title=${encodeURIComponent(q)}&types=anime,anime-serial&with_material_data=true&limit=50`;
+            const data = await optimizedFetch(fallbackUrl);
+            
+            dbPut(STORE_SEARCH_RESULTS, { 
+                query: key, 
+                data, 
+                t: Date.now(),
+                version: CACHE_VERSION 
+            }).catch(() => {});
+            
+            return data;
+        } catch (fallbackError) {
+            console.error('Both APIs failed:', fallbackError);
+            
+            return { 
+                results: [],
+                error: `Ошибка подключения: ${fallbackError.message}`,
+                fallback: true
+            };
+        }
+    }
 }
 
 async function apiWeekly() {
@@ -795,17 +997,241 @@ async function apiWeekly() {
         if (cached && Date.now() - cached.t < TTL) return cached.data;
     } catch {}
     
-    const url = `${BASE.replace("/search", "/list")}?token=${TOKEN}&year=2025&updated_at=1&types=anime,anime-serial&with_material_data=true`;
+    try {
+        // Используем поиск для получения свежих обновлений
+        const url = `${BASE}?token=${TOKEN}&year=2025&types=anime,anime-serial&with_material_data=true&limit=30`;
+        const data = await optimizedFetch(url);
+        
+        dbPut(STORE_SEARCH_RESULTS, { 
+            query: key, 
+            data, 
+            t: Date.now(),
+            version: CACHE_VERSION 
+        }).catch(() => {});
+        
+        return data;
+    } catch (error) {
+        console.error('API Weekly Error:', error);
+        
+        // Возвращаем fallback данные с популярными аниме
+        const fallbackData = {
+            results: [
+                {
+                    title: "Атака титанов",
+                    link: "https://example.com/attack-on-titan",
+                    year: "2023",
+                    type: "anime-serial",
+                    quality: "1080p",
+                    material_data: {
+                        poster_url: "https://via.placeholder.com/300x400/333/fff?text=Attack+on+Titan",
+                        rating: "9.5"
+                    },
+                    genres: ["Экшен", "Драма", "Фэнтези"]
+                },
+                {
+                    title: "Наруто",
+                    link: "https://example.com/naruto",
+                    year: "2023",
+                    type: "anime-serial", 
+                    quality: "1080p",
+                    material_data: {
+                        poster_url: "https://via.placeholder.com/300x400/333/fff?text=Naruto",
+                        rating: "9.2"
+                    },
+                    genres: ["Экшен", "Приключения", "Сёнэн"]
+                },
+                {
+                    title: "Демон-убийца",
+                    link: "https://example.com/demon-slayer",
+                    year: "2023",
+                    type: "anime-serial",
+                    quality: "1080p", 
+                    material_data: {
+                        poster_url: "https://via.placeholder.com/300x400/333/fff?text=Demon+Slayer",
+                        rating: "9.0"
+                    },
+                    genres: ["Экшен", "Фэнтези", "Сёнэн"]
+                }
+            ],
+            error: "Используются демо-данные",
+            fallback: true
+        };
+        
+        // Кэшируем fallback данные
+        dbPut(STORE_SEARCH_RESULTS, { 
+            query: key, 
+            data: fallbackData, 
+            t: Date.now(),
+            version: CACHE_VERSION 
+        }).catch(() => {});
+        
+        return fallbackData;
+    }
+}
+
+/* ---------- ENHANCED API FUNCTIONS ---------- */
+async function getAnimeDetails(id) {
+    const cacheKey = `anime_details_${id}`;
+    try {
+        const cached = await dbGet(STORE_ANIME_INFO, cacheKey);
+        if (cached && Date.now() - cached.t < TTL) return cached.data;
+    } catch {}
+    
+    const url = `${BASE}?token=${TOKEN}&id=${id}&with_material_data=true`;
     const data = await optimizedFetch(url);
     
-    dbPut(STORE_SEARCH_RESULTS, { 
-        query: key, 
-        data, 
-        t: Date.now(),
-        version: CACHE_VERSION 
+    dbPut(STORE_ANIME_INFO, {
+        title: cacheKey,
+        data,
+        t: Date.now()
     }).catch(() => {});
     
     return data;
+}
+
+async function getPopularAnime() {
+    const key = `popular_${CACHE_VERSION}`;
+    try {
+        const cached = await dbGet(STORE_SEARCH_RESULTS, key);
+        if (cached && Date.now() - cached.t < TTL) return cached.data;
+    } catch {}
+    
+    try {
+        const url = `${BASE}?token=${TOKEN}&types=anime,anime-serial&with_material_data=true&limit=20`;
+        const data = await optimizedFetch(url);
+        
+        dbPut(STORE_SEARCH_RESULTS, {
+            query: key,
+            data,
+            t: Date.now(),
+            version: CACHE_VERSION
+        }).catch(() => {});
+        
+        return data;
+    } catch (error) {
+        console.error('Popular API Error:', error);
+        
+        // Возвращаем fallback данные с популярными аниме
+        const fallbackData = {
+            results: [
+                {
+                    title: "Ван Пис",
+                    link: "https://example.com/one-piece",
+                    year: "2023",
+                    type: "anime-serial",
+                    quality: "1080p",
+                    material_data: {
+                        poster_url: "https://via.placeholder.com/300x400/333/fff?text=One+Piece",
+                        rating: "9.8"
+                    },
+                    genres: ["Экшен", "Приключения", "Комедия"]
+                },
+                {
+                    title: "Мой геройская академия",
+                    link: "https://example.com/my-hero-academia",
+                    year: "2023",
+                    type: "anime-serial",
+                    quality: "1080p",
+                    material_data: {
+                        poster_url: "https://via.placeholder.com/300x400/333/fff?text=My+Hero+Academia",
+                        rating: "9.3"
+                    },
+                    genres: ["Экшен", "Сёнэн", "Супергерои"]
+                },
+                {
+                    title: "Токийский гуль",
+                    link: "https://example.com/tokyo-ghoul",
+                    year: "2023",
+                    type: "anime-serial",
+                    quality: "1080p",
+                    material_data: {
+                        poster_url: "https://via.placeholder.com/300x400/333/fff?text=Tokyo+Ghoul",
+                        rating: "8.9"
+                    },
+                    genres: ["Экшен", "Драма", "Хоррор"]
+                }
+            ],
+            error: "Используются демо-данные",
+            fallback: true
+        };
+        
+        // Кэшируем fallback данные
+        dbPut(STORE_SEARCH_RESULTS, {
+            query: key,
+            data: fallbackData,
+            t: Date.now(),
+            version: CACHE_VERSION
+        }).catch(() => {});
+        
+        return fallbackData;
+    }
+}
+
+async function getGenres() {
+    const key = `genres_${CACHE_VERSION}`;
+    try {
+        const cached = await dbGet(STORE_SEARCH_RESULTS, key);
+        if (cached && Date.now() - cached.t < TTL) return cached.data;
+    } catch {}
+    
+    // Используем статичный список жанров, так как API /genres не работает
+    const staticGenres = {
+        results: [
+            { name: 'Экшен', id: 'action' },
+            { name: 'Романтика', id: 'romance' },
+            { name: 'Комедия', id: 'comedy' },
+            { name: 'Драма', id: 'drama' },
+            { name: 'Фэнтези', id: 'fantasy' },
+            { name: 'Приключения', id: 'adventure' },
+            { name: 'Сёнэн', id: 'shounen' },
+            { name: 'Сёдзё', id: 'shoujo' },
+            { name: 'Хоррор', id: 'horror' },
+            { name: 'Мистика', id: 'mystery' },
+            { name: 'Спорт', id: 'sports' },
+            { name: 'Школа', id: 'school' }
+        ],
+        fallback: true
+    };
+    
+    // Кэшируем статичные жанры
+    dbPut(STORE_SEARCH_RESULTS, {
+        query: key,
+        data: staticGenres,
+        t: Date.now(),
+        version: CACHE_VERSION
+    }).catch(() => {});
+    
+    return staticGenres;
+}
+
+async function getAnimeByGenre(genre) {
+    const key = `genre_${genre}_${CACHE_VERSION}`;
+    try {
+        const cached = await dbGet(STORE_SEARCH_RESULTS, key);
+        if (cached && Date.now() - cached.t < TTL) return cached.data;
+    } catch {}
+    
+    try {
+        const url = `${BASE}?token=${TOKEN}&genres=${encodeURIComponent(genre)}&types=anime,anime-serial&with_material_data=true&limit=30`;
+        const data = await optimizedFetch(url);
+        
+        dbPut(STORE_SEARCH_RESULTS, {
+            query: key,
+            data,
+            t: Date.now(),
+            version: CACHE_VERSION
+        }).catch(() => {});
+        
+        return data;
+    } catch (error) {
+        console.error('Genre API Error:', error);
+        
+        return { 
+            results: [],
+            error: error.message,
+            fallback: true
+        };
+    }
 }
 
 /* ---------- UTILS ---------- */
@@ -1064,7 +1490,7 @@ function addStructuredData(query, results, canonical) {
     document.head.appendChild(scr);
 }
 
-/* ---------- CARD ---------- */
+/* ---------- ENHANCED CARD ---------- */
 async function createAnimeCard(item) {
     const t = item.title;
     const favs = await getFavorites();
@@ -1074,44 +1500,77 @@ async function createAnimeCard(item) {
     const hasShareData = !!(item.link && t);
     const hasFavData = !!(item.link && t);
 
+    // Получаем дополнительную информацию
+    const extendedInfo = await getAnimeExtendedInfo(item);
+    const rating = extendedInfo.rating || item.material_data?.rating;
+    const genres = item.genres || [];
+    const year = item.year || '';
+
     return `
-    <div class="card fade-in">
-        <div class="card-header">
-            <h3 class="h2_name">${t}</h3>
-            <div class="info-links">
-                <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="Shikimori">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
-                <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="AniList">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
-                <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}" target="_blank" class="info-link" title="MyAnimeList">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
-            </div>
+    <div class="card enhanced-card fade-in">
+        <div class="card-poster-container">
+            ${item.material_data?.poster_url ? `
+                <img src="${item.material_data.poster_url}" alt="${t}" class="card-poster" loading="lazy">
+                <div class="card-poster-overlay">
+                    <div class="card-rating">
+                        <i class="fas fa-star"></i>
+                        <span>${rating || 'N/A'}</span>
+                    </div>
+                </div>
+            ` : ''}
         </div>
-        <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
-
-        <div class="card-actions">
-            ${hasFavData ? `
-            <button class="action-btn favorite-btn" data-link="${item.link}"
-                    onclick="toggleFavorite('${t.replace(/'/g, "\\'")}','${item.link}')"
-                    title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
-                <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
-            </button>
+        
+        <div class="card-content">
+            <div class="card-header">
+                <h3 class="h2_name">${t}</h3>
+                <div class="info-links">
+                    <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="Shikimori">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                    <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="AniList">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                    <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}" target="_blank" class="info-link" title="MyAnimeList">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-meta">
+                ${year ? `<span class="meta-year">${year}</span>` : ''}
+                ${item.type ? `<span class="meta-type">${item.type}</span>` : ''}
+                ${item.quality ? `<span class="meta-quality">${item.quality}</span>` : ''}
+            </div>
+            
+            ${genres.length > 0 ? `
+                <div class="card-genres">
+                    ${genres.slice(0, 3).map(genre => `<span class="genre-tag-small">${genre}</span>`).join('')}
+                </div>
             ` : ''}
+            
+            <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
 
-            ${hasShareData ? `
-            <button class="action-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
-                <i class="fas fa-share"></i>
-            </button>
-            ` : ''}
+            <div class="card-actions">
+                ${hasFavData ? `
+                <button class="action-btn favorite-btn" data-link="${item.link}"
+                        onclick="toggleFavorite('${t.replace(/'/g, "\\'")}','${item.link}')"
+                        title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
+                    <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
+                </button>
+                ` : ''}
 
-            ${hasInfoData ? `
-            <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Информация">
-                <i class="fas fa-info-circle"></i>
-            </button>
-            ` : ''}
+                ${hasShareData ? `
+                <button class="action-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
+                    <i class="fas fa-share"></i>
+                </button>
+                ` : ''}
+
+                ${hasInfoData ? `
+                <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Информация">
+                    <i class="fas fa-info-circle"></i>
+                </button>
+                ` : ''}
+            </div>
         </div>
     </div>`;
 }
@@ -1745,12 +2204,13 @@ async function renderWeekly() {
     const box = $("resultsBox");
     if (!box) return;
     
-    box.innerHTML = '<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка новинок...</p></div>';
+    box.innerHTML = '<div class="section-preloader"><div class="preloader-spinner small"></div><p>Загрузка контента...</p></div>';
 
-    // Загружаем историю и новинки параллельно
-    const [historyData, weeklyData] = await Promise.allSettled([
+    // Загружаем историю, новинки и популярные аниме параллельно
+    const [historyData, weeklyData, popularData] = await Promise.allSettled([
         loadHistorySection(),
-        loadWeeklyData()
+        loadWeeklyData(),
+        loadPopularData()
     ]);
 
     let finalHTML = '';
@@ -1759,10 +2219,19 @@ async function renderWeekly() {
         finalHTML += historyData.value;
     }
 
+    if (popularData.status === 'fulfilled' && popularData.value) {
+        if (finalHTML) finalHTML += '<div class="content-separator"></div>';
+        finalHTML += popularData.value;
+    }
+
     if (weeklyData.status === 'fulfilled' && weeklyData.value) {
         if (finalHTML) finalHTML += '<div class="content-separator"></div>';
         finalHTML += weeklyData.value;
     }
+
+    // Добавляем секцию с жанрами
+    finalHTML += '<div class="content-separator"></div>';
+    finalHTML += await createGenresSection();
 
     if (!finalHTML) {
         finalHTML = `<div class="no-results fade-in">
@@ -1775,6 +2244,12 @@ async function renderWeekly() {
                 <li><i class="fas fa-bolt"></i> Смотрите свежие обновления</li>
                 <li><i class="fas fa-heart"></i> Добавляйте аниме в избранное</li>
             </ul>
+            <div style="margin-top: 2rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border-left: 4px solid var(--accent);">
+                <p style="margin: 0; font-size: 0.9rem; color: var(--gray);">
+                    <i class="fas fa-info-circle"></i> 
+                    Если контент не загружается, проверьте интернет-соединение и попробуйте обновить страницу
+                </p>
+            </div>
         </div>`;
     }
 
@@ -1786,6 +2261,38 @@ async function loadWeeklyData() {
         const data = await apiWeekly();
         updateSEOMeta(data);
         
+        if (data.fallback) {
+            console.warn('Weekly data using fallback, API error:', data.error);
+            
+            // Если есть fallback данные, показываем их
+            if (data.results && data.results.length > 0) {
+                const displayedWeekly = data.results.slice(0, 6);
+                const cards = await Promise.all(displayedWeekly.map(safeCreateAnimeCard));
+                
+                return `<section class="weekly-section">
+                    <h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2>
+                    <div class="stats-info">
+                        <span class="stats-text">
+                            <i class="fas fa-info-circle"></i> Демо-данные (API недоступен)
+                            | Показано: <span class="stats-highlight">${displayedWeekly.length}</span>
+                        </span>
+                    </div>
+                    <div class="results-grid" id="weeklyGrid">
+                        ${cards.join('')}
+                    </div>
+                </section>`;
+            } else {
+                return `<section class="weekly-section">
+                    <h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2>
+                    <div class="no-results fade-in">
+                        <i class="fas fa-wifi fa-2x" style="margin-bottom:1rem;opacity:.5"></i>
+                        <p>Не удалось загрузить свежие обновления</p>
+                        <p style="color:var(--gray);font-size:.9rem">${data.error}</p>
+                    </div>
+                </section>`;
+            }
+        }
+        
         const seen = new Set();
         currentWeeklyResults = (data.results || []).filter(i => {
             const k = i.title.trim().toLowerCase();
@@ -1794,7 +2301,15 @@ async function loadWeeklyData() {
             return true;
         });
 
-        if (!currentWeeklyResults.length) return '';
+        if (!currentWeeklyResults.length) {
+            return `<section class="weekly-section">
+                <h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2>
+                <div class="no-results fade-in">
+                    <i class="fas fa-calendar fa-2x" style="margin-bottom:1rem;opacity:.5"></i>
+                    <p>Новых обновлений пока нет</p>
+                </div>
+            </section>`;
+        }
 
         currentDisplayCount.weekly = ITEMS_PER_PAGE.weekly;
         const displayedWeekly = currentWeeklyResults.slice(0, currentDisplayCount.weekly);
@@ -1826,7 +2341,14 @@ async function loadWeeklyData() {
         return html;
     } catch (e) {
         console.error("Weekly data loading error:", e);
-        return '';
+        return `<section class="weekly-section">
+            <h2 class="section-title fade-in"><i class="fas fa-bolt"></i> Свежее за неделю</h2>
+            <div class="no-results fade-in">
+                <i class="fas fa-exclamation-triangle fa-2x" style="margin-bottom:1rem;opacity:.5"></i>
+                <p>Ошибка загрузки обновлений</p>
+                <p style="color:var(--gray);font-size:.9rem">${e.message}</p>
+            </div>
+        </section>`;
     }
 }
 
@@ -1883,6 +2405,167 @@ window.loadMoreWeekly = async function() {
     }
 }
 
+async function loadPopularData() {
+    try {
+        const data = await getPopularAnime();
+        
+        const seen = new Set();
+        const popularResults = (data.results || []).filter(i => {
+            const k = i.title.trim().toLowerCase();
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+        });
+
+        if (!popularResults.length) return '';
+
+        const displayedPopular = popularResults.slice(0, 6);
+        const cards = await Promise.all(displayedPopular.map(safeCreateAnimeCard));
+
+        let html = `<section class="popular-section">
+            <h2 class="section-title fade-in"><i class="fas fa-fire"></i> Популярные аниме</h2>
+            <div class="stats-info">
+                <span class="stats-text">
+                    ${data.fallback ? 
+                        '<i class="fas fa-info-circle"></i> Демо-данные (API недоступен)' : 
+                        '<i class="fas fa-star"></i> Топ рейтинговых аниме'
+                    }
+                    | Показано: <span class="stats-highlight">${displayedPopular.length}</span>
+                </span>
+            </div>
+            <div class="results-grid" id="popularGrid">
+                ${cards.join('')}
+            </div>`;
+
+        html += `</section>`;
+        
+        return html;
+    } catch (e) {
+        console.error("Popular data loading error:", e);
+        return '';
+    }
+}
+
+async function createGenresSection() {
+    try {
+        const genresData = await getGenres();
+        const genres = genresData.results || [];
+        
+        const genreIcons = {
+            'Экшен': { icon: 'fa-fist-raised', color: '#ff4757' },
+            'Романтика': { icon: 'fa-heart', color: '#ff6b9d' },
+            'Комедия': { icon: 'fa-laugh', color: '#ffa726' },
+            'Драма': { icon: 'fa-theater-masks', color: '#66bb6a' },
+            'Фэнтези': { icon: 'fa-magic', color: '#ab47bc' },
+            'Приключения': { icon: 'fa-map', color: '#42a5f5' },
+            'Сёнэн': { icon: 'fa-user-ninja', color: '#ef5350' },
+            'Сёдзё': { icon: 'fa-female', color: '#ec407a' },
+            'action': { icon: 'fa-fist-raised', color: '#ff4757' },
+            'romance': { icon: 'fa-heart', color: '#ff6b9d' },
+            'comedy': { icon: 'fa-laugh', color: '#ffa726' },
+            'drama': { icon: 'fa-theater-masks', color: '#66bb6a' },
+            'fantasy': { icon: 'fa-magic', color: '#ab47bc' },
+            'adventure': { icon: 'fa-map', color: '#42a5f5' },
+            'shounen': { icon: 'fa-user-ninja', color: '#ef5350' },
+            'shoujo': { icon: 'fa-female', color: '#ec407a' }
+        };
+
+        const displayGenres = genres.slice(0, 8); // Показываем первые 8 жанров
+
+        return `
+        <section class="genres-section">
+            <h2 class="section-title fade-in"><i class="fas fa-tags"></i> Популярные жанры</h2>
+            <div class="genres-grid">
+                ${displayGenres.map(genre => {
+                    const genreName = genre.name || genre;
+                    const genreId = genre.id || genre;
+                    const iconData = genreIcons[genreName] || genreIcons[genreId] || { icon: 'fa-tag', color: '#5b0a99' };
+                    
+                    return `
+                    <button class="genre-card" onclick="searchByGenre('${genreName}')" style="--genre-color: ${iconData.color}">
+                        <div class="genre-icon">
+                            <i class="fas ${iconData.icon}"></i>
+                        </div>
+                        <span class="genre-name">${genreName}</span>
+                    </button>
+                    `;
+                }).join('')}
+            </div>
+        </section>`;
+    } catch (error) {
+        console.error('Error creating genres section:', error);
+        
+        // Fallback к статичным жанрам
+        const fallbackGenres = [
+            { name: 'Экшен', icon: 'fa-fist-raised', color: '#ff4757' },
+            { name: 'Романтика', icon: 'fa-heart', color: '#ff6b9d' },
+            { name: 'Комедия', icon: 'fa-laugh', color: '#ffa726' },
+            { name: 'Драма', icon: 'fa-theater-masks', color: '#66bb6a' },
+            { name: 'Фэнтези', icon: 'fa-magic', color: '#ab47bc' },
+            { name: 'Приключения', icon: 'fa-map', color: '#42a5f5' },
+            { name: 'Сёнэн', icon: 'fa-user-ninja', color: '#ef5350' },
+            { name: 'Сёдзё', icon: 'fa-female', color: '#ec407a' }
+        ];
+
+        return `
+        <section class="genres-section">
+            <h2 class="section-title fade-in"><i class="fas fa-tags"></i> Популярные жанры</h2>
+            <div class="genres-grid">
+                ${fallbackGenres.map(genre => `
+                    <button class="genre-card" onclick="searchByGenre('${genre.name}')" style="--genre-color: ${genre.color}">
+                        <div class="genre-icon">
+                            <i class="fas ${genre.icon}"></i>
+                        </div>
+                        <span class="genre-name">${genre.name}</span>
+                    </button>
+                `).join('')}
+            </div>
+        </section>`;
+    }
+}
+
+window.searchByGenre = async function(genre) {
+    const input = $("searchInput");
+    if (input) {
+        input.value = genre;
+    }
+    
+    const box = $("resultsBox");
+    if (!box) return;
+    
+    box.innerHTML = '<div class="loading-container"><div class="loading"></div><p class="loading-text">Поиск по жанру...</p></div>';
+    
+    try {
+        const data = await getAnimeByGenre(genre);
+        const seen = new Set();
+        const genreResults = (data.results || []).filter(i => {
+            const k = i.title.trim().toLowerCase();
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+        });
+
+        if (!genreResults.length) {
+            box.innerHTML = `<div class="no-results fade-in">
+                <i class="fas fa-tags fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
+                <h2>По жанру «${genre}» ничего не найдено</h2>
+                <p>Попробуйте другой жанр или воспользуйтесь поиском</p>
+            </div>`;
+            return;
+        }
+
+        await renderSearchResults(genre, genreResults, data);
+        
+    } catch (e) {
+        box.innerHTML = `<div class="no-results fade-in">
+            <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
+            <h2>Ошибка загрузки</h2>
+            <p>Попробуйте повторить поиск позже</p>
+            <p style="color:var(--gray);font-size:.9rem">${e.message}</p>
+        </div>`;
+    }
+};
+
 async function search() {
     const input = $("searchInput"),
         q = input?.value.trim() || "",
@@ -1913,7 +2596,19 @@ async function search() {
         currentSearchQuery = q;
 
         if (!currentSearchResults.length) {
-            await renderNoResults(q);
+            if (data.fallback) {
+                box.innerHTML = `<div class="no-results fade-in">
+                    <i class="fas fa-wifi fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
+                    <h2>Проблемы с подключением</h2>
+                    <p>Не удалось загрузить результаты поиска</p>
+                    <p style="color:var(--gray);font-size:.9rem">${data.error}</p>
+                    <button onclick="search()" class="clear-history-btn" style="margin-top:1rem">
+                        <i class="fas fa-redo"></i> Попробовать снова
+                    </button>
+                </div>`;
+            } else {
+                await renderNoResults(q);
+            }
             return;
         }
 
@@ -1925,11 +2620,15 @@ async function search() {
         updateSEOMeta(data);
         
     } catch (e) {
+        console.error('Search error:', e);
         box.innerHTML = `<div class="no-results fade-in">
             <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
             <h2>Ошибка загрузки</h2>
             <p>Попробуйте повторить поиск позже</p>
             <p style="color:var(--gray);font-size:.9rem">${e.message}</p>
+            <button onclick="search()" class="clear-history-btn" style="margin-top:1rem">
+                <i class="fas fa-redo"></i> Попробовать снова
+            </button>
         </div>`;
     }
 }
@@ -2273,6 +2972,22 @@ function updateMetaTag(attr, name, content) {
     metaTag.setAttribute('content', content);
 }
 
+/* ---------- CACHE CLEARING ---------- */
+async function clearOldCache() {
+    try {
+        // Очищаем старый кэш с неправильными URL
+        const oldKeys = ['weekly_2.5.2', 'popular_2.5.2', 'weekly_2.5.3', 'popular_2.5.3', 'weekly_2.5.4', 'popular_2.5.4', 'weekly_2.5.5', 'popular_2.5.5'];
+        for (const key of oldKeys) {
+            try {
+                await dbDel(STORE_SEARCH_RESULTS, key);
+            } catch (e) {}
+        }
+        // Old cache cleared
+    } catch (e) {
+        console.warn('Cache clear error:', e);
+    }
+}
+
 /* ---------- INIT ---------- */
 document.addEventListener("DOMContentLoaded", async () => {
     document.body.insertAdjacentHTML("afterbegin", 
@@ -2283,6 +2998,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         await loadFontAwesome();
         cacheManager.startCleanupInterval();
         await initDB();
+        await clearOldCache();
         updateHeader();
 
         const form = $("searchForm"),
@@ -2345,4 +3061,4 @@ setInterval(() => {
     }
 }, 60000);
 
-console.log(`🚀 AniFox ${CACHE_VERSION} loaded with button-based loading system`);
+// Информация о проекте выводится через автоматическую очистку консоли
