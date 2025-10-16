@@ -1,6 +1,12 @@
 /* =========================================================
    AniFox 2.4 (optimized)
    Улучшения: кнопки загрузки вместо прогрессивной загрузки + исправление JSON ошибок
+   
+   💻 Разработано SerGio Play
+   🌐 Веб-сайт: https://sergioplay-dev.vercel.app/
+   📁 GitHub: https://github.com/SerGioPlay01/anifox-search
+   
+   При использовании данного проекта обязательно указывайте ссылку на разработчика.
    ========================================================= */
 
 /* ---------- CONFIG ---------- */
@@ -869,12 +875,6 @@ function updateSEOMeta(apiData) {
     
     if (!query) return;
     
-    // Удаляем query parameters из URL
-    if (history.replaceState) {
-        const cleanUrl = location.origin + location.pathname;
-        history.replaceState(null, '', cleanUrl);
-    }
-    
     const top = results[0];
     let title, desc, kw, ogTitle, ogDesc, ogImage;
     
@@ -896,7 +896,7 @@ function updateSEOMeta(apiData) {
         ogImage = "/resources/obl_web.jpg";
     }
     
-    // ОБНОВЛЕНО: Используем clean URL без параметров
+    // ОБНОВЛЕНО: Используем текущий URL для поиска
     const cleanCanonical = location.origin + location.pathname;
     const currentUrl = location.origin + location.pathname;
 
@@ -1133,6 +1133,205 @@ async function getFavorites() {
     } catch (e) {
         favoritesCache = [];
         return favoritesCache;
+    }
+}
+
+/* ---------- EXPORT/IMPORT FAVORITES ---------- */
+// Генерация уникального кода для защиты
+function generateUniqueCode() {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 15);
+    const checksum = btoa(timestamp + random).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    return `${timestamp}-${random}-${checksum}`.toUpperCase();
+}
+
+// Валидация уникального кода
+function validateUniqueCode(code) {
+    if (!code || typeof code !== 'string') return false;
+    const parts = code.split('-');
+    if (parts.length !== 3) return false;
+    
+    const [timestamp, random, checksum] = parts;
+    if (!timestamp || !random || !checksum) return false;
+    
+    // Проверяем, что код не старше 30 дней
+    const codeTime = parseInt(timestamp, 36);
+    const now = Date.now();
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    
+    return (now - codeTime) < thirtyDays;
+}
+
+// Экспорт избранного с защитой
+async function exportFavorites() {
+    try {
+        const favorites = await getFavorites();
+        if (!favorites.length) {
+            showNote("В избранном нет аниме для экспорта", "info");
+            return null;
+        }
+
+        const uniqueCode = generateUniqueCode();
+        const processedFavorites = favorites
+            .filter(fav => fav && fav.title && fav.link) // Фильтруем некорректные записи
+            .map(fav => ({
+                title: fav.title.trim(),
+                link: fav.link.trim(),
+                addedAt: fav.addedAt || new Date().toISOString()
+            }));
+        
+        // Проверяем, что после фильтрации остались валидные записи
+        if (!processedFavorites.length) {
+            showNote("В избранном нет корректных данных для экспорта", "info");
+            return null;
+        }
+
+        const exportData = {
+            version: "1.0",
+            timestamp: Date.now(),
+            uniqueCode: uniqueCode,
+            favorites: processedFavorites,
+            checksum: generateChecksum(processedFavorites)
+        };
+
+        const exportString = JSON.stringify(exportData);
+        // Исправляем проблему с кодировкой для btoa
+        const compressedData = btoa(unescape(encodeURIComponent(exportString)));
+        
+        return {
+            data: compressedData,
+            code: uniqueCode,
+            count: processedFavorites.length
+        };
+    } catch (error) {
+        console.error("Export error:", error);
+        showNote("Ошибка при экспорте избранного", "error");
+        return null;
+    }
+}
+
+// Импорт избранного с проверкой
+async function importFavorites(importData, providedCode) {
+    try {
+        if (!importData || !providedCode) {
+            throw new Error("Неверные данные для импорта");
+        }
+
+        // Декодируем данные с правильной обработкой кодировки
+        let decodedString;
+        try {
+            decodedString = decodeURIComponent(escape(atob(importData)));
+        } catch (decodeError) {
+            throw new Error("Неверный формат файла или поврежденные данные");
+        }
+        
+        let importObj;
+        try {
+            importObj = JSON.parse(decodedString);
+        } catch (parseError) {
+            throw new Error("Файл поврежден или имеет неверный формат");
+        }
+
+        // Проверяем версию
+        if (importObj.version !== "1.0") {
+            throw new Error("Неподдерживаемая версия файла");
+        }
+
+        // Проверяем уникальный код
+        if (!validateUniqueCode(providedCode)) {
+            throw new Error("Неверный или устаревший код защиты");
+        }
+
+        if (importObj.uniqueCode !== providedCode) {
+            throw new Error("Код защиты не совпадает с файлом");
+        }
+
+        // Проверяем целостность данных
+        if (!importObj.favorites || !Array.isArray(importObj.favorites)) {
+            throw new Error("Поврежденные данные избранного");
+        }
+
+        // Проверяем контрольную сумму
+        const currentChecksum = generateChecksum(importObj.favorites);
+        if (importObj.checksum !== currentChecksum) {
+            throw new Error("Файл поврежден или изменен");
+        }
+
+        // Получаем текущее избранное
+        const currentFavorites = await getFavorites();
+        const currentLinks = new Set(currentFavorites.map(f => f.link));
+
+        // Фильтруем дубликаты
+        const newFavorites = importObj.favorites.filter(fav => !currentLinks.has(fav.link));
+
+        if (!newFavorites.length) {
+            showNote("Все аниме из файла уже есть в избранном", "info");
+            return { imported: 0, total: importObj.favorites.length };
+        }
+
+        // Добавляем новые избранные
+        let importedCount = 0;
+        for (const fav of newFavorites) {
+            try {
+                const newFavorite = {
+                    id: Date.now() + Math.random(),
+                    title: fav.title,
+                    link: fav.link,
+                    t: Date.now(),
+                    addedAt: fav.addedAt || new Date().toISOString(),
+                    imported: true
+                };
+                await dbAdd(STORE_FAVORITES, newFavorite);
+                importedCount++;
+            } catch (error) {
+                console.warn("Failed to import favorite:", fav.title, error);
+            }
+        }
+
+        clearFavoritesCache();
+        await refreshAllFavoriteButtons();
+
+        return {
+            imported: importedCount,
+            total: importObj.favorites.length,
+            duplicates: importObj.favorites.length - newFavorites.length
+        };
+
+    } catch (error) {
+        console.error("Import error:", error);
+        throw error;
+    }
+}
+
+// Генерация контрольной суммы
+function generateChecksum(favorites) {
+    const data = favorites.map(f => f.title + f.link).join('');
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+        const char = data.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+}
+
+// Поделиться избранным через уникальную ссылку
+async function shareFavorites() {
+    try {
+        const exportResult = await exportFavorites();
+        if (!exportResult) return null;
+
+        const shareUrl = `${location.origin}/?import=${encodeURIComponent(exportResult.data)}&code=${exportResult.code}`;
+        
+        return {
+            url: shareUrl,
+            code: exportResult.code,
+            count: exportResult.count
+        };
+    } catch (error) {
+        console.error("Share error:", error);
+        showNote("Ошибка при создании ссылки для обмена", "error");
+        return null;
     }
 }
 
@@ -1611,12 +1810,25 @@ async function renderFavoritesPage() {
 
         html += `
             <div class="favorites-actions">
-                <button onclick="clearFavorites()" class="clear-history-btn">
-                    <i class="fas fa-trash"></i> Очистить избранное
-                </button>
-                <button onclick="navigateToHome()" class="clear-history-btn secondary">
-                    <i class="fas fa-arrow-left"></i> Вернуться к поиску
-                </button>
+                <div class="favorites-export-actions">
+                    <button onclick="shareFavoritesLink()" class="action-btn primary">
+                        <i class="fas fa-share"></i> Поделиться ссылкой
+                    </button>
+                    <button onclick="exportFavoritesToFile()" class="action-btn secondary">
+                        <i class="fas fa-download"></i> Экспорт в файл
+                    </button>
+                    <button onclick="showImportModal()" class="action-btn secondary">
+                        <i class="fas fa-upload"></i> Импорт
+                    </button>
+                </div>
+                <div class="favorites-manage-actions">
+                    <button onclick="clearFavorites()" class="clear-history-btn">
+                        <i class="fas fa-trash"></i> Очистить избранное
+                    </button>
+                    <button onclick="navigateToHome()" class="clear-history-btn secondary">
+                        <i class="fas fa-arrow-left"></i> Вернуться к поиску
+                    </button>
+                </div>
             </div>
         </section>`;
 
@@ -1705,6 +1917,127 @@ window.clearFavorites = async () => {
         }
     }
 };
+
+// Глобальные функции для экспорта/импорта
+window.exportFavoritesToFile = async () => {
+    try {
+        const exportResult = await exportFavorites();
+        if (!exportResult) {
+            showNote("Нет данных для экспорта", "info");
+            return;
+        }
+
+        if (!exportResult.data || !exportResult.code) {
+            throw new Error("Неверные данные экспорта");
+        }
+
+        const blob = new Blob([exportResult.data], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `anifox-favorites-${new Date().toISOString().split('T')[0]}.txt`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNote(`Избранное экспортировано (${exportResult.count} аниме). Код защиты: ${exportResult.code}`, "success");
+    } catch (error) {
+        console.error("Export to file error:", error);
+        showNote(`Ошибка при экспорте в файл: ${error.message}`, "error");
+    }
+};
+
+window.importFavoritesFromFile = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const code = prompt("Введите код защиты из файла:");
+            if (!code) {
+                showNote("Код защиты не введен", "error");
+                return;
+            }
+
+            const result = await importFavorites(text.trim(), code.trim());
+            if (result) {
+                let message = `Импортировано ${result.imported} из ${result.total} аниме`;
+                if (result.duplicates > 0) {
+                    message += ` (${result.duplicates} дубликатов пропущено)`;
+                }
+                showNote(message, "success");
+
+                if (location.search.includes("page=favorites")) {
+                    renderFavoritesPage();
+                }
+            }
+        } catch (error) {
+            console.error("Import from file error:", error);
+            showNote(`Ошибка импорта: ${error.message}`, "error");
+        }
+    };
+    input.click();
+};
+
+window.shareFavoritesLink = async () => {
+    try {
+        const shareResult = await shareFavorites();
+        if (!shareResult) return;
+
+        if (navigator.share) {
+            await navigator.share({
+                title: 'Мое избранное аниме',
+                text: `Поделиться избранным (${shareResult.count} аниме)`,
+                url: shareResult.url
+            });
+        } else {
+            await navigator.clipboard.writeText(shareResult.url);
+            showNote(`Ссылка скопирована! Код защиты: ${shareResult.code}`, "success");
+        }
+    } catch (error) {
+        console.error("Share link error:", error);
+        showNote("Ошибка при создании ссылки", "error");
+    }
+};
+
+window.showImportModal = () => {
+    const modalHTML = `
+    <div class="modal-overlay" onclick="closeImportModal(event)">
+        <div class="modal-content import-modal" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            <h2 class="modal-title">Импорт избранного</h2>
+            <div class="import-option-single">
+                <h3><i class="fas fa-file-upload"></i> Из файла</h3>
+                <p>Выберите файл с экспортированным избранным</p>
+                <button class="modal-btn primary" onclick="importFavoritesFromFile(); closeImportModal();">
+                    <i class="fas fa-upload"></i> Выбрать файл
+                </button>
+            </div>
+            <div class="import-info">
+                <p><i class="fas fa-info-circle"></i> Для импорта требуется код защиты, который был создан при экспорте</p>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+    document.body.classList.add("modal-open");
+};
+
+window.closeImportModal = (e) => {
+    if (e && e.target !== document.querySelector(".modal-overlay")) return;
+    const modal = document.querySelector(".modal-overlay");
+    if (modal) {
+        modal.remove();
+        document.body.classList.remove("modal-open");
+    }
+};
+
 
 /* ---------- HISTORY SECTION ---------- */
 async function loadHistorySection() {
@@ -1883,9 +2216,9 @@ window.loadMoreWeekly = async function() {
     }
 }
 
-async function search() {
+async function search(queryParam = null) {
     const input = $("searchInput"),
-        q = input?.value.trim() || "",
+        q = queryParam || input?.value.trim() || "",
         box = $("resultsBox");
     
     if (!box) return;
@@ -2102,9 +2435,11 @@ window.navigateToHome = (e) => {
 };
 
 window.navigateToFavorites = () => {
+    // Всегда используем корневой путь для избранного
+    const basePath = "/";
     const url = location.search
-        ? `${location.pathname}${location.search}${location.search.includes("?") ? "&" : "?"}page=favorites`
-        : `${location.pathname}?page=favorites`;
+        ? `${basePath}${location.search}${location.search.includes("?") ? "&" : "?"}page=favorites`
+        : `${basePath}?page=favorites`;
     history.replaceState(null, null, url);
     updateHeader();
     renderFavoritesPage();
@@ -2156,7 +2491,7 @@ function updateSEOMetaForFavorites() {
     
     const title = "Избранное — AniFox";
     const desc = "Ваша коллекция избранных аниме на AniFox. Сохраняйте любимые сериалы и следите за новыми сериями.";
-    const currentUrl = location.origin + location.pathname + "?page=favorites";
+    const currentUrl = location.origin + "/?page=favorites";
     
     // Обновляем мета-теги
     document.title = title;
@@ -2298,11 +2633,45 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (input) {
             const path = location.pathname;
+            const urlParams = new URLSearchParams(location.search);
+
+            // Проверяем параметры импорта
+            if (urlParams.has('import') && urlParams.has('code')) {
+                const importData = urlParams.get('import');
+                const code = urlParams.get('code');
+                
+                try {
+                    const result = await importFavorites(importData, code);
+                    if (result) {
+                        let message = `Импортировано ${result.imported} из ${result.total} аниме`;
+                        if (result.duplicates > 0) {
+                            message += ` (${result.duplicates} дубликатов пропущено)`;
+                        }
+                        showNote(message, "success");
+                        
+                        // Очищаем URL от параметров импорта
+                        const cleanUrl = location.origin + "/";
+                        history.replaceState(null, null, cleanUrl);
+                        
+                        // Переходим на страницу избранного
+                        navigateToFavorites();
+                        return;
+                    }
+                } catch (error) {
+                    console.error("Auto-import error:", error);
+                    showNote(`Ошибка импорта: ${error.message}`, "error");
+                    
+                    // Очищаем URL от параметров импорта
+                    const cleanUrl = location.origin + "/";
+                    history.replaceState(null, null, cleanUrl);
+                }
+            }
 
             if (path.startsWith("/search/")) {
                 const slug = path.replace("/search/", "");
-                input.value = slug.replace(/-/g, " ");
-                search();
+                const query = slug.replace(/-/g, " ");
+                if (input) input.value = query;
+                search(query);
             } else if (location.search.includes("page=favorites")) {
                 renderFavoritesPage();
             } else {
@@ -2346,3 +2715,5 @@ setInterval(() => {
 }, 60000);
 
 console.log(`🚀 AniFox ${CACHE_VERSION} loaded with button-based loading system`);
+console.log(`💻 Разработано SerGio Play - https://sergioplay-dev.vercel.app/`);
+console.log(`📁 GitHub: https://github.com/SerGioPlay01/anifox-search`);

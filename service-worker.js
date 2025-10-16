@@ -1,20 +1,41 @@
-const CACHE_NAME = 'anifox-v2.0.1';
-const STATIC_CACHE = 'static-v2.0.1';
-const DYNAMIC_CACHE = 'dynamic-v2.0.1';
+/*
+ * AniFox 2.4 - Service Worker
+ * 
+ * 💻 Разработано SerGio Play
+ * 🌐 Веб-сайт: https://sergioplay-dev.vercel.app/
+ * 📁 GitHub: https://github.com/SerGioPlay01/anifox-search
+ * 
+ * При использовании данного проекта обязательно указывайте ссылку на разработчика.
+ * 
+ * Функции:
+ * - Кэширование статических ресурсов
+ * - Стратегии кэширования (Cache First, Network First)
+ * - Офлайн поддержка
+ * - Автоматическое обновление кэша
+ */
 
-// Файлы для кэширования при установке
+// ===========================================
+// НАСТРОЙКИ КЭШИРОВАНИЯ
+// ===========================================
+
+// Имена кэшей для разных типов ресурсов
+const CACHE_NAME = 'anifox-v2.0.1';        // Основной кэш
+const STATIC_CACHE = 'static-v2.0.1';      // Статические ресурсы
+const DYNAMIC_CACHE = 'dynamic-v2.0.1';    // Динамические ресурсы
+
+// Файлы для кэширования при установке Service Worker
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/api.js',
-  '/manifest.json',
-  '/favicon/favicon.ico',
-  '/favicon/apple-touch-icon.png',
-  '/favicon/site.webmanifest',
-  '/resources/obl_web.jpg',
-  '/css/all.min.css',
-  '/fonts/rubik/rubik-regular.ttf'
+  '/',                                    // Главная страница
+  '/index.html',                          // HTML файл
+  '/style.css',                           // Основные стили
+  '/api.js',                              // API скрипт
+  '/manifest.json',                       // PWA манифест
+  '/favicon/favicon.ico',                 // Иконка сайта
+  '/favicon/apple-touch-icon.png',        // Иконка для iOS
+  '/favicon/site.webmanifest',            // Веб-манифест
+  '/resources/obl_web.jpg',               // Фоновое изображение
+  '/css/all.min.css',                     // Font Awesome стили
+  '/fonts/rubik/rubik-regular.ttf'        // Основной шрифт
 ];
 
 // Паттерны для стратегии Network First
@@ -132,6 +153,12 @@ function isStaticAsset(request) {
 // Стратегия: Cache First (только для GET запросов)
 async function cacheFirstStrategy(request) {
   try {
+    // Проверяем, что это запрос к нашему домену
+    if (!request.url.startsWith(self.location.origin)) {
+      // Для внешних запросов просто делаем fetch без кэширования
+      return fetch(request);
+    }
+
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       return cachedResponse;
@@ -139,8 +166,8 @@ async function cacheFirstStrategy(request) {
 
     const networkResponse = await fetch(request);
     
-    // Кэшируем только успешные ответы
-    if (networkResponse.status === 200) {
+    // Кэшируем только успешные ответы и только для нашего домена
+    if (networkResponse.status === 200 && request.url.startsWith(self.location.origin)) {
       const cache = await caches.open(STATIC_CACHE);
       // Создаем копию response для кэширования
       cache.put(request, networkResponse.clone()).catch(error => {

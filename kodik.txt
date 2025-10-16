@@ -1,1 +1,6 @@
+# AniFox 2.4 - Kodik API Token
+# Разработано SerGio Play | https://sergioplay-dev.vercel.app/
+
+# Токен для доступа к API Kodik
+# Используется для получения данных об аниме и видео
 kodik4104955464

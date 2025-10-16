@@ -1,53 +1,96 @@
-/**
- * AniFox Anti-Adblock Banner
- * Улучшенная версия с лучшим обнаружением без внешних скриптов
+/*
+ * AniFox 2.4 - Анти-адблок баннер
+ * 
+ * 💻 Разработано SerGio Play
+ * 🌐 Веб-сайт: https://sergioplay-dev.vercel.app/
+ * 📁 GitHub: https://github.com/SerGioPlay01/anifox-search
+ * 
+ * При использовании данного проекта обязательно указывайте ссылку на разработчика.
+ * 
+ * Функции:
+ * - Обнаружение блокировщиков рекламы
+ * - Показ баннера с просьбой отключить блокировщик
+ * - Инструкции по отключению для разных браузеров
+ * - Сохранение выбора пользователя
+ * - Повторная проверка после отключения
  */
+
+// Обертываем весь код в IIFE для изоляции переменных
 (() => {
+  // ===========================================
+  // НАСТРОЙКИ
+  // ===========================================
+
+  // Ключи для хранения выбора пользователя в localStorage
   const STORAGE_KEY = "anifox-adblock-choice";
   const STORAGE_KEY_WANT = "anifox-adblock-want-disable";
-  const RE_CHECK_TRIES = 3;
-  const RE_CHECK_PAUSE = 1000;
 
+  // Настройки повторной проверки
+  const RE_CHECK_TRIES = 3;        // Количество попыток проверки
+  const RE_CHECK_PAUSE = 1000;     // Пауза между проверками (мс)
+
+  // Блокировка множественного показа баннера
   let lock = false;
 
-  /* ---------- улучшенная проверка без внешних скриптов ---------- */
-  function detectAdblockHard(callback) {
-    let blockedSignals = 0;
-    const totalTests = 4;
-    let testsCompleted = 0;
+// ===========================================
+// ОБНАРУЖЕНИЕ БЛОКИРОВЩИКОВ
+// ===========================================
 
-    function checkCompletion() {
-      testsCompleted++;
-      if (testsCompleted >= totalTests) {
-        const blocked = blockedSignals >= 2;
-        const isMobileBlocked =
-          /Opera Mini|Chrome Lite|Yandex Turbo|Firefox Focus/.test(
-            navigator.userAgent
-          );
-        callback(blocked || isMobileBlocked);
-      }
+/**
+ * Улучшенная проверка блокировщиков рекламы без внешних скриптов
+ * Использует несколько методов обнаружения для повышения точности
+ * @param {Function} callback - Функция обратного вызова с результатом
+ */
+function detectAdblockHard(callback) {
+  let blockedSignals = 0;      // Счетчик сигналов блокировки
+  const totalTests = 4;        // Общее количество тестов
+  let testsCompleted = 0;      // Количество завершенных тестов
+
+  /**
+   * Проверка завершения всех тестов
+   * Определяет, заблокирована ли реклама на основе результатов
+   */
+  function checkCompletion() {
+    testsCompleted++;
+    if (testsCompleted >= totalTests) {
+      // Если 2 или более теста показали блокировку
+      const blocked = blockedSignals >= 2;
+      
+      // Дополнительная проверка для мобильных браузеров с блокировкой
+      const isMobileBlocked =
+        /Opera Mini|Chrome Lite|Yandex Turbo|Firefox Focus/.test(
+          navigator.userAgent
+        );
+      
+      callback(blocked || isMobileBlocked);
     }
+  }
 
-    // Тест 1: Bait элементы с классами рекламы
-    const bait = document.createElement("div");
-    bait.className = "ads ad-unit ad-banner advertisement";
-    bait.style.cssText =
-      "position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px;";
-    bait.innerHTML = '<div class="ad-text">Advertisement</div>';
-    document.body.appendChild(bait);
+  // ===========================================
+  // ТЕСТ 1: BAIT ЭЛЕМЕНТЫ
+  // ===========================================
+  // Создаем элемент с классами, которые блокируют адблоки
+  
+  const bait = document.createElement("div");
+  bait.className = "ads ad-unit ad-banner advertisement";
+  bait.style.cssText =
+    "position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px;";
+  bait.innerHTML = '<div class="ad-text">Advertisement</div>';
+  document.body.appendChild(bait);
 
-    setTimeout(() => {
-      const style = window.getComputedStyle(bait);
-      if (
-        style.display === "none" ||
-        style.visibility === "hidden" ||
-        style.height === "0px"
-      ) {
-        blockedSignals++;
-      }
-      bait.remove();
-      checkCompletion();
-    }, 300);
+  // Проверяем, был ли элемент заблокирован
+  setTimeout(() => {
+    const style = window.getComputedStyle(bait);
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.height === "0px"
+    ) {
+      blockedSignals++;
+    }
+    bait.remove();
+    checkCompletion();
+  }, 300);
 
     // Тест 2: Fake скрипт с триггерными атрибутами
     const fakeScript = document.createElement("script");

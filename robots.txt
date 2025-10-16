@@ -1,6 +1,13 @@
+# AniFox 2.4 - Robots.txt
+# Разработано SerGio Play | https://sergioplay-dev.vercel.app/
+
+# Разрешаем всем поисковым роботам индексировать сайт
 User-agent: *
 Allow: /
+
+# Запрещаем индексацию ресурсов и шрифтов
 Disallow: /resources/
 Disallow: /fonts/
 
+# Указываем путь к карте сайта
 Sitemap: https://anifox-search.vercel.app/sitemap.xml

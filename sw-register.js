@@ -1,4 +1,23 @@
-// sw-register.js
+/*
+ * AniFox 2.4 - Регистрация Service Worker и PWA
+ * 
+ * 💻 Разработано SerGio Play
+ * 🌐 Веб-сайт: https://sergioplay-dev.vercel.app/
+ * 📁 GitHub: https://github.com/SerGioPlay01/anifox-search
+ * 
+ * При использовании данного проекта обязательно указывайте ссылку на разработчика.
+ * 
+ * Функции:
+ * - Регистрация Service Worker для кэширования
+ * - PWA установка приложения
+ * - Управление установочным баннером
+ */
+
+// ===========================================
+// SERVICE WORKER
+// ===========================================
+
+// Регистрация Service Worker для кэширования ресурсов
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/service-worker.js')
@@ -11,10 +30,15 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// PWA Install Prompt
-let deferredPrompt;
-const installButton = document.createElement('button');
+// ===========================================
+// PWA УСТАНОВКА
+// ===========================================
 
+// Переменные для управления установкой PWA
+let deferredPrompt;                    // Отложенный промпт установки
+const installButton = document.createElement('button');  // Кнопка установки
+
+// Обработчик события готовности к установке PWA
 window.addEventListener('beforeinstallprompt', (e) => {
   // Предотвращаем автоматическое отображение баннера
   e.preventDefault();
@@ -24,7 +48,12 @@ window.addEventListener('beforeinstallprompt', (e) => {
   showInstallButton();
 });
 
+/**
+ * Создание и отображение кнопки установки PWA
+ * Стилизует кнопку и добавляет обработчик клика
+ */
 function showInstallButton() {
+  // Стилизация кнопки установки
   installButton.style.cssText = `
     position: fixed;
     bottom: 20px;
@@ -40,6 +69,7 @@ function showInstallButton() {
   installButton.textContent = 'Установить приложение';
   document.body.appendChild(installButton);
   
+  // Обработчик клика по кнопке установки
   installButton.addEventListener('click', async () => {
     if (!deferredPrompt) return;
     
@@ -60,6 +90,7 @@ function showInstallButton() {
   });
 }
 
+// Обработчик успешной установки PWA
 window.addEventListener('appinstalled', () => {
   console.log('PWA was installed');
   installButton.style.display = 'none';

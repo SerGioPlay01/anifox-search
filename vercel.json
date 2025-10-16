@@ -1,5 +1,10 @@
 {
+  "_comment": "AniFox 2.4 - Vercel Configuration | Разработано SerGio Play | https://sergioplay-dev.vercel.app/",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { 
+      "source": "/(.*)", 
+      "destination": "/index.html",
+      "_description": "SPA routing - все запросы перенаправляются на index.html для клиентской маршрутизации"
+    }
   ]
 }

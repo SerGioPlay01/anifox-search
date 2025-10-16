@@ -1,19 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  AniFox 2.4 - Sitemap
+  Разработано SerGio Play | https://sergioplay-dev.vercel.app/
+  
+  Карта сайта для поисковых систем
+  Указывает основные страницы и их приоритеты для индексации
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Главная страница - высший приоритет -->
   <url>
     <loc>https://anifox-search.vercel.app/</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  
+  <!-- Страница жанров - высокий приоритет -->
   <url>
     <loc>https://anifox-search.vercel.app/genres.html</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  
+  <!-- Политика конфиденциальности - низкий приоритет -->
   <url>
     <loc>https://anifox-search.vercel.app/privacy-policy.html</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <!-- Страница лицензии - низкий приоритет -->
+  <url>
+    <loc>https://anifox-search.vercel.app/license.html</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>

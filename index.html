@@ -1,29 +1,61 @@
 <!doctype html>
+<!--
+ * AniFox 2.4 - Главная страница
+ * 
+ * 💻 Разработано SerGio Play
+ * 🌐 Веб-сайт: https://sergioplay-dev.vercel.app/
+ * 📁 GitHub: https://github.com/SerGioPlay01/anifox-search
+ * 
+ * При использовании данного проекта обязательно указывайте ссылку на разработчика.
+ * 
+ * Структура страницы:
+ * - Прелоадер с анимацией загрузки
+ * - Шапка с логотипом и навигацией
+ * - Поисковая форма
+ * - Основной контент (динамически загружается)
+ * - Футер с информацией и ссылками
+ * - Водяной знак разработчика
+ * - Скрипты для инициализации и аналитики
+-->
 <html lang="ru" class="preloader-active">
 
 <head>
 
-    <!-- Google Tag Manager (noscript) -->
+    <!-- =========================================== -->
+    <!-- АНАЛИТИКА И ОТСЛЕЖИВАНИЕ -->
+    <!-- =========================================== -->
+    
+    <!-- Google Tag Manager (noscript) - резервный код для браузеров без JavaScript -->
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PPSLBGXR" height="0" width="0"
             style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
 
-    <!-- Google Tag Manager -->
+    <!-- Google Tag Manager - основной код для отслеживания пользователей -->
     <script>(function (w, d, s, l, i) {
             w[l] = w[l] || []; w[l].push({
                 'gtm.start':
                     new Date().getTime(), event: 'gtm.js'
             }); var f = d.getElementsByTagName(s)[0],
                 j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; 
+            j.onerror = function() { console.warn('GTM failed to load'); };
+            f.parentNode.insertBefore(j, f);
         })(window, document, 'script', 'dataLayer', 'GTM-PPSLBGXR');</script>
     <!-- End Google Tag Manager -->
 
+    <!-- =========================================== -->
+    <!-- ОСНОВНЫЕ МЕТА-ТЕГИ -->
+    <!-- =========================================== -->
+    
+    <!-- Кодировка и совместимость -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <!-- Critical CSS Inline -->
+    <!-- =========================================== -->
+    <!-- КРИТИЧЕСКИЕ СТИЛИ (INLINE) -->
+    <!-- =========================================== -->
+    <!-- Прелоадер и анимации загрузки - загружаются сразу для быстрого отображения -->
     <style>
         #preloader-site-full {
             position: fixed;
@@ -71,14 +103,20 @@
         }
     </style>
 
-    <!-- SEO Meta -->
+    <!-- =========================================== -->
+    <!-- SEO МЕТА-ТЕГИ -->
+    <!-- =========================================== -->
+    <!-- Основные теги для поисковых систем -->
     <title>Смотреть аниме онлайн бесплатно в HD — AniFox</title>
     <meta name="description"
         content="✅ Более 3000 аниме фильмов и сериалов на AniFox. Смотрите онлайн в HD 720/1080, без регистрации и рекламы. Ежедневные обновления, удобный поиск по жанрам и годам.">
     <meta name="keywords"
         content="аниме онлайн, смотреть аниме, аниме бесплатно, аниме 2025, аниме HD, аниме сериалы, аниме фильмы, naruto, attack on titan, demon slayer, death note, one piece, сёнэн, сёдзё, исекай, романтика, боевик, драма, тетрадь смерти, аниме каталог, аниме поиск">
 
-    <!-- Open Graph -->
+    <!-- =========================================== -->
+    <!-- OPEN GRAPH (SOCIAL MEDIA) -->
+    <!-- =========================================== -->
+    <!-- Мета-теги для корректного отображения в социальных сетях -->
     <meta property="og:type" content="website">
     <meta property="og:locale" content="ru_RU">
     <meta property="og:url" content="https://anifox-search.vercel.app/">
@@ -90,35 +128,48 @@
     <meta property="og:image:height" content="630">
     <meta property="og:site_name" content="AniFox">
 
-    <!-- Twitter -->
+    <!-- =========================================== -->
+    <!-- TWITTER CARDS -->
+    <!-- =========================================== -->
+    <!-- Мета-теги для Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="AniFox — смотреть аниме онлайн">
     <meta name="twitter:description" content="Без рекламы, HD 1080, ежедневные обновления.">
     <meta name="twitter:image" content="https://anifox-search.vercel.app/resources/obl_web.jpg">
 
-    <!-- Favicons -->
+    <!-- =========================================== -->
+    <!-- ИКОНКИ И PWA -->
+    <!-- =========================================== -->
+    <!-- Иконки для различных устройств и браузеров -->
     <link rel="icon" href="/favicon/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
 
-    <!-- PWA -->
+    <!-- PWA настройки -->
     <meta name="theme-color" content="#5b0a99">
     <link rel="manifest" href="/manifest.json">
 
-    <!-- Preload critical resources -->
+    <!-- =========================================== -->
+    <!-- ОПТИМИЗАЦИЯ ЗАГРУЗКИ -->
+    <!-- =========================================== -->
+    <!-- Предзагрузка критических ресурсов -->
     <link rel="preload" href="/style.css" as="style">
     <link rel="preconnect" href="https://mc.yandex.ru">
 
-    <!-- Non-critical CSS deferred -->
+    <!-- Отложенная загрузка некритических CSS -->
     <link rel="stylesheet" href="/style.css" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="/cookie-banner.css" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="/adblock-banner.css" media="print" onload="this.media='all'">
+    <!-- Резервная загрузка для браузеров без JavaScript -->
     <noscript>
         <link rel="stylesheet" href="/style.css">
         <link rel="stylesheet" href="/cookie-banner.css">
         <link rel="stylesheet" href="/adblock-banner.css">
     </noscript>
 
-    <!-- Structured Data -->
+    <!-- =========================================== -->
+    <!-- СТРУКТУРИРОВАННЫЕ ДАННЫЕ (SCHEMA.ORG) -->
+    <!-- =========================================== -->
+    <!-- JSON-LD разметка для улучшения SEO и отображения в поисковых системах -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -138,15 +189,21 @@
 
 <body>
 
-    <!-- Прелоадер - виден сразу благодаря инлайн стилям -->
+    <!-- =========================================== -->
+    <!-- ПРЕЛОАДЕР -->
+    <!-- =========================================== -->
+    <!-- Анимация загрузки - отображается до полной загрузки страницы -->
     <div id="preloader-site-full">
         <div class="loader-site"></div>
     </div>
 
-    <!-- Header -->
+    <!-- =========================================== -->
+    <!-- ШАПКА САЙТА -->
+    <!-- =========================================== -->
+    <!-- Логотип и навигация -->
     <header class="top">
         <a class="logo-link" href="/" aria-label="AniFox — главная">
-            <!-- Оптимизированный SVG -->
+            <!-- Оптимизированный SVG логотип -->
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none"
                 aria-hidden="true">
                 <rect width="40.48" height="283.04" rx="15" transform="matrix(.9066 -.422 .42324 .90602 103.258 17.083)"
@@ -182,7 +239,10 @@
         </a>
     </header>
 
-    <!-- Search Section -->
+    <!-- =========================================== -->
+    <!-- ПОИСКОВАЯ СЕКЦИЯ -->
+    <!-- =========================================== -->
+    <!-- Форма поиска аниме -->
     <section class="search-section">
         <form id="searchForm" action="/" method="get" autocomplete="off">
             <label class="visually-hidden" for="searchInput">Название аниме</label>
@@ -191,22 +251,31 @@
         </form>
     </section>
 
-    <!-- Main content -->
+    <!-- =========================================== -->
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <!-- =========================================== -->
+    <!-- Динамически загружаемый контент (результаты поиска, избранное, новинки) -->
     <main id="resultsBox" class="player-lane" aria-live="polite">
-        <!-- Content loaded dynamically -->
+        <!-- Контент загружается динамически через JavaScript -->
     </main>
 
-    <!-- Footer -->
+    <!-- =========================================== -->
+    <!-- ФУТЕР -->
+    <!-- =========================================== -->
+    <!-- Информация о сайте, ссылки и контакты -->
     <footer class="site-footer" aria-label="Футер сайта">
         <div class="footer-content">
             <div class="footer-main">
+                <!-- Информация о проекте -->
                 <div class="footer-section">
                     <h3>AniFox</h3>
                     <p>Лучшая платформа для просмотра аниме онлайн в HD качестве. Бесплатно и без регистрации.</p>
                     <div class="footer-links">
                         <a href="/privacy-policy.html">Политика конфиденциальности</a>
+                        <a href="/license.html">Лицензия</a>
                     </div>
                 </div>
+                <!-- Навигация по разделам -->
                 <div class="footer-section">
                     <h4>Разделы</h4>
                     <ul>
@@ -214,11 +283,27 @@
                         <li><a href="/?page=favorites">Избранное</a></li>
                     </ul>
                 </div>
+                <!-- Информация о разработчике -->
+                <div class="footer-section">
+                    <h4>Разработчик</h4>
+                    <p>Разработано <strong>SerGio Play</strong></p>
+                    <div class="developer-links">
+                        <a href="https://sergioplay-dev.vercel.app/" target="_blank" rel="noopener" aria-label="Веб-сайт разработчика">
+                            <i class="fas fa-globe"></i> Веб-сайт
+                        </a>
+                        <a href="https://github.com/SerGioPlay01/anifox-search" target="_blank" rel="noopener" aria-label="GitHub репозиторий">
+                            <i class="fab fa-github"></i> GitHub
+                        </a>
+                    </div>
+                </div>
             </div>
+            <!-- Нижняя часть футера -->
             <div class="footer-bottom">
                 <div class="footer-copyright">
                     <p>&copy; 2025 AniFox. Весь контент принадлежит правообладателям.</p>
+                    <p class="developer-credit">Разработано <a href="https://sergioplay-dev.vercel.app/" target="_blank" rel="noopener">SerGio Play</a></p>
                 </div>
+                <!-- Социальные сети -->
                 <div class="footer-social">
                     <a href="https://vk.com/anifox_ru" aria-label="ВКонтакте" target="_blank" rel="noopener">
                         <i class="fab fa-vk"></i>
@@ -235,9 +320,24 @@
         </div>
     </footer>
 
-    <!-- Optimized preloader script -->
+    <!-- =========================================== -->
+    <!-- ВОДЯНОЙ ЗНАК -->
+    <!-- =========================================== -->
+    <!-- Постоянный водяной знак разработчика -->
+    <div class="watermark" id="watermark">
+        <div class="watermark-content">
+            <span>Разработано</span>
+            <a href="https://sergioplay-dev.vercel.app/" target="_blank" rel="noopener">SerGio Play</a>
+        </div>
+    </div>
+
+    <!-- =========================================== -->
+    <!-- СКРИПТЫ -->
+    <!-- =========================================== -->
+    
+    <!-- Оптимизированный скрипт прелоадера -->
     <script>
-        // Минимальный прелоадер - запускается мгновенно
+        // Минимальный прелоадер - запускается мгновенно для быстрого отображения
         (function () {
             'use strict';
 
@@ -306,17 +406,31 @@
         })();
     </script>
 
-    <!-- Defer non-critical JS -->
+    <!-- =========================================== -->
+    <!-- ОТЛОЖЕННЫЕ СКРИПТЫ -->
+    <!-- =========================================== -->
+    <!-- Некритические скрипты загружаются после основного контента -->
     <script src="/api.js" defer></script>
     <script src="/seo.js" defer></script>
     <script src="/cookie-banner.js" defer></script>
     <script src="/adblock-banner.js" defer></script>
     <script src="/sw-register.js" defer></script>
 
-    <!-- Yandex.Metrika (async) -->
+    <!-- =========================================== -->
+    <!-- YANDEX.METRIKA -->
+    <!-- =========================================== -->
+    <!-- Аналитика и отслеживание пользователей -->
     <script defer>
-        (function (m, e, t, r, i, k, a) { m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) }; m[i].l = 1 * new Date(); k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a) })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym'); ym(104428432, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true });
+        (function (m, e, t, r, i, k, a) { 
+            m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) }; 
+            m[i].l = 1 * new Date(); 
+            k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r;
+            k.onerror = function() { console.warn('Yandex Metrika failed to load'); };
+            a.parentNode.insertBefore(k, a) 
+        })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym'); 
+        ym(104428432, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true });
     </script>
+    <!-- Резервный код для браузеров без JavaScript -->
     <noscript><img src="https://mc.yandex.ru/watch/104428432" style="position:absolute;left:-9999px" alt=""></noscript>
 </body>
 

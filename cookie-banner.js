@@ -1,31 +1,80 @@
-(() => {
-  const STORAGE_KEY = 'anifox-cookies-accepted';
+/*
+ * AniFox 2.4 - Баннер согласия на использование cookies
+ * 
+ * 💻 Разработано SerGio Play
+ * 🌐 Веб-сайт: https://sergioplay-dev.vercel.app/
+ * 📁 GitHub: https://github.com/SerGioPlay01/anifox-search
+ * 
+ * При использовании данного проекта обязательно указывайте ссылку на разработчика.
+ * 
+ * Функции:
+ * - Отображение баннера согласия на cookies
+ * - Сохранение согласия пользователя в localStorage
+ * - Соответствие требованиям GDPR и других регуляций
+ */
 
-  function init() {
-    if (localStorage.getItem(STORAGE_KEY)) return;
-    buildBanner();
-  }
+// ===========================================
+// НАСТРОЙКИ
+// ===========================================
 
-  function buildBanner() {
-    const banner = document.createElement('div');
-    banner.className = 'cookie-banner';
-    banner.innerHTML = `
-      <p class="cookie-text">
-        Мы используем файлы cookie, чтобы сделать сайт удобнее.
-        Подробности читайте в&nbsp;<a href="https://anifox-search.vercel.app/privacy-policy.html" target="_blank" class="cookie-link">политике конфиденциальности</a>.
-      </p>
-      <div class="cookie-actions">
-        <button class="cookie-btn" aria-label="Я ознакомлен(а)">Я ознакомлен(а)</button>
-      </div>
-    `;
-    document.body.appendChild(banner);
+// Ключ для хранения согласия в localStorage
+const STORAGE_KEY = 'anifox-cookies-accepted';
 
-    banner.querySelector('.cookie-btn').addEventListener('click', () => {
-      localStorage.setItem(STORAGE_KEY, '1');
-      banner.classList.add('hidden');
-      setTimeout(() => banner.remove(), 300);
-    });
-  }
+// ===========================================
+// ОСНОВНЫЕ ФУНКЦИИ
+// ===========================================
 
-  document.addEventListener('DOMContentLoaded', init);
-})();
+/**
+ * Инициализация баннера cookies
+ * Проверяет, дал ли пользователь согласие ранее
+ */
+function init() {
+  // Если пользователь уже дал согласие, баннер не показываем
+  if (localStorage.getItem(STORAGE_KEY)) return;
+  
+  // Показываем баннер
+  buildBanner();
+}
+
+/**
+ * Создание и отображение баннера согласия
+ * Создает DOM-элемент баннера и добавляет обработчики событий
+ */
+function buildBanner() {
+  // Создаем контейнер баннера
+  const banner = document.createElement('div');
+  banner.className = 'cookie-banner';
+  
+  // HTML содержимое баннера
+  banner.innerHTML = `
+    <p class="cookie-text">
+      Мы используем файлы cookie, чтобы сделать сайт удобнее.
+      Подробности читайте в&nbsp;<a href="https://anifox-search.vercel.app/privacy-policy.html" target="_blank" class="cookie-link">политике конфиденциальности</a>.
+    </p>
+    <div class="cookie-actions">
+      <button class="cookie-btn" aria-label="Я ознакомлен(а)">Я ознакомлен(а)</button>
+    </div>
+  `;
+  
+  // Добавляем баннер на страницу
+  document.body.appendChild(banner);
+
+  // Обработчик клика по кнопке согласия
+  banner.querySelector('.cookie-btn').addEventListener('click', () => {
+    // Сохраняем согласие в localStorage
+    localStorage.setItem(STORAGE_KEY, '1');
+    
+    // Скрываем баннер с анимацией
+    banner.classList.add('hidden');
+    
+    // Удаляем баннер из DOM после анимации
+    setTimeout(() => banner.remove(), 300);
+  });
+}
+
+// ===========================================
+// ИНИЦИАЛИЗАЦИЯ
+// ===========================================
+
+// Запускаем инициализацию после загрузки DOM
+document.addEventListener('DOMContentLoaded', init);

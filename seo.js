@@ -1,16 +1,41 @@
-// SEO улучшения для футера
+/*
+ * AniFox 2.4 - SEO оптимизация
+ * 
+ * 💻 Разработано SerGio Play
+ * 🌐 Веб-сайт: https://sergioplay-dev.vercel.app/
+ * 📁 GitHub: https://github.com/SerGioPlay01/anifox-search
+ * 
+ * При использовании данного проекта обязательно указывайте ссылку на разработчика.
+ * 
+ * Функции:
+ * - SEO оптимизация футера
+ * - Отслеживание кликов для аналитики
+ * - Микроразметка Schema.org
+ * - Улучшение доступности ссылок
+ */
+
+/**
+ * Класс для SEO оптимизации футера
+ * Обеспечивает улучшенную индексацию поисковыми системами
+ */
 class FooterSEO {
     constructor() {
         this.init();
     }
 
+    /**
+     * Инициализация всех SEO функций
+     */
     init() {
         this.trackFooterClicks();
         this.addMicrodata();
         this.enhanceLinks();
     }
 
-    // Отслеживание кликов в футере для аналитики
+    /**
+     * Отслеживание кликов в футере для аналитики
+     * Отправляет данные о кликах в Google Analytics
+     */
     trackFooterClicks() {
         const footer = document.querySelector('.site-footer');
         if (!footer) return;
@@ -21,7 +46,7 @@ class FooterSEO {
                 const linkText = link.textContent.trim();
                 const linkHref = link.getAttribute('href');
                 
-                // Можно отправить в Google Analytics
+                // Отправляем событие в Google Analytics
                 if (typeof gtag !== 'undefined') {
                     gtag('event', 'footer_click', {
                         'event_category': 'Footer Navigation',
@@ -35,7 +60,10 @@ class FooterSEO {
         });
     }
 
-    // Добавление микроразметки динамически
+    /**
+     * Добавление микроразметки Schema.org
+     * Улучшает понимание структуры сайта поисковыми системами
+     */
     addMicrodata() {
         // Добавляем микроразметку для навигации
         const footerSections = document.querySelectorAll('.footer-section');
@@ -45,14 +73,17 @@ class FooterSEO {
         });
     }
 
-    // Улучшение ссылок для SEO
+    /**
+     * Улучшение ссылок для SEO и безопасности
+     * Добавляет необходимые атрибуты для внешних ссылок
+     */
     enhanceLinks() {
         const footerLinks = document.querySelectorAll('.site-footer a[href]');
         
         footerLinks.forEach(link => {
             const href = link.getAttribute('href');
             
-            // Добавляем rel атрибуты для внешних ссылок
+            // Добавляем rel атрибуты для внешних ссылок (безопасность)
             if (href.startsWith('http') && !href.includes('anifox.ru')) {
                 link.setAttribute('rel', 'noopener noreferrer');
                 link.setAttribute('target', '_blank');
@@ -66,7 +97,10 @@ class FooterSEO {
         });
     }
 
-    // Динамическое обновление популярных аниме в футере
+    /**
+     * Динамическое обновление популярных аниме в футере
+     * @param {Array} animeList - Список популярных аниме
+     */
     updatePopularAnime(animeList) {
         const popularSection = document.querySelector('.footer-section:nth-child(3) ul');
         if (!popularSection || !animeList) return;
@@ -80,7 +114,11 @@ class FooterSEO {
     }
 }
 
-// Инициализация при загрузке страницы
+// ===========================================
+// ИНИЦИАЛИЗАЦИЯ
+// ===========================================
+
+// Инициализация SEO функций при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     window.footerSEO = new FooterSEO();
 });
