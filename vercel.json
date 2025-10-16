@@ -1,5 +1,4 @@
 {
-  "_comment": "AniFox 2.4 - Vercel Configuration | Разработано SerGio Play | https://sergioplay-dev.vercel.app/",
   "rewrites": [
     { 
       "source": "/(.*)", 
