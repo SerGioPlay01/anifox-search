@@ -817,16 +817,97 @@ async function apiWeekly() {
 /* ---------- UTILS ---------- */
 const $ = (id) => document.getElementById(id);
 
-function showNote(msg, type = "info") {
+// Функция для копирования текста в буфер обмена
+async function copyToClipboard(text) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } else {
+            // Fallback для старых браузеров
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            textArea.style.opacity = '0';
+            textArea.style.pointerEvents = 'none';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            // Пытаемся скопировать
+            let result = false;
+            try {
+                result = document.execCommand('copy');
+            } catch (execError) {
+                console.warn('execCommand copy failed:', execError);
+            }
+            
+            document.body.removeChild(textArea);
+            return result;
+        }
+    } catch (error) {
+        console.error('Ошибка при копировании в буфер обмена:', error);
+        return false;
+    }
+}
+
+function showNote(msg, type = "info", copyText = null) {
     document.querySelectorAll('.notification').forEach(n => n.remove());
     
     const n = document.createElement("div");
     n.className = `notification notification-${type}`;
-    n.innerHTML = `<i class="fas fa-${type === "success" ? "check" : type === "error" ? "exclamation-triangle" : "info"}"></i>
-                   <span>${msg}</span>
-                   <button onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+    
+    // Создаем иконку
+    const icon = document.createElement("i");
+    icon.className = `fas fa-${type === "success" ? "check" : type === "error" ? "exclamation-triangle" : "info"}`;
+    
+    // Создаем текст сообщения
+    const messageSpan = document.createElement("span");
+    messageSpan.textContent = msg;
+    
+    // Создаем кнопку копирования, если нужно
+    let copyButton = null;
+    if (copyText) {
+        copyButton = document.createElement("button");
+        copyButton.title = "Копировать код защиты";
+        copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+        copyButton.addEventListener('click', async () => {
+            const success = await copyToClipboard(copyText);
+            if (success) {
+                copyButton.innerHTML = '<i class="fas fa-check"></i>';
+                copyButton.classList.add('copied');
+                setTimeout(() => {
+                    copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                    copyButton.classList.remove('copied');
+                }, 2000);
+            } else {
+                copyButton.innerHTML = '<i class="fas fa-times"></i>';
+                copyButton.classList.add('copy-failed');
+                setTimeout(() => {
+                    copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                    copyButton.classList.remove('copy-failed');
+                }, 2000);
+            }
+        });
+    }
+    
+    // Создаем кнопку закрытия
+    const closeButton = document.createElement("button");
+    closeButton.innerHTML = '<i class="fas fa-times"></i>';
+    closeButton.addEventListener('click', () => n.remove());
+    
+    // Добавляем все элементы
+    n.appendChild(icon);
+    n.appendChild(messageSpan);
+    if (copyButton) {
+        n.appendChild(copyButton);
+    }
+    n.appendChild(closeButton);
+    
     document.body.appendChild(n);
-    setTimeout(() => n.remove(), 3000);
+    setTimeout(() => n.remove(), 5000); // Увеличиваем время показа для уведомлений с кнопкой копирования
 }
 
 function toSlug(str) {
@@ -1775,9 +1856,14 @@ async function renderFavoritesPage() {
                 <i class="fas fa-heart fa-3x" style="margin-bottom:1rem;opacity:.5"></i>
                 <h2>В избранном пока ничего нет</h2>
                 <p>Добавляйте аниме в избранное с помощью <i class="fas fa-heart"></i></p>
-                <button onclick="navigateToHome()" class="clear-history-btn" style="margin-top:1rem">
-                    <i class="fas fa-arrow-left"></i> Вернуться к поиску
-                </button>
+                <div class="empty-favorites-actions" style="margin-top:2rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+                    <button onclick="showImportModal()" class="action-btn secondary">
+                        <i class="fas fa-upload"></i> Импорт избранного
+                    </button>
+                    <button onclick="navigateToHome()" class="clear-history-btn">
+                        <i class="fas fa-arrow-left"></i> Вернуться к поиску
+                    </button>
+                </div>
             </div>`;
             return;
         }
@@ -1898,25 +1984,189 @@ window.loadMoreFavorites = async function() {
     }
 }
 
-window.clearFavorites = async () => {
-    if (confirm("Очистить всё избранное?")) {
-        try {
-            await dbClear(STORE_FAVORITES);
-            clearFavoritesCache();
-            currentFavorites = [];
-            currentDisplayCount.favorites = ITEMS_PER_PAGE.favorites;
-            await refreshAllFavoriteButtons();
+// Функции для работы с модальным окном очистки избранного
+function showClearFavoritesModal() {
+    const modal = document.getElementById('clearFavoritesModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        
+        // Добавляем обработчики
+        modal.addEventListener('click', handleClearModalOverlayClick);
+        document.addEventListener('keydown', handleClearModalEscapeKey);
+    }
+}
 
-            if (location.search.includes("page=favorites")) {
-                renderFavoritesPage();
-            }
-            showNote("Избранное очищено", "success");
-        } catch (e) {
-            console.error("Clear favorites error:", e);
-            showNote("Ошибка при очистке избранного", "error");
+function closeClearFavoritesModal() {
+    const modal = document.getElementById('clearFavoritesModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        modal.removeEventListener('click', handleClearModalOverlayClick);
+        document.removeEventListener('keydown', handleClearModalEscapeKey);
+    }
+}
+
+function handleClearModalOverlayClick(event) {
+    if (event.target === event.currentTarget) {
+        closeClearFavoritesModal();
+    }
+}
+
+function handleClearModalEscapeKey(event) {
+    if (event.key === 'Escape') {
+        closeClearFavoritesModal();
+    }
+}
+
+async function confirmClearFavorites() {
+    try {
+        // Показываем индикатор загрузки
+        const confirmBtn = document.querySelector('#clearFavoritesModal .modal-btn.danger');
+        const originalText = confirmBtn.innerHTML;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Очистка...';
+        confirmBtn.disabled = true;
+        
+        await dbClear(STORE_FAVORITES);
+        clearFavoritesCache();
+        currentFavorites = [];
+        currentDisplayCount.favorites = ITEMS_PER_PAGE.favorites;
+        await refreshAllFavoriteButtons();
+
+        if (location.search.includes("page=favorites")) {
+            renderFavoritesPage();
+        }
+        
+        closeClearFavoritesModal();
+        showNote("Избранное очищено", "success");
+    } catch (e) {
+        console.error("Clear favorites error:", e);
+        showNote("Ошибка при очистке избранного", "error");
+    } finally {
+        // Восстанавливаем кнопку
+        const confirmBtn = document.querySelector('#clearFavoritesModal .modal-btn.danger');
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Очистить';
+            confirmBtn.disabled = false;
         }
     }
-};
+}
+
+window.clearFavorites = showClearFavoritesModal;
+
+// Переменная для хранения данных импорта
+let pendingImportData = null;
+
+// Функции для работы с модальным окном ввода кода защиты
+function showCodeInputModal(importData) {
+    pendingImportData = importData;
+    const modal = document.getElementById('codeInputModal');
+    const input = document.getElementById('protectionCodeInput');
+    
+    if (modal && input) {
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        input.value = '';
+        input.focus();
+        
+        // Добавляем обработчик для Enter
+        input.addEventListener('keypress', handleCodeInputKeypress);
+        
+        // Добавляем обработчик для закрытия по клику на overlay
+        modal.addEventListener('click', handleModalOverlayClick);
+        
+        // Добавляем обработчик для Escape
+        document.addEventListener('keydown', handleModalEscapeKey);
+    }
+}
+
+function closeCodeInputModal() {
+    const modal = document.getElementById('codeInputModal');
+    const input = document.getElementById('protectionCodeInput');
+    
+    if (modal && input) {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        input.removeEventListener('keypress', handleCodeInputKeypress);
+        modal.removeEventListener('click', handleModalOverlayClick);
+        document.removeEventListener('keydown', handleModalEscapeKey);
+        pendingImportData = null;
+    }
+}
+
+function handleModalOverlayClick(event) {
+    if (event.target === event.currentTarget) {
+        closeCodeInputModal();
+    }
+}
+
+function handleModalEscapeKey(event) {
+    if (event.key === 'Escape') {
+        closeCodeInputModal();
+    }
+}
+
+function handleCodeInputKeypress(event) {
+    if (event.key === 'Enter') {
+        confirmCodeInput();
+    }
+}
+
+async function confirmCodeInput() {
+    const input = document.getElementById('protectionCodeInput');
+    const code = input.value.trim();
+    
+    if (!code) {
+        showNote("Пожалуйста, введите код защиты", "error");
+        input.focus();
+        return;
+    }
+    
+    if (!pendingImportData) {
+        showNote("Ошибка: данные для импорта не найдены", "error");
+        closeCodeInputModal();
+        return;
+    }
+    
+    try {
+        // Показываем индикатор загрузки
+        const confirmBtn = document.querySelector('.code-input-buttons .modal-btn.primary');
+        const originalText = confirmBtn.innerHTML;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Импорт...';
+        confirmBtn.disabled = true;
+        
+        const result = await importFavorites(pendingImportData, code);
+        
+        if (result) {
+            let message = `Импортировано ${result.imported} из ${result.total} аниме`;
+            if (result.duplicates > 0) {
+                message += ` (${result.duplicates} дубликатов пропущено)`;
+            }
+            showNote(message, "success");
+            closeCodeInputModal();
+            
+            // Обновляем страницу избранного, если мы на ней
+            if (location.search.includes("page=favorites")) {
+                renderFavoritesPage();
+            } else {
+                // Обновляем кнопки избранного на странице
+                await refreshAllFavoriteButtons();
+            }
+        } else {
+            showNote("Ошибка при импорте избранного", "error");
+        }
+    } catch (error) {
+        console.error("Import error:", error);
+        showNote(`Ошибка при импорте: ${error.message}`, "error");
+    } finally {
+        // Восстанавливаем кнопку
+        const confirmBtn = document.querySelector('.code-input-buttons .modal-btn.primary');
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i class="fas fa-check"></i> Импортировать';
+            confirmBtn.disabled = false;
+        }
+    }
+}
 
 // Глобальные функции для экспорта/импорта
 window.exportFavoritesToFile = async () => {
@@ -1931,6 +2181,9 @@ window.exportFavoritesToFile = async () => {
             throw new Error("Неверные данные экспорта");
         }
 
+        // Автоматически копируем код защиты в буфер обмена
+        const copySuccess = await copyToClipboard(exportResult.code);
+        
         const blob = new Blob([exportResult.data], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1942,11 +2195,63 @@ window.exportFavoritesToFile = async () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showNote(`Избранное экспортировано (${exportResult.count} аниме). Код защиты: ${exportResult.code}`, "success");
+        // Показываем уведомление с информацией об автоматическом копировании с небольшой задержкой
+        setTimeout(() => {
+            if (copySuccess) {
+                showNote(`Избранное экспортировано (${exportResult.count} аниме). Код защиты автоматически скопирован в буфер обмена!`, "success", exportResult.code);
+            } else {
+                showNote(`Избранное экспортировано (${exportResult.count} аниме). Код защиты: ${exportResult.code}`, "success", exportResult.code);
+            }
+        }, 500);
     } catch (error) {
         console.error("Export to file error:", error);
         showNote(`Ошибка при экспорте в файл: ${error.message}`, "error");
     }
+};
+
+// Функция для показа модального окна импорта
+window.showImportModal = () => {
+    const modalHTML = `
+    <div class="modal-overlay" onclick="closeImportModal(event)">
+        <div class="modal-content import-modal" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            <h2 class="modal-title">Импорт избранного</h2>
+            <div class="import-option-single">
+                <h3><i class="fas fa-file-upload"></i> Из файла</h3>
+                <p>Выберите файл с экспортированным избранным</p>
+                <button class="modal-btn primary" onclick="selectImportFile();">
+                    <i class="fas fa-upload"></i> Выбрать файл
+                </button>
+            </div>
+            <div class="import-info">
+                <p><i class="fas fa-info-circle"></i> Для импорта требуется код защиты, который был создан при экспорте</p>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+    document.body.classList.add("modal-open");
+};
+
+// Функция для выбора файла импорта
+window.selectImportFile = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            closeImportModal();
+            showCodeInputModal(text.trim());
+        } catch (error) {
+            console.error("Import from file error:", error);
+            showNote(`Ошибка при чтении файла: ${error.message}`, "error");
+        }
+    };
+    input.click();
 };
 
 window.importFavoritesFromFile = () => {
@@ -1959,27 +2264,10 @@ window.importFavoritesFromFile = () => {
 
         try {
             const text = await file.text();
-            const code = prompt("Введите код защиты из файла:");
-            if (!code) {
-                showNote("Код защиты не введен", "error");
-                return;
-            }
-
-            const result = await importFavorites(text.trim(), code.trim());
-            if (result) {
-                let message = `Импортировано ${result.imported} из ${result.total} аниме`;
-                if (result.duplicates > 0) {
-                    message += ` (${result.duplicates} дубликатов пропущено)`;
-                }
-                showNote(message, "success");
-
-                if (location.search.includes("page=favorites")) {
-                    renderFavoritesPage();
-                }
-            }
+            showCodeInputModal(text.trim());
         } catch (error) {
             console.error("Import from file error:", error);
-            showNote(`Ошибка импорта: ${error.message}`, "error");
+            showNote(`Ошибка при чтении файла: ${error.message}`, "error");
         }
     };
     input.click();
@@ -1998,7 +2286,7 @@ window.shareFavoritesLink = async () => {
             });
         } else {
             await navigator.clipboard.writeText(shareResult.url);
-            showNote(`Ссылка скопирована! Код защиты: ${shareResult.code}`, "success");
+            showNote(`Ссылка скопирована! Код защиты: ${shareResult.code}`, "success", shareResult.code);
         }
     } catch (error) {
         console.error("Share link error:", error);
@@ -2006,32 +2294,10 @@ window.shareFavoritesLink = async () => {
     }
 };
 
-window.showImportModal = () => {
-    const modalHTML = `
-    <div class="modal-overlay" onclick="closeImportModal(event)">
-        <div class="modal-content import-modal" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeImportModal()">&times;</button>
-            <h2 class="modal-title">Импорт избранного</h2>
-            <div class="import-option-single">
-                <h3><i class="fas fa-file-upload"></i> Из файла</h3>
-                <p>Выберите файл с экспортированным избранным</p>
-                <button class="modal-btn primary" onclick="importFavoritesFromFile(); closeImportModal();">
-                    <i class="fas fa-upload"></i> Выбрать файл
-                </button>
-            </div>
-            <div class="import-info">
-                <p><i class="fas fa-info-circle"></i> Для импорта требуется код защиты, который был создан при экспорте</p>
-            </div>
-        </div>
-    </div>`;
-    
-    document.body.insertAdjacentHTML("beforeend", modalHTML);
-    document.body.classList.add("modal-open");
-};
-
 window.closeImportModal = (e) => {
     if (e && e.target !== document.querySelector(".modal-overlay")) return;
-    const modal = document.querySelector(".modal-overlay");
+    // Ищем модальное окно импорта (то, которое было создано динамически)
+    const modal = document.querySelector(".modal-overlay:not(#codeInputModal):not(#clearFavoritesModal)");
     if (modal) {
         modal.remove();
         document.body.classList.remove("modal-open");

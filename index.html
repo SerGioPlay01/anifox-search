@@ -432,6 +432,86 @@
     </script>
     <!-- Резервный код для браузеров без JavaScript -->
     <noscript><img src="https://mc.yandex.ru/watch/104428432" style="position:absolute;left:-9999px" alt=""></noscript>
+
+    <!-- Модальное окно для ввода кода защиты -->
+    <div id="codeInputModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content code-input-modal">
+            <button class="modal-close" onclick="closeCodeInputModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="code-input-container">
+                <div class="code-input-header">
+                    <i class="fas fa-shield-alt"></i>
+                    <h2>Введите код защиты</h2>
+                    <p>Для импорта избранного необходимо ввести код защиты из файла</p>
+                </div>
+                
+                <div class="code-input-form">
+                    <div class="input-group">
+                        <label for="protectionCodeInput">Код защиты:</label>
+                        <input 
+                            type="text" 
+                            id="protectionCodeInput" 
+                            placeholder="Введите код защиты..."
+                            maxlength="50"
+                            autocomplete="off"
+                        >
+                        <div class="input-hint">
+                            <i class="fas fa-info-circle"></i>
+                            Код защиты был показан при экспорте файла
+                        </div>
+                    </div>
+                    
+                    <div class="code-input-buttons">
+                        <button class="modal-btn secondary" onclick="closeCodeInputModal()">
+                            <i class="fas fa-times"></i>
+                            Отмена
+                        </button>
+                        <button class="modal-btn primary" onclick="confirmCodeInput()">
+                            <i class="fas fa-check"></i>
+                            Импортировать
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для очистки избранного -->
+    <div id="clearFavoritesModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content code-input-modal">
+            <button class="modal-close" onclick="closeClearFavoritesModal()">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="code-input-container">
+                <div class="code-input-header">
+                    <i class="fas fa-trash-alt"></i>
+                    <h2>Очистить избранное</h2>
+                    <p>Вы уверены, что хотите удалить все аниме из избранного? Это действие нельзя отменить.</p>
+                </div>
+                
+                <div class="code-input-form">
+                    <div class="clear-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Все аниме будут удалены из избранного навсегда</span>
+                    </div>
+                    
+                    <div class="code-input-buttons">
+                        <button class="modal-btn secondary" onclick="closeClearFavoritesModal()">
+                            <i class="fas fa-times"></i>
+                            Отмена
+                        </button>
+                        <button class="modal-btn danger" onclick="confirmClearFavorites()">
+                            <i class="fas fa-trash"></i>
+                            Очистить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
