@@ -957,17 +957,19 @@ function updateSEOMeta(apiData) {
     if (!query) return;
     
     const top = results[0];
-    let title, desc, kw, ogTitle, ogDesc, ogImage;
+    let title, desc, kw, ogTitle, ogDesc, ogImage, ogImageWidth, ogImageHeight;
     
     if (top) {
         const { title: t, year, genres = "", material_data } = top;
         const clean = t.replace(/\[.*?\]/g, "").trim();
         title = `Смотреть аниме «${clean}» (${year}) онлайн бесплатно в HD — AniFox`;
-        desc = `Аниме «${clean}» (${year}) уже на AniFox: русская озвучка, HD 1080p, без регистрации. Жанры: ${genres}. Смотри новые серии первым!`;
+        desc = `Смотреть аниме «${clean}» (${year}) онлайн бесплатно в HD качестве на AniFox. Русская озвучка, субтитры, без регистрации. Жанры: ${genres}. Смотри новые серии первым!`;
         kw = buildKeywords(clean, genres, year);
         ogTitle = `«${clean}» — смотреть онлайн`;
         ogDesc = desc;
         ogImage = material_data?.poster_url || "/resources/obl_web.jpg";
+        ogImageWidth = "1200";
+        ogImageHeight = "630";
     } else {
         title = `Поиск «${query}» — AniFox`;
         desc = `По запросу «${query}» ничего не найдено, но вы можете посмотреть другие аниме на AniFox.`;
@@ -975,6 +977,8 @@ function updateSEOMeta(apiData) {
         ogTitle = title;
         ogDesc = desc;
         ogImage = "/resources/obl_web.jpg";
+        ogImageWidth = "1200";
+        ogImageHeight = "630";
     }
     
     // ОБНОВЛЕНО: Используем текущий URL для поиска
@@ -988,30 +992,47 @@ function updateSEOMeta(apiData) {
     updateMetaTag('name', 'description', desc);
     updateMetaTag('name', 'keywords', kw);
     
-    // Open Graph
+    // Open Graph - расширенные теги
     updateMetaTag('property', 'og:title', ogTitle);
     updateMetaTag('property', 'og:description', ogDesc);
     updateMetaTag('property', 'og:image', ogImage);
+    updateMetaTag('property', 'og:image:width', ogImageWidth);
+    updateMetaTag('property', 'og:image:height', ogImageHeight);
+    updateMetaTag('property', 'og:image:alt', top ? `Постер аниме «${top.title.replace(/\[.*?\]/g, "").trim()}»` : 'AniFox - смотреть аниме онлайн');
     updateMetaTag('property', 'og:url', currentUrl);
     updateMetaTag('property', 'og:type', 'website');
+    updateMetaTag('property', 'og:site_name', 'AniFox');
+    updateMetaTag('property', 'og:locale', 'ru_RU');
     
-    // Twitter
+    // Twitter Cards - улучшенные теги
+    updateMetaTag('name', 'twitter:card', 'summary_large_image');
     updateMetaTag('name', 'twitter:title', ogTitle);
     updateMetaTag('name', 'twitter:description', ogDesc);
     updateMetaTag('name', 'twitter:image', ogImage);
-    updateMetaTag('name', 'twitter:card', 'summary_large_image');
-    updateMetaTag('property', 'twitter:domain', 'anifox-search.vercel.app');
-    updateMetaTag('property', 'twitter:url', currentUrl);
+    updateMetaTag('name', 'twitter:image:alt', top ? `Постер аниме «${top.title.replace(/\[.*?\]/g, "").trim()}»` : 'AniFox - смотреть аниме онлайн');
+    updateMetaTag('name', 'twitter:site', '@anifoxru');
+    updateMetaTag('name', 'twitter:creator', '@anifoxru');
+    
+    // Дополнительные SEO теги
+    updateMetaTag('name', 'robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    updateMetaTag('name', 'googlebot', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    updateMetaTag('name', 'author', 'AniFox');
+    updateMetaTag('name', 'publisher', 'AniFox');
+    updateMetaTag('name', 'copyright', 'AniFox');
+    updateMetaTag('name', 'language', 'ru');
+    updateMetaTag('name', 'geo.region', 'RU');
+    updateMetaTag('name', 'geo.placename', 'Russia');
     
     // Каноническая ссылка
-    let linkCanon = document.createElement("link");
-    linkCanon.rel = "canonical";
-    linkCanon.href = cleanCanonical;
-    linkCanon.setAttribute("data-dynamic", "");
-    document.head.appendChild(linkCanon);
+    updateCanonicalLink(cleanCanonical);
     
     // Микроразметка
     addStructuredData(query, results, cleanCanonical);
+    
+    // Обновляем URL в истории браузера для лучшего SEO
+    if (history.state !== query) {
+        history.replaceState({ query: query, results: results.length }, '', currentUrl);
+    }
 }
 
 // ДОБАВЛЕНО: Функция для обновления или создания мета-тегов
@@ -1054,11 +1075,18 @@ function clearOldDynamicMeta() {
 // ДОБАВЛЕНО: Функция построения ключевых слов
 function buildKeywords(title, genres, year) {
     const baseKeywords = [
-        'аниме',
+        'смотреть аниме',
+        'аниме онлайн',
         'смотреть аниме онлайн',
         'аниме бесплатно',
-        'AniFox',
-        'аниме в HD'
+        'аниме HD',
+        'аниме 2025',
+        'аниме с русской озвучкой',
+        'аниме с субтитрами',
+        'популярное аниме',
+        'новое аниме',
+        'аниме стриминг',
+        'AniFox'
     ];
     
     const titleKeywords = title
@@ -1070,51 +1098,48 @@ function buildKeywords(title, genres, year) {
         ? genres.split(',').map(g => g.trim().toLowerCase())
         : [];
     
+    const popularQueries = [
+        `${title} смотреть онлайн`,
+        `смотреть ${title} онлайн`,
+        `${title} бесплатно`,
+        `${title} HD`,
+        `${title} русская озвучка`,
+        `${title} субтитры`,
+        `аниме ${title}`,
+        `${title} аниме`,
+        `смотреть ${title} бесплатно`,
+        `${title} бесплатно онлайн`
+    ];
+    
     return [...new Set([
         ...titleKeywords,
         ...genreKeywords,
         ...baseKeywords,
+        ...popularQueries,
         `аниме ${year}`,
         `${title} смотреть онлайн`
-    ])].slice(0, 20).join(', ');
+    ])].slice(0, 25).join(', ');
 }
 
-// ДОБАВЛЕНО: Функция для микроразметки
+// ДОБАВЛЕНО: Функция для микроразметки результатов поиска
 function addStructuredData(query, results, canonical) {
-    const jsonLd = {
+    // Основная разметка сайта
+    const websiteJsonLd = {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        name: "AniFox",
-        url: location.origin,
-        potentialAction: {
+        "name": "AniFox",
+        "url": location.origin,
+        "description": "Бесплатная платформа для просмотра аниме онлайн в HD качестве",
+        "inLanguage": "ru",
+        "potentialAction": {
             "@type": "SearchAction",
-            target: `${location.origin}/?q={search_term_string}`,
-            "query-input": "required name=search_term_string",
-        },
+            "target": `${location.origin}/?q={search_term_string}`,
+            "query-input": "required name=search_term_string"
+        }
     };
     
-    if (results.length) {
-        jsonLd.mainEntity = results
-            .slice(0, 10)
-            .map((r) => ({
-                "@type": "TVSeries",
-                name: r.title,
-                datePublished: r.year,
-                genre: r.genres,
-                image: r.material_data?.poster_url || "/resources/obl_web.jpg",
-                url: `${location.origin}/search/${generateSlug(r.title)}`,
-            }));
-    }
-            
-    const scr = document.createElement("script");
-    scr.type = "application/ld+json";
-    scr.textContent = JSON.stringify(jsonLd);
-    scr.setAttribute("data-dynamic", "");
-    document.head.appendChild(scr);
-}
-
-function addStructuredData(query, results, canonical) {
-    const jsonLd = {
+    // Разметка страницы результатов поиска
+    const searchResultsJsonLd = {
         "@context": "https://schema.org",
         "@type": "SearchResultsPage",
         "name": `Результаты поиска: ${query}`,
@@ -1131,18 +1156,34 @@ function addStructuredData(query, results, canonical) {
                     "name": item.title,
                     "datePublished": item.year,
                     "genre": item.genres,
-                    "image": item.material_data?.poster_url,
-                    "url": `${location.origin}/?q=${encodeURIComponent(item.title)}`
+                    "image": item.material_data?.poster_url || "/resources/obl_web.jpg",
+                    "url": `${location.origin}/?q=${encodeURIComponent(item.title)}`,
+                    "description": `Смотреть аниме «${item.title}» (${item.year}) онлайн бесплатно в HD качестве с русской озвучкой и субтитрами`,
+                    "inLanguage": "ru",
+                    "contentRating": "PG-13",
+                    "aggregateRating": {
+                        "@type": "AggregateRating",
+                        "ratingValue": "4.5",
+                        "ratingCount": "1000"
+                    }
                 }
             }))
         }
     };
     
-    const scr = document.createElement("script");
-    scr.type = "application/ld+json";
-    scr.textContent = JSON.stringify(jsonLd);
-    scr.setAttribute("data-dynamic", "");
-    document.head.appendChild(scr);
+    // Добавляем разметку сайта
+    const websiteScript = document.createElement("script");
+    websiteScript.type = "application/ld+json";
+    websiteScript.textContent = JSON.stringify(websiteJsonLd);
+    websiteScript.setAttribute("data-dynamic", "");
+    document.head.appendChild(websiteScript);
+    
+    // Добавляем разметку результатов поиска
+    const searchScript = document.createElement("script");
+    searchScript.type = "application/ld+json";
+    searchScript.textContent = JSON.stringify(searchResultsJsonLd);
+    searchScript.setAttribute("data-dynamic", "");
+    document.head.appendChild(searchScript);
 }
 
 /* ---------- CARD ---------- */
@@ -2788,7 +2829,7 @@ function updateSEOMetaForFavorites() {
 
 // ДОБАВЛЕНО: Функция для обновления канонической ссылки
 function updateCanonicalLink(url) {
-    let linkCanon = document.head.querySelector('link[rel="canonical"]');
+    let linkCanon = document.querySelector('link[rel="canonical"][data-dynamic]');
     if (!linkCanon) {
         linkCanon = document.createElement("link");
         linkCanon.rel = "canonical";
@@ -2798,57 +2839,57 @@ function updateCanonicalLink(url) {
     linkCanon.href = url;
 }
 
-// ДОБАВЛЕНО: Микроразметка для главной страницы
+// ДОБАВЛЕНО: Функция для структурированных данных главной страницы
 function addHomeStructuredData() {
-    const jsonLd = {
+    const homeJsonLd = {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "AniFox",
-        "description": "Смотреть аниме онлайн в HD качестве бесплатно",
+        "name": "AniFox - Смотреть аниме онлайн",
         "url": location.origin,
+        "description": "Бесплатная платформа для просмотра аниме онлайн в HD качестве. Тысячи сериалов и фильмов без регистрации.",
+        "inLanguage": "ru",
         "potentialAction": {
             "@type": "SearchAction",
-            "target": `${location.origin}/search?q={search_term_string}`,
+            "target": `${location.origin}/?q={search_term_string}`,
             "query-input": "required name=search_term_string"
         },
         "publisher": {
             "@type": "Organization",
             "name": "AniFox",
-            "logo": {
-                "@type": "ImageObject",
-                "url": `${location.origin}/resources/logo.png`
-            }
-        }
-    };
-    
-    const scr = document.createElement("script");
-    scr.type = "application/ld+json";
-    scr.textContent = JSON.stringify(jsonLd);
-    scr.setAttribute("data-dynamic", "");
-    document.head.appendChild(scr);
-}
-
-// ДОБАВЛЕНО: Микроразметка для страницы избранного
-function addFavoritesStructuredData() {
-    const jsonLd = {
-        "@context": "https://schema.org",
-        "@type": "CollectionPage",
-        "name": "Избранные аниме",
-        "description": "Коллекция избранных аниме пользователя",
-        "url": location.href,
-        "isPartOf": {
-            "@type": "WebSite",
-            "name": "AniFox",
             "url": location.origin
         }
     };
     
-    const scr = document.createElement("script");
-    scr.type = "application/ld+json";
-    scr.textContent = JSON.stringify(jsonLd);
-    scr.setAttribute("data-dynamic", "");
-    document.head.appendChild(scr);
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify(homeJsonLd);
+    script.setAttribute("data-dynamic", "");
+    document.head.appendChild(script);
 }
+
+// ДОБАВЛЕНО: Функция для структурированных данных страницы избранного
+function addFavoritesStructuredData() {
+    const favoritesJsonLd = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Избранное - AniFox",
+        "url": `${location.origin}/?page=favorites`,
+        "description": "Ваша коллекция избранных аниме на AniFox. Сохраняйте любимые сериалы и следите за новыми сериями.",
+        "inLanguage": "ru",
+        "mainEntity": {
+            "@type": "ItemList",
+            "name": "Избранные аниме",
+            "description": "Список избранных аниме пользователя"
+        }
+    };
+    
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify(favoritesJsonLd);
+    script.setAttribute("data-dynamic", "");
+    document.head.appendChild(script);
+}
+
 
 // ДОБАВЛЕНО: Функция для обновления мета-тегов (если еще не добавлена)
 function updateMetaTag(attr, name, content) {

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Главная страница -->
+  <url>
+    <loc>https://anifox-search.vercel.app/</loc>
+    <lastmod>2025-01-27</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://anifox-search.vercel.app/resources/obl_web.jpg</image:loc>
+      <image:title>AniFox - Смотреть аниме онлайн бесплатно</image:title>
+      <image:caption>Смотреть аниме онлайн бесплатно в HD качестве</image:caption>
+    </image:image>
+  </url>
+  
+  <!-- Популярные поисковые запросы -->
+  <url>
+    <loc>https://anifox-search.vercel.app/?q=naruto</loc>
+    <lastmod>2025-01-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <url>
+    <loc>https://anifox-search.vercel.app/?q=attack%20on%20titan</loc>
+    <lastmod>2025-01-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <url>
+    <loc>https://anifox-search.vercel.app/?q=demon%20slayer</loc>
+    <lastmod>2025-01-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <url>
+    <loc>https://anifox-search.vercel.app/?q=one%20piece</loc>
+    <lastmod>2025-01-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <url>
+    <loc>https://anifox-search.vercel.app/?q=death%20note</loc>
+    <lastmod>2025-01-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Страница избранного -->
+  <url>
+    <loc>https://anifox-search.vercel.app/?page=favorites</loc>
+    <lastmod>2025-01-27</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+</urlset>

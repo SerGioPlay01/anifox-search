@@ -5,9 +5,26 @@
 User-agent: *
 Allow: /
 
+# Разрешаем индексацию популярных поисковых запросов
+Allow: /?q=naruto
+Allow: /?q=attack%20on%20titan
+Allow: /?q=demon%20slayer
+Allow: /?q=one%20piece
+Allow: /?q=death%20note
+Allow: /?q=смотреть%20аниме
+Allow: /?q=аниме%20онлайн
+Allow: /?q=аниме%20бесплатно
+
 # Запрещаем индексацию ресурсов и шрифтов
 Disallow: /resources/
 Disallow: /fonts/
+Disallow: /webfonts/
+Disallow: /css/
+Disallow: /js/
 
-# Указываем путь к карте сайта
+# Указываем пути к картам сайта
 Sitemap: https://anifox-search.vercel.app/sitemap.xml
+Sitemap: https://anifox-search.vercel.app/sitemap-seo.xml
+
+# Дополнительные директивы для лучшей индексации
+Crawl-delay: 1
