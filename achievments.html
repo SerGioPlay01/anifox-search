@@ -2044,6 +2044,10 @@
             const stats = achievementSystem.loadStats();
             const achievements = achievementSystem.achievements || [];
             
+            // Отладочная информация
+            console.log('Stats for canvas:', stats);
+            console.log('Achievements for canvas:', achievements);
+            
             // Основная статистика
             let y = 200;
             ctx.fillStyle = '#9115ea';
@@ -2120,19 +2124,31 @@
                 switch (achievement.type) {
                     case 'watch_time':
                         current = stats.totalWatchHours || 0;
-                        progress = Math.min((current / achievement.target) * 100, 100);
+                        progress = achievement.target > 0 ? Math.min((current / achievement.target) * 100, 100) : 0;
                         break;
                     case 'search':
                         current = stats.totalSearches || 0;
-                        progress = Math.min((current / achievement.target) * 100, 100);
+                        progress = achievement.target > 0 ? Math.min((current / achievement.target) * 100, 100) : 0;
                         break;
                     case 'site_time':
-                        current = achievementSystem.calculateTotalSiteTime();
-                        progress = Math.min((current / achievement.target) * 100, 100);
+                        // Используем общее время сессий из статистики
+                        current = stats.totalSessionTime || 0;
+                        progress = achievement.target > 0 ? Math.min((current / achievement.target) * 100, 100) : 0;
+                        break;
+                    case 'level':
+                        current = stats.level || 1;
+                        progress = achievement.target > 0 ? Math.min((current / achievement.target) * 100, 100) : 0;
+                        break;
+                    case 'experience':
+                        current = stats.experience || 0;
+                        progress = achievement.target > 0 ? Math.min((current / achievement.target) * 100, 100) : 0;
                         break;
                     default:
                         progress = 0;
                 }
+                
+                // Отладочная информация для каждого достижения
+                console.log(`Achievement: ${achievement.title}, Type: ${achievement.type}, Current: ${current}, Target: ${achievement.target}, Progress: ${progress.toFixed(1)}%`);
                 
                 const progressText = `${achievement.title}: ${progress.toFixed(1)}%`;
                 ctx.fillText(progressText, canvas.width - 50, y + (index * 25));
