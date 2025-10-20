@@ -211,9 +211,6 @@
     <!-- Предзагрузка критических ресурсов -->
     <link rel="preload" href="/style.css" as="style">
     <link rel="preconnect" href="https://mc.yandex.ru">
-    
-    <!-- Font Awesome локально -->
-    <link rel="stylesheet" href="/css/all.min.css">
 
     <!-- Отложенная загрузка некритических CSS -->
     <link rel="stylesheet" href="/style.css" media="print" onload="this.media='all'">
@@ -325,14 +322,6 @@
             </svg>
             <span class="logo-text">AniFox</span>
         </a>
-        
-        <!-- Навигация -->
-        <nav class="header-nav">
-            <a href="/?page=favorites" class="nav-btn">
-                <i class="fas fa-heart"></i>
-                Избранное
-            </a>
-        </nav>
     </header>
 
     <!-- =========================================== -->
@@ -377,7 +366,6 @@
                     <ul>
                         <li><a href="/">Смотреть аниме онлайн</a></li>
                         <li><a href="/?page=favorites">Избранное аниме</a></li>
-                        <li><a href="/achievments.html">Достижения</a></li>
                         <li><a href="/search/naruto">Наруто онлайн</a></li>
                         <li><a href="/search/attack-on-titan">Атака титанов</a></li>
                         <li><a href="/search/demon-slayer">Демон Слейер</a></li>
@@ -515,7 +503,6 @@
     <script src="/cookie-banner.js" defer></script>
     <script src="/adblock-banner.js" defer></script>
     <script src="/sw-register.js" defer></script>
-    <script src="/achievements-integration.js" defer></script>
 
     <!-- =========================================== -->
     <!-- YANDEX.METRIKA -->
@@ -526,22 +513,10 @@
             m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) }; 
             m[i].l = 1 * new Date(); 
             k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r;
-            k.onerror = function() { 
-                console.warn('Yandex Metrika failed to load - this is normal in development mode');
-                // Fallback: create a mock ym function for development
-                if (typeof window.ym === 'undefined') {
-                    window.ym = function() { console.log('Yandex Metrika mock called:', arguments); };
-                }
-            };
+            k.onerror = function() { console.warn('Yandex Metrika failed to load'); };
             a.parentNode.insertBefore(k, a) 
         })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym'); 
-        
-        // Initialize Yandex Metrika with error handling
-        try {
-            ym(104428432, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true });
-        } catch (error) {
-            console.warn('Yandex Metrika initialization failed:', error);
-        }
+        ym(104428432, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true });
     </script>
     <!-- Резервный код для браузеров без JavaScript -->
     <noscript><img src="https://mc.yandex.ru/watch/104428432" style="position:absolute;left:-9999px" alt=""></noscript>
