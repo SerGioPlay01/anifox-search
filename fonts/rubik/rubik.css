@@ -1,0 +1,49 @@
+/* Rubik Font Family */
+@font-face {
+    font-family: 'Rubik';
+    src: url('rubik-regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Fallback для других весов - используем системные шрифты */
+@font-face {
+    font-family: 'Rubik';
+    src: local('Rubik Light'), local('Rubik-Light'), local('Arial'), local('Helvetica');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Rubik';
+    src: local('Rubik Medium'), local('Rubik-Medium'), local('Arial'), local('Helvetica');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Rubik';
+    src: local('Rubik SemiBold'), local('Rubik-SemiBold'), local('Arial'), local('Helvetica');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Rubik';
+    src: local('Rubik Bold'), local('Rubik-Bold'), local('Arial'), local('Helvetica');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Rubik';
+    src: local('Rubik ExtraBold'), local('Rubik-ExtraBold'), local('Arial'), local('Helvetica');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}

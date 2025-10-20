@@ -1,0 +1,2505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Достижения AniFox - Система достижений и статистики</title>
+    <meta name="description" content="Отслеживайте свои достижения в просмотре аниме и поиске на AniFox. Детальная статистика, достижения до 50000 часов просмотра и 45000 поисковых запросов.">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="/fonts/rubik/">
+    <link rel="stylesheet" href="/fonts/rubik/rubik.css">
+    <link rel="stylesheet" href="/style.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="/chart.js"></script>
+    
+    <!-- html2canvas for screenshots -->
+    <script src="/html2canvas.min.js"></script>
+    
+    <!-- FileSaver.js for downloads -->
+    <script src="/FileSaver.min.js"></script>
+    
+    <!-- API functions for IndexedDB access -->
+    <script src="/api.js"></script>
+    
+    <style>
+        :root {
+            --primary: #5b0a99;
+            --accent: #9115ea;
+            --black: #0a0a0a;
+            --white: #f2f2f2;
+            --gray: #666;
+            --dark-gray: #333;
+            --radius: 16px;
+            --transition: 0.3s;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            --shadow: 0 8px 32px rgba(91, 10, 153, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Rubik', system-ui, -apple-system, sans-serif;
+            background: var(--black) url('/resources/bg.jpg') center/cover fixed;
+            color: var(--white);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(38, 3, 66, 0.95);
+            backdrop-filter: blur(40px);
+            border-bottom: 1px solid rgba(145, 21, 234, 0.3);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .logo-text {
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius);
+            color: var(--white);
+            text-decoration: none;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .nav-btn:hover {
+            background: var(--gradient);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Main Container - в стиле главной страницы */
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(91, 10, 153, 0.1) 0%, rgba(145, 21, 234, 0.05) 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Page Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #5b0a99 0%, #9115ea 50%, #ff6b6b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(145, 21, 234, 0.3);
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            color: var(--gray);
+            margin-bottom: 2rem;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #5b0a99, #9115ea, #ff6b6b);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(145, 21, 234, 0.3);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-value {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #5b0a99 0%, #9115ea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(145, 21, 234, 0.3);
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            color: var(--gray);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Achievement System */
+        .achievements-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-title i {
+            color: var(--accent);
+        }
+
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .achievement-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .achievement-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #5b0a99, #9115ea, #ff6b6b);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .achievement-card.unlocked {
+            border-color: rgba(145, 21, 234, 0.5);
+            box-shadow: 0 0 30px rgba(145, 21, 234, 0.3);
+            background: linear-gradient(135deg, rgba(145, 21, 234, 0.15) 0%, rgba(91, 10, 153, 0.1) 100%);
+        }
+
+        .achievement-card.unlocked::before {
+            opacity: 1;
+        }
+
+        .achievement-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(145, 21, 234, 0.3);
+        }
+
+        .achievement-card:hover::before {
+            opacity: 1;
+        }
+
+        .achievement-icon {
+            font-size: 3.5rem;
+            background: linear-gradient(135deg, #5b0a99 0%, #9115ea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(145, 21, 234, 0.3);
+        }
+
+        .achievement-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--white);
+            text-align: center;
+        }
+
+        .achievement-description {
+            color: var(--gray);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .achievement-progress {
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            color: var(--gray);
+            text-align: center;
+        }
+
+        .achievement-reward {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Statistics Section */
+        .statistics-section {
+            margin-bottom: 3rem;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius);
+            padding: 2rem;
+            backdrop-filter: blur(15px);
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--white);
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Detailed Stats */
+        .detailed-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-item-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-item-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        /* Export Section */
+        .export-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .export-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .export-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1.25rem 1.5rem;
+            background: linear-gradient(135deg, #5b0a99 0%, #9115ea 100%);
+            border: none;
+            border-radius: 12px;
+            color: var(--white);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            text-decoration: none;
+        }
+
+        .export-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(145, 21, 234, 0.4);
+        }
+
+        .export-btn:hover::before {
+            left: 100%;
+        }
+
+        .export-btn.secondary {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--white);
+        }
+
+        .export-btn.secondary:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+            border-color: rgba(145, 21, 234, 0.3);
+        }
+
+        /* Responsive - улучшенная адаптивность */
+        @media (max-width: 1200px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            .stats-overview {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .achievements-grid {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 99%;
+                padding: 1rem;
+                margin: 0.5rem;
+                border-radius: 16px;
+            }
+
+            .page-header {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .page-title {
+                font-size: 2.2rem;
+                line-height: 1.2;
+            }
+
+            .page-subtitle {
+                font-size: 1rem;
+            }
+
+            .stats-overview {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1.5rem;
+            }
+
+            .stat-value {
+                font-size: 2.2rem;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .achievements-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .achievement-card {
+                padding: 1.5rem;
+            }
+
+            .export-buttons {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .export-btn {
+                padding: 1rem 1.5rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0.75rem;
+                margin: 0.25rem;
+            }
+
+            .page-header {
+                padding: 1rem;
+            }
+
+            .page-title {
+                font-size: 1.8rem;
+            }
+
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card {
+                padding: 1.25rem;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .achievement-card {
+                padding: 1.25rem;
+            }
+
+            .achievement-icon {
+                font-size: 2.5rem;
+            }
+
+            .achievement-title {
+                font-size: 1.2rem;
+            }
+
+            .export-btn {
+                padding: 0.875rem 1.25rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Animations - улучшенные анимации */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(145, 21, 234, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(145, 21, 234, 0.6);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .slide-in-left {
+            animation: slideInLeft 0.6s ease-out;
+        }
+
+        .slide-in-right {
+            animation: slideInRight 0.6s ease-out;
+        }
+
+        .scale-in {
+            animation: scaleIn 0.5s ease-out;
+        }
+
+        .glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        /* Hover effects */
+        .stat-card:hover .stat-value {
+            transform: scale(1.1);
+            transition: transform 0.3s ease;
+        }
+
+        .achievement-card:hover .achievement-icon {
+            transform: scale(1.1) rotate(5deg);
+            transition: transform 0.3s ease;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .pulse {
+            /* Анимация отключена - класс оставлен для совместимости */
+            transform: none;
+        }
+
+        /* Loading States */
+        .loading {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            /* Анимация отключена */
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--black);
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            z-index: 10000;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-left: 4px solid #4caf50;
+        }
+
+        .notification.error {
+            border-left: 4px solid #f44336;
+        }
+    </style>
+</head>
+<body>
+    <!-- Логотип и навигация -->
+    <header class="top">
+        <a class="logo-link" href="/" aria-label="AniFox — главная">
+            <!-- Оптимизированный SVG логотип -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none"
+                aria-hidden="true">
+                <rect width="40.48" height="283.04" rx="15" transform="matrix(.9066 -.422 .42324 .90602 103.258 17.083)"
+                    fill="url(#paint0_linear)" />
+                <foreignObject x="-94.47" y="2.529" width="453.94" height="366.95">
+                    <div xmlns="http://www.w3.org/1999/xhtml"
+                        style="backdrop-filter:blur(50px);clip-path:url(#bgblur_clip);height:100%;width:100%"></div>
+                </foreignObject>
+                <rect width="40.44" height="283.32" rx="15" transform="matrix(-.5065 -.86224 -.86303 .50515 265 131.88)"
+                    fill="url(#paint1_linear)" />
+                <rect width="40.48" height="283.04" rx="15" transform="matrix(-.9066 -.422 -.42324 .90602 156.62 17.54)"
+                    fill="url(#paint2_linear)" />
+                <defs>
+                    <clipPath id="bgblur_clip" transform="translate(94.47 -2.529)">
+                        <rect width="40.44" height="283.32" rx="15"
+                            transform="matrix(-.5065 -.86224 -.86303 .50515 265 131.88)" />
+                    </clipPath>
+                    <linearGradient id="paint0_linear" x1="20.24" y1="0" x2="27.54" y2="495.89">
+                        <stop stop-color="#fff" />
+                        <stop offset="1" stop-color="#fff" stop-opacity=".7" />
+                    </linearGradient>
+                    <linearGradient id="paint1_linear" x1="25.124" y1="411.96" x2="33.264" y2="-4.776">
+                        <stop stop-color="#22083f" stop-opacity=".7" />
+                        <stop offset="1" stop-color="#6c16c9" />
+                    </linearGradient>
+                    <linearGradient id="paint2_linear" x1="20.24" y1="0" x2="20.24" y2="283.04">
+                        <stop stop-color="#fff" />
+                        <stop offset="1" stop-color="#fff" />
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span class="logo-text">AniFox</span>
+        </a>
+        
+        <!-- Навигация -->
+        <nav class="header-nav">
+            <a href="/?page=favorites" class="nav-btn">
+                <i class="fas fa-heart"></i>
+                Избранное
+            </a>
+        </nav>
+    </header>
+    <br><br>
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header fade-in-up">
+            <h1 class="page-title">🏆 Достижения AniFox</h1>
+            <p class="page-subtitle">Отслеживайте свой прогресс в просмотре аниме и поиске</p>
+            
+            <!-- Stats Overview -->
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalWatchHours">0</div>
+                    <div class="stat-label">Часов просмотра</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSearches">0</div>
+                    <div class="stat-label">Поисковых запросов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="achievementsUnlocked">0</div>
+                    <div class="stat-label">Достижений получено</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="currentLevel">1</div>
+                    <div class="stat-label">Текущий уровень</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievements Section -->
+        <section class="achievements-section fade-in-up">
+            <h2 class="section-title">
+                <i class="fas fa-trophy"></i>
+                Система достижений
+            </h2>
+            <div class="achievements-grid" id="achievementsGrid">
+                <!-- Achievements will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Statistics Section -->
+        <section class="statistics-section fade-in-up">
+            <h2 class="section-title">
+                <i class="fas fa-chart-line"></i>
+                Детальная статистика
+            </h2>
+            
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3 class="chart-title">Часы просмотра по месяцам</h3>
+                    <div class="chart-container">
+                        <canvas id="watchHoursChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Поисковые запросы по месяцам</h3>
+                    <div class="chart-container">
+                        <canvas id="searchesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <div style="text-align: center; margin-top: 1rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <button onclick="refreshCharts()" style="
+                    background: rgba(145, 21, 234, 0.2);
+                    border: 1px solid rgba(145, 21, 234, 0.5);
+                    color: #9115ea;
+                    padding: 0.5rem 1rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-family: 'Rubik', sans-serif;
+                ">
+                    <i class="fas fa-sync-alt"></i> Обновить графики
+                </button>
+            </div>
+            <br><br>
+            <div class="detailed-stats">
+                <div class="stat-item">
+                    <div class="stat-item-value" id="avgWatchTime">0</div>
+                    <div class="stat-item-label">Среднее время просмотра в день</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-item-value" id="avgSearches">0</div>
+                    <div class="stat-item-label">Среднее количество поисков в день</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-item-value" id="longestSession">0</div>
+                    <div class="stat-item-label">Самая длинная сессия (часы)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-item-value" id="mostSearchedDay">0</div>
+                    <div class="stat-item-label">Больше всего поисков в день</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Export Section -->
+        <section class="export-section fade-in-up">
+            <h2 class="section-title">
+                <i class="fas fa-download"></i>
+                Экспорт достижений
+            </h2>
+            <p>Создайте красивую кастомную статистику с вашими достижениями и прогрессом в виде PNG изображения</p>
+            
+            <div class="export-buttons">
+                <button class="export-btn" onclick="exportCustomStatsCanvas()">
+                    <i class="fas fa-chart-bar"></i>
+                    Кастомная статистика
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <script>
+        // Achievement System
+        class AchievementSystem {
+            constructor() {
+                this.stats = this.loadStats();
+                this.achievements = this.defineAchievements();
+                this.init();
+            }
+
+            loadStats() {
+                const defaultStats = {
+                    totalWatchHours: 0,
+                    totalSearches: 0,
+                    watchSessions: [],
+                    searchHistory: [],
+                    achievements: [],
+                    level: 1,
+                    experience: 0,
+                    joinDate: new Date().toISOString(),
+                    dailyStats: {},
+                    activityStats: {
+                        clicks: 0,
+                        scrolls: 0,
+                        keypresses: 0,
+                        mousemoves: 0,
+                        totalActivity: 0
+                    }
+                };
+
+                const saved = localStorage.getItem('anifox_achievements');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Ensure all required fields exist
+                    return { ...defaultStats, ...parsed };
+                }
+                return defaultStats;
+            }
+
+            saveStats() {
+                localStorage.setItem('anifox_achievements', JSON.stringify(this.stats));
+            }
+
+            defineAchievements() {
+                return [
+                    // Watch Time Achievements
+                    {
+                        id: 'first_hour',
+                        title: 'Первые шаги',
+                        description: 'Посмотрите аниме в течение 1 часа',
+                        icon: 'fas fa-play',
+                        type: 'watch_time',
+                        target: 1,
+                        reward: '10 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'marathon_5h',
+                        title: 'Марафонец',
+                        description: 'Посмотрите аниме 5 часов подряд',
+                        icon: 'fas fa-clock',
+                        type: 'watch_time',
+                        target: 5,
+                        reward: '50 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'dedicated_24h',
+                        title: 'Преданный фанат',
+                        description: 'Посмотрите аниме 24 часа',
+                        icon: 'fas fa-star',
+                        type: 'watch_time',
+                        target: 24,
+                        reward: '100 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'enthusiast_100h',
+                        title: 'Энтузиаст',
+                        description: 'Посмотрите аниме 100 часов',
+                        icon: 'fas fa-fire',
+                        type: 'watch_time',
+                        target: 100,
+                        reward: '500 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'expert_500h',
+                        title: 'Эксперт',
+                        description: 'Посмотрите аниме 500 часов',
+                        icon: 'fas fa-graduation-cap',
+                        type: 'watch_time',
+                        target: 500,
+                        reward: '1000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'master_1000h',
+                        title: 'Мастер',
+                        description: 'Посмотрите аниме 1000 часов',
+                        icon: 'fas fa-crown',
+                        type: 'watch_time',
+                        target: 1000,
+                        reward: '2000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'legend_5000h',
+                        title: 'Легенда',
+                        description: 'Посмотрите аниме 5000 часов',
+                        icon: 'fas fa-trophy',
+                        type: 'watch_time',
+                        target: 5000,
+                        reward: '5000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'ultimate_10000h',
+                        title: 'Ультимативный фанат',
+                        description: 'Посмотрите аниме 10000 часов',
+                        icon: 'fas fa-gem',
+                        type: 'watch_time',
+                        target: 10000,
+                        reward: '10000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'godlike_25000h',
+                        title: 'Богоподобный',
+                        description: 'Посмотрите аниме 25000 часов',
+                        icon: 'fas fa-infinity',
+                        type: 'watch_time',
+                        target: 25000,
+                        reward: '25000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'transcendent_50000h',
+                        title: 'Трансцендентный',
+                        description: 'Посмотрите аниме 50000 часов',
+                        icon: 'fas fa-rainbow',
+                        type: 'watch_time',
+                        target: 50000,
+                        reward: '50000 XP',
+                        unlocked: false
+                    },
+                    // Search Achievements
+                    {
+                        id: 'first_search',
+                        title: 'Первый поиск',
+                        description: 'Выполните первый поиск',
+                        icon: 'fas fa-search',
+                        type: 'search',
+                        target: 1,
+                        reward: '5 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'curious_10',
+                        title: 'Любознательный',
+                        description: 'Выполните 10 поисковых запросов',
+                        icon: 'fas fa-question',
+                        type: 'search',
+                        target: 10,
+                        reward: '25 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'explorer_50',
+                        title: 'Исследователь',
+                        description: 'Выполните 50 поисковых запросов',
+                        icon: 'fas fa-compass',
+                        type: 'search',
+                        target: 50,
+                        reward: '100 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'seeker_100',
+                        title: 'Искатель',
+                        description: 'Выполните 100 поисковых запросов',
+                        icon: 'fas fa-binoculars',
+                        type: 'search',
+                        target: 100,
+                        reward: '200 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'hunter_500',
+                        title: 'Охотник',
+                        description: 'Выполните 500 поисковых запросов',
+                        icon: 'fas fa-crosshairs',
+                        type: 'search',
+                        target: 500,
+                        reward: '500 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'detective_1000',
+                        title: 'Детектив',
+                        description: 'Выполните 1000 поисковых запросов',
+                        icon: 'fas fa-magnifying-glass',
+                        type: 'search',
+                        target: 1000,
+                        reward: '1000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'archaeologist_2500',
+                        title: 'Археолог',
+                        description: 'Выполните 2500 поисковых запросов',
+                        icon: 'fas fa-shovel',
+                        type: 'search',
+                        target: 2500,
+                        reward: '2500 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'scholar_5000',
+                        title: 'Учёный',
+                        description: 'Выполните 5000 поисковых запросов',
+                        icon: 'fas fa-book',
+                        type: 'search',
+                        target: 5000,
+                        reward: '5000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'sage_10000',
+                        title: 'Мудрец',
+                        description: 'Выполните 10000 поисковых запросов',
+                        icon: 'fas fa-scroll',
+                        type: 'search',
+                        target: 10000,
+                        reward: '10000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'oracle_25000',
+                        title: 'Оракул',
+                        description: 'Выполните 25000 поисковых запросов',
+                        icon: 'fas fa-crystal-ball',
+                        type: 'search',
+                        target: 25000,
+                        reward: '25000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'omniscient_45000',
+                        title: 'Всезнающий',
+                        description: 'Выполните 45000 поисковых запросов',
+                        icon: 'fas fa-eye',
+                        type: 'search',
+                        target: 45000,
+                        reward: '45000 XP',
+                        unlocked: false
+                    },
+                    // Site Time Achievements
+                    {
+                        id: 'visitor_1h',
+                        title: 'Посетитель',
+                        description: 'Проведите 1 час на сайте',
+                        icon: 'fas fa-user',
+                        type: 'site_time',
+                        target: 1,
+                        reward: '20 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'regular_10h',
+                        title: 'Постоянный посетитель',
+                        description: 'Проведите 10 часов на сайте',
+                        icon: 'fas fa-users',
+                        type: 'site_time',
+                        target: 10,
+                        reward: '100 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'loyal_24h',
+                        title: 'Преданный пользователь',
+                        description: 'Проведите 24 часа на сайте',
+                        icon: 'fas fa-heart',
+                        type: 'site_time',
+                        target: 24,
+                        reward: '200 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'devoted_100h',
+                        title: 'Преданный фанат сайта',
+                        description: 'Проведите 100 часов на сайте',
+                        icon: 'fas fa-star',
+                        type: 'site_time',
+                        target: 100,
+                        reward: '500 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'addicted_500h',
+                        title: 'Зависимый от AniFox',
+                        description: 'Проведите 500 часов на сайте',
+                        icon: 'fas fa-fire',
+                        type: 'site_time',
+                        target: 500,
+                        reward: '1000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'obsessed_1000h',
+                        title: 'Одержимый AniFox',
+                        description: 'Проведите 1000 часов на сайте',
+                        icon: 'fas fa-gem',
+                        type: 'site_time',
+                        target: 1000,
+                        reward: '2000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'legendary_5000h',
+                        title: 'Легендарный пользователь',
+                        description: 'Проведите 5000 часов на сайте',
+                        icon: 'fas fa-crown',
+                        type: 'site_time',
+                        target: 5000,
+                        reward: '5000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'mythical_10000h',
+                        title: 'Мифический пользователь',
+                        description: 'Проведите 10000 часов на сайте',
+                        icon: 'fas fa-infinity',
+                        type: 'site_time',
+                        target: 10000,
+                        reward: '10000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'divine_25000h',
+                        title: 'Божественный пользователь',
+                        description: 'Проведите 25000 часов на сайте',
+                        icon: 'fas fa-rainbow',
+                        type: 'site_time',
+                        target: 25000,
+                        reward: '25000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'eternal_50000h',
+                        title: 'Вечный пользователь',
+                        description: 'Проведите 50000 часов на сайте',
+                        icon: 'fas fa-infinity',
+                        type: 'site_time',
+                        target: 50000,
+                        reward: '50000 XP',
+                        unlocked: false
+                    },
+                    // Activity Achievements
+                    {
+                        id: 'clicker_100',
+                        title: 'Кликатель',
+                        description: 'Сделайте 100 кликов на сайте',
+                        icon: 'fas fa-mouse-pointer',
+                        type: 'activity',
+                        target: 100,
+                        reward: '50 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'scroller_500',
+                        title: 'Скроллер',
+                        description: 'Прокрутите страницу 500 раз',
+                        icon: 'fas fa-arrows-alt-v',
+                        type: 'activity',
+                        target: 500,
+                        reward: '100 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'typer_1000',
+                        title: 'Печататель',
+                        description: 'Нажмите клавиши 1000 раз',
+                        icon: 'fas fa-keyboard',
+                        type: 'activity',
+                        target: 1000,
+                        reward: '200 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'explorer_5000',
+                        title: 'Исследователь интерфейса',
+                        description: 'Выполните 5000 действий на сайте',
+                        icon: 'fas fa-compass',
+                        type: 'activity',
+                        target: 5000,
+                        reward: '500 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'power_user_10000',
+                        title: 'Продвинутый пользователь',
+                        description: 'Выполните 10000 действий на сайте',
+                        icon: 'fas fa-user-cog',
+                        type: 'activity',
+                        target: 10000,
+                        reward: '1000 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'super_user_25000',
+                        title: 'Супер пользователь',
+                        description: 'Выполните 25000 действий на сайте',
+                        icon: 'fas fa-user-ninja',
+                        type: 'activity',
+                        target: 25000,
+                        reward: '2500 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'ultimate_user_50000',
+                        title: 'Ультимативный пользователь',
+                        description: 'Выполните 50000 действий на сайте',
+                        icon: 'fas fa-user-astronaut',
+                        type: 'activity',
+                        target: 50000,
+                        reward: '5000 XP',
+                        unlocked: false
+                    },
+                    // Special Achievements
+                    {
+                        id: 'daily_warrior',
+                        title: 'Ежедневный воин',
+                        description: 'Используйте AniFox 7 дней подряд',
+                        icon: 'fas fa-calendar-check',
+                        type: 'streak',
+                        target: 7,
+                        reward: '100 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'night_owl',
+                        title: 'Сова',
+                        description: 'Посмотрите аниме после полуночи',
+                        icon: 'fas fa-moon',
+                        type: 'special',
+                        target: 1,
+                        reward: '50 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'early_bird',
+                        title: 'Ранняя пташка',
+                        description: 'Посмотрите аниме до 6 утра',
+                        icon: 'fas fa-sun',
+                        type: 'special',
+                        target: 1,
+                        reward: '50 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'weekend_warrior',
+                        title: 'Выходной воин',
+                        description: 'Активно используйте AniFox в выходные',
+                        icon: 'fas fa-calendar-weekend',
+                        type: 'special',
+                        target: 1,
+                        reward: '75 XP',
+                        unlocked: false
+                    },
+                    {
+                        id: 'midnight_marathon',
+                        title: 'Полуночный марафон',
+                        description: 'Смотрите аниме всю ночь',
+                        icon: 'fas fa-clock',
+                        type: 'special',
+                        target: 1,
+                        reward: '100 XP',
+                        unlocked: false
+                    }
+                ];
+            }
+
+            init() {
+                this.updateAchievements();
+                this.renderAchievements();
+                this.updateStats();
+                this.renderCharts();
+                this.updateDetailedStats();
+            }
+
+            updateAchievements() {
+                this.achievements.forEach(achievement => {
+                    if (this.stats.achievements.includes(achievement.id)) {
+                        achievement.unlocked = true;
+                        return;
+                    }
+
+                    let progress = 0;
+                    let current = 0;
+
+                    switch (achievement.type) {
+                        case 'watch_time':
+                            current = this.stats.totalWatchHours;
+                            progress = Math.min(current / achievement.target * 100, 100);
+                            break;
+                        case 'search':
+                            current = this.stats.totalSearches;
+                            progress = Math.min(current / achievement.target * 100, 100);
+                            break;
+                        case 'site_time':
+                            current = this.calculateTotalSiteTime();
+                            progress = Math.min(current / achievement.target * 100, 100);
+                            break;
+                        case 'activity':
+                            current = this.calculateActivityProgress(achievement.id);
+                            progress = Math.min(current / achievement.target * 100, 100);
+                            break;
+                        case 'streak':
+                            current = this.calculateStreak();
+                            progress = Math.min(current / achievement.target * 100, 100);
+                            break;
+                        case 'special':
+                            // Special achievements are handled separately
+                            progress = this.checkSpecialAchievement(achievement);
+                            break;
+                    }
+
+                    if (progress >= 100 && !achievement.unlocked) {
+                        this.unlockAchievement(achievement);
+                    }
+                });
+            }
+
+            checkSpecialAchievement(achievement) {
+                // Check special achievements based on time of day, day of week, etc.
+                const now = new Date();
+                const hour = now.getHours();
+                const dayOfWeek = now.getDay();
+                
+                switch (achievement.id) {
+                    case 'night_owl':
+                        return hour >= 0 && hour < 6 ? 100 : 0;
+                    case 'early_bird':
+                        return hour >= 6 && hour < 12 ? 100 : 0;
+                    case 'weekend_warrior':
+                        return (dayOfWeek === 0 || dayOfWeek === 6) ? 100 : 0;
+                    case 'midnight_marathon':
+                        return hour >= 23 || hour < 2 ? 100 : 0;
+                    default:
+                        return 0;
+                }
+            }
+
+            unlockAchievement(achievement) {
+                achievement.unlocked = true;
+                this.stats.achievements.push(achievement.id);
+                
+                // Add experience
+                const xp = parseInt(achievement.reward.replace(/\D/g, ''));
+                this.stats.experience += xp;
+                
+                // Check for level up
+                this.checkLevelUp();
+                
+                this.saveStats();
+                this.showNotification(`🏆 Поздравляем! Достижение "${achievement.title}" разблокировано! Вы становитесь сильнее!`, 'success');
+            }
+
+            checkLevelUp() {
+                const requiredXP = this.stats.level * 1000;
+                if (this.stats.experience >= requiredXP) {
+                    this.stats.level++;
+                    this.showNotification(`⭐ Уровень ${this.stats.level} достигнут! Вы растете как настоящий аниме-мастер!`, 'success');
+                }
+            }
+
+            calculateStreak() {
+                // Simple streak calculation based on daily usage
+                const today = new Date().toDateString();
+                const lastUsed = localStorage.getItem('anifox_last_used');
+                if (lastUsed === today) {
+                    return parseInt(localStorage.getItem('anifox_streak') || '0');
+                }
+                return 0;
+            }
+
+            calculateTotalSiteTime() {
+                if (!this.stats.dailyStats) return 0;
+                
+                let totalTime = 0;
+                Object.values(this.stats.dailyStats).forEach(dayStats => {
+                    totalTime += dayStats.sessionTime || 0;
+                });
+                
+                return totalTime;
+            }
+
+            calculateAverageSessionDuration() {
+                if (!this.stats.watchSessions || this.stats.watchSessions.length === 0) return 0;
+                
+                const totalDuration = this.stats.watchSessions.reduce((sum, session) => sum + (session.duration || 0), 0);
+                return totalDuration / this.stats.watchSessions.length;
+            }
+
+            getMostActiveDay() {
+                if (!this.stats.dailyStats) return 'Неизвестно';
+                
+                let maxActivity = 0;
+                let mostActiveDay = 'Неизвестно';
+                
+                Object.entries(this.stats.dailyStats).forEach(([date, dayStats]) => {
+                    const activity = (dayStats.watchTime || 0) + (dayStats.searches || 0) + (dayStats.sessionTime || 0);
+                    if (activity > maxActivity) {
+                        maxActivity = activity;
+                        mostActiveDay = date;
+                    }
+                });
+                
+                return mostActiveDay;
+            }
+
+            calculateConsistencyScore() {
+                if (!this.stats.dailyStats) return 0;
+                
+                const days = Object.keys(this.stats.dailyStats);
+                if (days.length < 7) return 0;
+                
+                const recentDays = days.slice(-7);
+                const activeDays = recentDays.filter(day => {
+                    const dayStats = this.stats.dailyStats[day];
+                    return (dayStats.watchTime > 0 || dayStats.searches > 0 || dayStats.sessionTime > 0);
+                });
+                
+                return Math.round((activeDays.length / 7) * 100);
+            }
+
+            calculateActivityProgress(achievementId) {
+                if (!this.stats.activityStats) return 0;
+                
+                switch (achievementId) {
+                    case 'clicker_100':
+                        return this.stats.activityStats.clicks || 0;
+                    case 'scroller_500':
+                        return this.stats.activityStats.scrolls || 0;
+                    case 'typer_1000':
+                        return this.stats.activityStats.keypresses || 0;
+                    case 'explorer_5000':
+                    case 'power_user_10000':
+                    case 'super_user_25000':
+                    case 'ultimate_user_50000':
+                        return this.stats.activityStats.totalActivity || 0;
+                    default:
+                        return 0;
+                }
+            }
+
+            renderAchievements() {
+                const grid = document.getElementById('achievementsGrid');
+                grid.innerHTML = '';
+
+                this.achievements.forEach(achievement => {
+                    const card = document.createElement('div');
+                    card.className = `achievement-card ${achievement.unlocked ? 'unlocked' : ''}`;
+                    
+                    let progress = 0;
+                    let current = 0;
+
+                    switch (achievement.type) {
+                        case 'watch_time':
+                            current = this.stats.totalWatchHours;
+                            progress = Math.min(current / achievement.target * 100, 100);
+                            break;
+                        case 'search':
+                            current = this.stats.totalSearches;
+                            progress = Math.min(current / achievement.target * 100, 100);
+                            break;
+                        case 'streak':
+                            current = this.calculateStreak();
+                            progress = Math.min(current / achievement.target * 100, 100);
+                            break;
+                    }
+
+                    card.innerHTML = `
+                        <div class="achievement-icon">
+                            <i class="${achievement.icon}"></i>
+                        </div>
+                        <h3 class="achievement-title">${achievement.title}</h3>
+                        <p class="achievement-description">${achievement.description}</p>
+                        <div class="achievement-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            </div>
+                            <div class="progress-text">${Math.round(progress)}% (${current}/${achievement.target})</div>
+                        </div>
+                        <div class="achievement-reward">
+                            <i class="fas fa-gem"></i>
+                            ${achievement.reward}
+                        </div>
+                    `;
+
+                    grid.appendChild(card);
+                });
+            }
+
+            updateStats() {
+                document.getElementById('totalWatchHours').textContent = this.stats.totalWatchHours.toFixed(1);
+                document.getElementById('totalSearches').textContent = this.stats.totalSearches;
+                document.getElementById('achievementsUnlocked').textContent = this.stats.achievements.length;
+                document.getElementById('currentLevel').textContent = this.stats.level;
+                
+                // Show message if no data exists
+                this.showNoDataMessage();
+            }
+
+            showNoDataMessage() {
+                const hasData = this.stats.totalWatchHours > 0 || this.stats.totalSearches > 0 || 
+                               Object.keys(this.stats.dailyStats || {}).length > 0;
+                
+                if (!hasData) {
+                    const message = document.createElement('div');
+                    message.className = 'no-data-message';
+                    message.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; background: rgba(255, 255, 255, 0.05); border-radius: 16px; margin: 2rem 0;">
+                            <i class="fas fa-info-circle" style="font-size: 3rem; color: var(--accent); margin-bottom: 1rem;"></i>
+                            <h3 style="color: var(--white); margin-bottom: 1rem;">Начните использовать AniFox!</h3>
+                            <p style="color: var(--gray); margin-bottom: 1.5rem;">
+                                Для отображения статистики и разблокировки достижений начните смотреть аниме и использовать поиск.
+                            </p>
+                            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                                <a href="/" style="background: var(--gradient); color: white; padding: 0.75rem 1.5rem; border-radius: 12px; text-decoration: none; font-weight: 600;">
+                                    <i class="fas fa-search"></i> Начать поиск
+                                </a>
+                                <a href="/?page=favorites" style="background: rgba(255, 255, 255, 0.1); color: var(--white); padding: 0.75rem 1.5rem; border-radius: 12px; text-decoration: none; font-weight: 600;">
+                                    <i class="fas fa-heart"></i> Избранное
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const container = document.querySelector('.container');
+                    const achievementsSection = document.querySelector('.achievements-section');
+                    container.insertBefore(message, achievementsSection);
+                }
+            }
+
+            renderCharts() {
+                // Проверяем наличие Chart.js
+                if (typeof Chart === 'undefined') {
+                    console.error('Chart.js not loaded');
+                    this.showChartError();
+                    return;
+                }
+                
+                // Инициализируем данные если их нет
+                this.initializeDataIfNeeded();
+                
+                this.renderWatchHoursChart();
+                this.renderSearchesChart();
+            }
+
+            initializeDataIfNeeded() {
+                const stats = this.loadStats();
+                if (!stats.dailyStats || Object.keys(stats.dailyStats).length === 0) {
+                    console.log('No daily stats found, waiting for real data from IndexedDB');
+                    // Не создаем фиктивные данные - ждем реальные данные из IndexedDB
+                    return;
+                }
+            }
+
+            showChartError() {
+                const watchChart = document.getElementById('watchHoursChart');
+                const searchChart = document.getElementById('searchesChart');
+                
+                if (watchChart) {
+                    watchChart.parentElement.innerHTML = '<p style="color: #666; text-align: center; padding: 2rem;">Chart.js не загружен</p>';
+                }
+                
+                if (searchChart) {
+                    searchChart.parentElement.innerHTML = '<p style="color: #666; text-align: center; padding: 2rem;">Chart.js не загружен</p>';
+                }
+            }
+
+            renderWatchHoursChart() {
+                const canvas = document.getElementById('watchHoursChart');
+                if (!canvas) {
+                    console.error('Canvas watchHoursChart not found');
+                    return;
+                }
+                
+                const ctx = canvas.getContext('2d');
+                const months = this.getLast12Months();
+                const data = months.map(month => this.getWatchHoursForMonth(month));
+
+                console.log('Watch hours chart data:', { months, data });
+
+                // Check if there's any real data
+                const hasData = data.some(value => value > 0);
+                console.log('Has watch hours data:', hasData);
+                
+                // Destroy existing chart if it exists
+                if (this.watchHoursChart) {
+                    this.watchHoursChart.destroy();
+                }
+                
+                this.watchHoursChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: 'Часы просмотра',
+                            data: data,
+                            borderColor: '#9115ea',
+                            backgroundColor: hasData ? 'rgba(145, 21, 234, 0.1)' : 'rgba(145, 21, 234, 0.05)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#f2f2f2'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#666'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#666'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderSearchesChart() {
+                const canvas = document.getElementById('searchesChart');
+                if (!canvas) {
+                    console.error('Canvas searchesChart not found');
+                    return;
+                }
+                
+                const ctx = canvas.getContext('2d');
+                const months = this.getLast12Months();
+                const data = months.map(month => this.getSearchesForMonth(month));
+
+                console.log('Searches chart data:', { months, data });
+
+                // Check if there's any real data
+                const hasData = data.some(value => value > 0);
+                console.log('Has searches data:', hasData);
+                
+                // Destroy existing chart if it exists
+                if (this.searchesChart) {
+                    this.searchesChart.destroy();
+                }
+
+                this.searchesChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: 'Поисковые запросы',
+                            data: data,
+                            backgroundColor: hasData ? 'rgba(91, 10, 153, 0.8)' : 'rgba(91, 10, 153, 0.3)',
+                            borderColor: '#5b0a99',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#f2f2f2'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#666'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#666'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateDetailedStats() {
+                const daysSinceJoin = Math.max(this.getDaysSinceJoin(), 1);
+                const avgWatchTime = this.stats.totalWatchHours / daysSinceJoin;
+                const avgSearches = this.stats.totalSearches / daysSinceJoin;
+                const longestSession = this.getLongestSession();
+                const mostSearchedDay = this.getMostSearchedDay();
+
+                // Show real data or 0 if no data exists
+                document.getElementById('avgWatchTime').textContent = (avgWatchTime || 0).toFixed(1) + 'ч';
+                document.getElementById('avgSearches').textContent = Math.round(avgSearches || 0);
+                document.getElementById('longestSession').textContent = (longestSession || 0).toFixed(1);
+                document.getElementById('mostSearchedDay').textContent = mostSearchedDay || 0;
+            }
+
+            getLast12Months() {
+                const months = [];
+                const now = new Date();
+                for (let i = 11; i >= 0; i--) {
+                    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    months.push(date.toLocaleDateString('ru', { month: 'short', year: '2-digit' }));
+                }
+                return months;
+            }
+
+            getWatchHoursForMonth(month) {
+                // Get real data from localStorage
+                const stats = this.loadStats();
+                console.log('All stats:', stats);
+                console.log('Daily stats:', stats.dailyStats);
+                
+                if (!stats.dailyStats) {
+                    console.log('No daily stats found');
+                    return 0;
+                }
+                
+                const monthData = Object.entries(stats.dailyStats).filter(([date]) => {
+                    try {
+                    const dateObj = new Date(date);
+                    const monthStr = dateObj.toLocaleDateString('ru', { month: 'short', year: '2-digit' });
+                    return monthStr === month;
+                    } catch (e) {
+                        console.error('Error parsing date:', date, e);
+                        return false;
+                    }
+                });
+                
+                console.log(`Filtered data for ${month}:`, monthData);
+                
+                const totalHours = monthData.reduce((total, [, dayStats]) => {
+                    const hours = dayStats.watchTime || 0;
+                    console.log(`Day ${dayStats}: ${hours} hours`);
+                    return total + hours;
+                }, 0);
+                
+                console.log(`Watch hours for ${month}:`, totalHours, 'from', monthData.length, 'days');
+                return totalHours;
+            }
+
+            getSearchesForMonth(month) {
+                // Get real data from localStorage
+                const stats = this.loadStats();
+                console.log('All stats for searches:', stats);
+                console.log('Daily stats for searches:', stats.dailyStats);
+                
+                if (!stats.dailyStats) {
+                    console.log('No daily stats found for searches');
+                    return 0;
+                }
+                
+                const monthData = Object.entries(stats.dailyStats).filter(([date]) => {
+                    try {
+                    const dateObj = new Date(date);
+                    const monthStr = dateObj.toLocaleDateString('ru', { month: 'short', year: '2-digit' });
+                    return monthStr === month;
+                    } catch (e) {
+                        console.error('Error parsing date for searches:', date, e);
+                        return false;
+                    }
+                });
+                
+                console.log(`Filtered search data for ${month}:`, monthData);
+                
+                const totalSearches = monthData.reduce((total, [, dayStats]) => {
+                    const searches = dayStats.searches || 0;
+                    console.log(`Day searches ${dayStats}: ${searches} searches`);
+                    return total + searches;
+                }, 0);
+                
+                console.log(`Searches for ${month}:`, totalSearches, 'from', monthData.length, 'days');
+                return totalSearches;
+            }
+
+            getDaysSinceJoin() {
+                const joinDate = new Date(this.stats.joinDate);
+                const now = new Date();
+                return Math.ceil((now - joinDate) / (1000 * 60 * 60 * 24));
+            }
+
+            getLongestSession() {
+                // Get real longest session from daily stats
+                const stats = this.loadStats();
+                if (!stats.dailyStats) return 0;
+                
+                let longestSession = 0;
+                Object.values(stats.dailyStats).forEach(dayStats => {
+                    if (dayStats.sessionTime > longestSession) {
+                        longestSession = dayStats.sessionTime;
+                    }
+                });
+                
+                return longestSession;
+            }
+
+            getMostSearchedDay() {
+                // Get real most searched day from daily stats
+                const stats = this.loadStats();
+                if (!stats.dailyStats) return 0;
+                
+                let mostSearches = 0;
+                Object.values(stats.dailyStats).forEach(dayStats => {
+                    if (dayStats.searches > mostSearches) {
+                        mostSearches = dayStats.searches;
+                    }
+                });
+                
+                return mostSearches;
+            }
+
+            showNotification(message, type = 'info') {
+                const container = document.getElementById('notificationContainer');
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                
+                container.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+
+            // No sample data generation - only real data
+        }
+
+        // Export Functions
+        // Функция для безопасного удаления проблемных canvas элементов
+        function removeProblematicCanvas() {
+            const charts = document.querySelectorAll('canvas');
+            const removedElements = [];
+            
+            charts.forEach((chart, index) => {
+                // Пропускаем важные графики
+                if (chart.id === 'watchHoursChart' || chart.id === 'searchesChart') {
+                    return;
+                }
+                
+                // Удаляем только canvas с нулевыми размерами или проблемные
+                if (chart.width === 0 || chart.height === 0 || chart.width < 10 || chart.height < 10) {
+                    const parent = chart.parentNode;
+                    const nextSibling = chart.nextSibling;
+                    
+                    removedElements.push({
+                        element: chart,
+                        parent: parent,
+                        nextSibling: nextSibling,
+                        type: 'canvas'
+                    });
+                    
+                    parent.removeChild(chart);
+                }
+            });
+            
+            return removedElements;
+        }
+
+        // Функция для восстановления удаленных элементов
+        function restoreRemovedElements(removedElements) {
+            removedElements.forEach(item => {
+                if (item.nextSibling) {
+                    item.parent.insertBefore(item.element, item.nextSibling);
+                } else {
+                    item.parent.appendChild(item.element);
+                }
+            });
+        }
+
+        // Функция для создания кастомного canvas со статистикой и достижениями
+        function createCustomStatsCanvas() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Размеры canvas
+            canvas.width = 1200;
+            canvas.height = 800;
+            
+            // Фон
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Градиент для заголовка
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, '#5b0a99');
+            gradient.addColorStop(0.5, '#9115ea');
+            gradient.addColorStop(1, '#ff6b6b');
+            
+            // Заголовок
+            ctx.fillStyle = gradient;
+            ctx.font = 'bold 48px Rubik, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('AniFox - Статистика Достижений', canvas.width / 2, 80);
+            
+            // Подзаголовок
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '24px Rubik, Arial, sans-serif';
+            ctx.fillText(`Создано: ${new Date().toLocaleString('ru-RU')}`, canvas.width / 2, 120);
+            
+            // Получаем статистику
+            const stats = achievementSystem.loadStats();
+            const achievements = achievementSystem.achievements || [];
+            
+            // Основная статистика
+            let y = 200;
+            ctx.fillStyle = '#9115ea';
+            ctx.font = 'bold 32px Rubik, Arial, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('📊 Основная Статистика', 50, y);
+            
+            y += 50;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '20px Rubik, Arial, sans-serif';
+            
+            const mainStats = [
+                `⏱️ Часы просмотра: ${stats.totalWatchHours?.toFixed(1) || 0} ч`,
+                `🔍 Поисковые запросы: ${stats.totalSearches || 0}`,
+                `🏆 Достижений разблокировано: ${stats.achievements?.length || 0}`,
+                `⭐ Текущий уровень: ${stats.level || 1}`,
+                `💎 Опыт: ${stats.experience || 0} XP`
+            ];
+            
+            mainStats.forEach(stat => {
+                ctx.fillText(stat, 50, y);
+                y += 35;
+            });
+            
+            // Достижения
+            y += 30;
+            ctx.fillStyle = '#9115ea';
+            ctx.font = 'bold 32px Rubik, Arial, sans-serif';
+            ctx.fillText('🏆 Достижения', 50, y);
+            
+            y += 50;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '18px Rubik, Arial, sans-serif';
+            
+            // Показываем только разблокированные достижения
+            const unlockedAchievements = achievements.filter(achievement => 
+                stats.achievements?.includes(achievement.id)
+            );
+            
+            if (unlockedAchievements.length > 0) {
+                unlockedAchievements.slice(0, 8).forEach((achievement, index) => {
+                    const x = 50 + (index % 2) * 550;
+                    const currentY = y + Math.floor(index / 2) * 40;
+                    
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillText(`✅ ${achievement.title}`, x, currentY);
+                });
+            } else {
+                ctx.fillStyle = '#666666';
+                ctx.fillText('Пока нет разблокированных достижений', 50, y);
+            }
+            
+            // Прогресс достижений
+            y = 200;
+            ctx.fillStyle = '#9115ea';
+            ctx.font = 'bold 32px Rubik, Arial, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('📈 Прогресс Достижений', canvas.width - 50, y);
+            
+            y += 50;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Rubik, Arial, sans-serif';
+            ctx.textAlign = 'right';
+            
+            // Показываем прогресс по основным достижениям
+            const progressAchievements = achievements.filter(achievement => 
+                !stats.achievements?.includes(achievement.id)
+            ).slice(0, 6);
+            
+            progressAchievements.forEach((achievement, index) => {
+                let current = 0;
+                let progress = 0;
+                
+                switch (achievement.type) {
+                    case 'watch_time':
+                        current = stats.totalWatchHours || 0;
+                        progress = Math.min((current / achievement.target) * 100, 100);
+                        break;
+                    case 'search':
+                        current = stats.totalSearches || 0;
+                        progress = Math.min((current / achievement.target) * 100, 100);
+                        break;
+                    case 'site_time':
+                        current = achievementSystem.calculateTotalSiteTime();
+                        progress = Math.min((current / achievement.target) * 100, 100);
+                        break;
+                    default:
+                        progress = 0;
+                }
+                
+                const progressText = `${achievement.title}: ${progress.toFixed(1)}%`;
+                ctx.fillText(progressText, canvas.width - 50, y + (index * 25));
+            });
+            
+            // Футер
+            ctx.fillStyle = '#666666';
+            ctx.font = '14px Rubik, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Создано с помощью AniFox - Система достижений', canvas.width / 2, canvas.height - 30);
+            
+            return canvas;
+        }
+
+        // Функция для экспорта кастомного canvas
+        function exportCustomStatsCanvas() {
+            try {
+                const customCanvas = createCustomStatsCanvas();
+                
+                // Создаем ссылку для скачивания
+                const link = document.createElement('a');
+                link.download = `anifox-custom-stats-${new Date().toISOString().split('T')[0]}.png`;
+                link.href = customCanvas.toDataURL('image/png', 0.95);
+                link.click();
+                
+                achievementSystem.showNotification('Кастомная статистика скачана!', 'success');
+            } catch (error) {
+                console.error('Custom canvas export error:', error);
+                achievementSystem.showNotification(`Ошибка при создании кастомной статистики: ${error.message}`, 'error');
+            }
+        }
+
+
+
+        function downloadStats() {
+            if (!achievementSystem) {
+                achievementSystem.showNotification('Система достижений не инициализирована', 'error');
+                return;
+            }
+
+            if (typeof saveAs === 'undefined') {
+                achievementSystem.showNotification('Ошибка: FileSaver не загружен', 'error');
+                return;
+            }
+
+            try {
+                const stats = achievementSystem.loadStats();
+                const enhancedStats = {
+                    // Основная статистика
+                    totalWatchHours: stats.totalWatchHours || 0,
+                    totalSearches: stats.totalSearches || 0,
+                    achievements: stats.achievements || [],
+                    level: stats.level || 1,
+                    experience: stats.experience || 0,
+                    joinDate: stats.joinDate || new Date().toISOString(),
+                    
+                    // Дополнительная статистика
+                    dailyStats: stats.dailyStats || {},
+                    activityStats: stats.activityStats || {},
+                    seasonalStats: stats.seasonalStats || {},
+                    dayOfWeekStats: stats.dayOfWeekStats || {},
+                    specialEvents: stats.specialEvents || {},
+                    deviceActivity: stats.deviceActivity || {},
+                    performanceData: stats.performanceData || [],
+                    errors: stats.errors || [],
+                    
+                    // Метаданные экспорта
+                    exportDate: new Date().toISOString(),
+                    exportVersion: '2.4',
+                    systemInfo: {
+                        userAgent: navigator.userAgent,
+                        platform: navigator.platform,
+                        language: navigator.language,
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        screenResolution: `${screen.width}x${screen.height}`,
+                        colorDepth: screen.colorDepth,
+                        pixelRatio: window.devicePixelRatio
+                    }
+                };
+
+                const dataStr = JSON.stringify(enhancedStats, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                saveAs(dataBlob, `anifox-enhanced-stats-${new Date().toISOString().split('T')[0]}.json`);
+                
+                achievementSystem.showNotification('Улучшенная статистика скачана!', 'success');
+            } catch (error) {
+                console.error('Stats export error:', error);
+                achievementSystem.showNotification(`Ошибка при экспорте статистики: ${error.message}`, 'error');
+            }
+        }
+
+        // Улучшенные функции экспорта
+        function downloadDetailedStats() {
+            if (achievementSystem) {
+                // Используем локальную систему достижений
+                const stats = achievementSystem.loadStats();
+            const dataStr = JSON.stringify(stats, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `anifox-detailed-stats-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                achievementSystem.showNotification('Детальная статистика скачана!', 'success');
+            } else {
+                achievementSystem.showNotification('Система достижений не инициализирована', 'error');
+            }
+        }
+
+        function downloadAchievementProgress() {
+            if (achievementSystem) {
+                // Создаем данные о прогрессе достижений
+                const stats = achievementSystem.loadStats();
+                const achievements = achievementSystem.achievements || [];
+                
+                const progress = achievements.map(achievement => {
+                    let current = 0;
+                    let progressPercent = 0;
+                    
+                    switch (achievement.type) {
+                        case 'watch_time':
+                            current = stats.totalWatchHours || 0;
+                            progressPercent = Math.min((current / achievement.target) * 100, 100);
+                            break;
+                        case 'search':
+                            current = stats.totalSearches || 0;
+                            progressPercent = Math.min((current / achievement.target) * 100, 100);
+                            break;
+                        case 'site_time':
+                            current = achievementSystem.calculateTotalSiteTime(stats);
+                            progressPercent = Math.min((current / achievement.target) * 100, 100);
+                            break;
+                        case 'streak':
+                            current = achievementSystem.calculateStreak();
+                            progressPercent = Math.min((current / achievement.target) * 100, 100);
+                            break;
+                        default:
+                            progressPercent = achievement.unlocked ? 100 : 0;
+                    }
+                    
+                    return {
+                        id: achievement.id,
+                        title: achievement.title,
+                        description: achievement.description,
+                        type: achievement.type,
+                        target: achievement.target,
+                        current: current,
+                        progress: Math.round(progressPercent),
+                        unlocked: achievement.unlocked || false,
+                        reward: achievement.reward
+                    };
+                });
+                
+                const dataStr = JSON.stringify(progress, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `anifox-achievement-progress-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                achievementSystem.showNotification('Прогресс достижений скачан!', 'success');
+            } else {
+                achievementSystem.showNotification('Система достижений не инициализирована', 'error');
+            }
+        }
+
+        function downloadBehavioralInsights() {
+            if (achievementSystem) {
+                // Создаем данные поведенческого анализа
+                const stats = achievementSystem.loadStats();
+                const insights = {
+                    peakHours: achievementSystem.behavioralData?.peakHours || [],
+                    favoriteGenres: Object.fromEntries(achievementSystem.behavioralData?.favoriteGenres || new Map()),
+                    searchPatterns: achievementSystem.behavioralData?.searchPatterns || [],
+                    watchPatterns: achievementSystem.behavioralData?.watchPatterns || [],
+                    deviceInfo: achievementSystem.behavioralData?.deviceInfo || {},
+                    timezone: achievementSystem.behavioralData?.timezone || 'Unknown',
+                    totalSessions: stats.watchSessions?.length || 0,
+                    averageSessionDuration: achievementSystem.calculateAverageSessionDuration(),
+                    mostActiveDay: achievementSystem.getMostActiveDay(),
+                    consistencyScore: achievementSystem.calculateConsistencyScore(),
+                    exportDate: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(insights, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `anifox-behavioral-insights-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                achievementSystem.showNotification('Поведенческий анализ скачан!', 'success');
+            } else {
+                achievementSystem.showNotification('Система достижений не инициализирована', 'error');
+            }
+        }
+
+        function downloadCSV() {
+            if (!achievementSystem) {
+                achievementSystem.showNotification('Система достижений не инициализирована', 'error');
+                return;
+            }
+
+            if (typeof saveAs === 'undefined') {
+                achievementSystem.showNotification('Ошибка: FileSaver не загружен', 'error');
+                return;
+            }
+
+            try {
+                const stats = achievementSystem.loadStats();
+                const csvData = [];
+                
+                // Заголовки
+                csvData.push([
+                    'Дата',
+                    'Часы просмотра',
+                    'Поиски',
+                    'Время на сайте',
+                    'Клики',
+                    'Скроллы',
+                    'Нажатия клавиш',
+                    'Общая активность'
+                ]);
+                
+                // Данные по дням
+                if (stats.dailyStats) {
+                    Object.entries(stats.dailyStats).forEach(([date, dayStats]) => {
+                        csvData.push([
+                            date,
+                            (dayStats.watchTime || 0).toFixed(2),
+                            dayStats.searches || 0,
+                            (dayStats.sessionTime || 0).toFixed(2),
+                            stats.activityStats?.clicks || 0,
+                            stats.activityStats?.scrolls || 0,
+                            stats.activityStats?.keypresses || 0,
+                            stats.activityStats?.totalActivity || 0
+                        ]);
+                    });
+                }
+                
+                // Конвертируем в CSV
+                const csvContent = csvData.map(row => 
+                    row.map(field => `"${field}"`).join(',')
+                ).join('\n');
+                
+                const dataBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                saveAs(dataBlob, `anifox-data-${new Date().toISOString().split('T')[0]}.csv`);
+                
+                achievementSystem.showNotification('CSV данные скачаны!', 'success');
+            } catch (error) {
+                console.error('CSV export error:', error);
+                achievementSystem.showNotification(`Ошибка при экспорте CSV: ${error.message}`, 'error');
+            }
+        }
+
+        function refreshCharts() {
+            if (achievementSystem) {
+                console.log('Manually refreshing charts...');
+                achievementSystem.showNotification('📊 Обновляем вашу статистику...', 'info');
+                
+                // Принудительно обновляем данные
+                achievementSystem.initializeDataIfNeeded();
+                
+                // Перерендериваем графики
+                setTimeout(() => {
+                    achievementSystem.renderCharts();
+                    achievementSystem.showNotification('✨ Статистика обновлена! Ваш прогресс впечатляет!', 'success');
+                }, 500);
+            }
+        }
+
+        async function loadRealDataFromIndexedDB() {
+            if (achievementSystem) {
+                console.log('Loading real data from IndexedDB...');
+                achievementSystem.showNotification('⚡ Анализируем вашу активность...', 'info');
+                
+                try {
+                    // Проверяем доступность IndexedDB функций
+                    if (typeof dbGetAll === 'undefined') {
+                        console.log('IndexedDB functions not available, using localStorage data');
+                        achievementSystem.showNotification('🌟 Система достижений готова! Начните свой путь к аниме-мастерству!', 'info');
+                        return;
+                    }
+                    
+                    // Получаем данные из IndexedDB
+                    const searchHistory = await dbGetAll('search_history', 'timestamp');
+                    const favorites = await dbGetAll('favorites', 'timestamp');
+                    
+                    console.log('Search history from IndexedDB:', searchHistory);
+                    console.log('Favorites from IndexedDB:', favorites);
+                    
+                    // Обрабатываем историю поиска
+                    const stats = achievementSystem.loadStats();
+                    if (!stats.dailyStats) {
+                        stats.dailyStats = {};
+                    }
+                    
+                    // Группируем поиски по дням
+                    const searchByDay = {};
+                    searchHistory.forEach(item => {
+                        const date = new Date(item.t).toDateString();
+                        if (!searchByDay[date]) {
+                            searchByDay[date] = 0;
+                        }
+                        searchByDay[date]++;
+                    });
+                    
+                    // Обновляем dailyStats с реальными данными
+                    Object.entries(searchByDay).forEach(([date, searches]) => {
+                        if (!stats.dailyStats[date]) {
+                            stats.dailyStats[date] = {
+                                sessionTime: 0,
+                                searches: 0,
+                                watchTime: 0
+                            };
+                        }
+                        stats.dailyStats[date].searches = searches;
+                    });
+                    
+                    // Обновляем общую статистику
+                    stats.totalSearches = searchHistory.length;
+                    stats.totalFavorites = favorites.length;
+                    
+                    // Сохраняем
+                    achievementSystem.stats = stats;
+                    achievementSystem.saveStats();
+                    
+                    console.log('Real data loaded:', stats.dailyStats);
+                    achievementSystem.showNotification('🎉 Добро пожаловать в мир достижений AniFox! Продолжайте смотреть аниме и открывайте новые награды!', 'success');
+                    
+                    // Обновляем графики
+                    setTimeout(() => {
+                        achievementSystem.renderCharts();
+                    }, 500);
+                    
+                } catch (error) {
+                    console.error('Error loading real data:', error);
+                    achievementSystem.showNotification('🚀 Не волнуйтесь! Система достижений работает! Каждое ваше действие приближает к новым наградам!', 'info');
+                }
+            }
+        }
+
+
+        // Initialize the system
+        let achievementSystem;
+        document.addEventListener('DOMContentLoaded', async () => {
+            achievementSystem = new AchievementSystem();
+            
+            // Автоматически загружаем реальные данные из IndexedDB
+            setTimeout(async () => {
+                if (achievementSystem && typeof loadRealDataFromIndexedDB === 'function') {
+                    console.log('Auto-loading real data from IndexedDB...');
+                    await loadRealDataFromIndexedDB();
+                }
+            }, 2000);
+            
+            // Добавляем задержку для рендеринга графиков
+            setTimeout(() => {
+                if (achievementSystem && typeof achievementSystem.renderCharts === 'function') {
+                    console.log('Rendering charts with delay...');
+                    achievementSystem.renderCharts();
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
