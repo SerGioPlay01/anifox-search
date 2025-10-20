@@ -746,7 +746,7 @@
 <body>
     <!-- Логотип и навигация -->
     <header class="top">
-        <a class="logo-link" href="/" aria-label="AniFox — главная">
+        <a class="logo-link" href="/" onclick="window.location.href='/'; return false;" aria-label="AniFox — главная">
             <!-- Оптимизированный SVG логотип -->
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none"
                 aria-hidden="true">
@@ -784,7 +784,7 @@
         
         <!-- Навигация -->
         <nav class="header-nav">
-            <a href="/?page=favorites" class="nav-btn">
+            <a href="/?page=favorites" onclick="window.location.href='/?page=favorites'; return false;" class="nav-btn">
                 <i class="fas fa-heart"></i>
                 Избранное
             </a>
@@ -1635,10 +1635,10 @@
                                 Для отображения статистики и разблокировки достижений начните смотреть аниме и использовать поиск.
                             </p>
                             <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                                <a href="/" style="background: var(--gradient); color: white; padding: 0.75rem 1.5rem; border-radius: 12px; text-decoration: none; font-weight: 600;">
+                                <a href="/" onclick="window.location.href='/'; return false;" style="background: var(--gradient); color: white; padding: 0.75rem 1.5rem; border-radius: 12px; text-decoration: none; font-weight: 600;">
                                     <i class="fas fa-search"></i> Начать поиск
                                 </a>
-                                <a href="/?page=favorites" style="background: rgba(255, 255, 255, 0.1); color: var(--white); padding: 0.75rem 1.5rem; border-radius: 12px; text-decoration: none; font-weight: 600;">
+                                <a href="/?page=favorites" onclick="window.location.href='/?page=favorites'; return false;" style="background: rgba(255, 255, 255, 0.1); color: var(--white); padding: 0.75rem 1.5rem; border-radius: 12px; text-decoration: none; font-weight: 600;">
                                     <i class="fas fa-heart"></i> Избранное
                                 </a>
                             </div>
