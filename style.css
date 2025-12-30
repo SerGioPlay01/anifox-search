@@ -83,7 +83,7 @@ html {
 
 body {
   font-family: "Rubik", system-ui, -apple-system, sans-serif;
-  background: var(--black) url(/resources/bg.jpg) center/cover fixed;
+  background-color: #0D1117;
   color: var(--white);
   display: flex;
   flex-direction: column;
