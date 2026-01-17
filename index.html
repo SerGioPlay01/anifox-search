@@ -80,6 +80,23 @@
             opacity: 1;
             visibility: visible;
             transition: opacity 0.5s ease, visibility 0.5s ease;
+            /* КРИТИЧЕСКИ ВАЖНО: НЕ блокируем скролл на мобильных */
+            pointer-events: auto;
+        }
+
+        /* На мобильных устройствах прелоадер НЕ должен блокировать скролл */
+        @media (max-width: 768px) {
+            html.preloader-active,
+            body.preloader-active {
+                overflow: auto !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                height: auto !important;
+                min-height: 100vh !important;
+                position: static !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: manipulation !important;
+            }
         }
 
         #preloader-site-full::before {
@@ -239,12 +256,14 @@
 
     <!-- Стили -->
     <link rel="stylesheet" href="/style.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/mobile-critical-fixes.css">
     <link rel="stylesheet" href="/privacy-consent.css">
     <link rel="stylesheet" href="/adblock-banner.css">
     <link rel="stylesheet" href="/mobile-enhancements.css" media="(max-width: 1024px)">
     <!-- Резервная загрузка для браузеров без JavaScript -->
     <noscript>
         <link rel="stylesheet" href="/style.css">
+        <link rel="stylesheet" href="/mobile-critical-fixes.css">
         <link rel="stylesheet" href="/privacy-consent.css">
         <link rel="stylesheet" href="/adblock-banner.css">
         <link rel="stylesheet" href="/mobile-enhancements.css">
@@ -493,6 +512,26 @@
             const preloader = document.getElementById('preloader-site-full');
             if (!preloader) return;
 
+            // Определяем мобильное устройство
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+            // КРИТИЧЕСКИ ВАЖНО: На мобильных НЕ блокируем скролл
+            if (isMobile) {
+                function forceEnableScroll() {
+                    document.documentElement.style.overflow = 'auto';
+                    document.documentElement.style.overflowY = 'auto';
+                    document.documentElement.style.overflowX = 'hidden';
+                    document.body.style.overflow = 'auto';
+                    document.body.style.overflowY = 'auto';
+                    document.body.style.overflowX = 'hidden';
+                }
+                
+                // Принудительно включаем скролл сразу и через интервалы
+                forceEnableScroll();
+                setTimeout(forceEnableScroll, 10);
+                setTimeout(forceEnableScroll, 100);
+            }
+
             let resourcesLoaded = false;
             let domReady = false;
 
@@ -519,6 +558,16 @@
                     setTimeout(() => {
                         preloader.classList.add('hidden');
                         document.documentElement.classList.remove('preloader-active');
+                        
+                        // Дополнительно принудительно включаем скролл на мобильных
+                        if (isMobile) {
+                            setTimeout(() => {
+                                document.documentElement.style.overflow = 'auto';
+                                document.documentElement.style.overflowY = 'auto';
+                                document.body.style.overflow = 'auto';
+                                document.body.style.overflowY = 'auto';
+                            }, 100);
+                        }
                     }, 300);
                 }
             }
@@ -542,13 +591,21 @@
                 resourcesLoaded = true;
             }
 
-            // Фолбек: скрыть через 3 секунды максимум
+            // Фолбек: скрыть через 2 секунды максимум (уменьшено для мобильных)
             setTimeout(() => {
                 if (!preloader.classList.contains('hidden')) {
                     preloader.classList.add('hidden');
                     document.documentElement.classList.remove('preloader-active');
+                    
+                    // Принудительно включаем скролл
+                    if (isMobile) {
+                        document.documentElement.style.overflow = 'auto';
+                        document.documentElement.style.overflowY = 'auto';
+                        document.body.style.overflow = 'auto';
+                        document.body.style.overflowY = 'auto';
+                    }
                 }
-            }, 3000);
+            }, isMobile ? 1500 : 3000);
 
             // Запускаем проверку сразу
             checkHidePreloader();
@@ -557,6 +614,7 @@
 
     <!-- Отложенные скрипты -->
     <!-- Некритические скрипты загружаются после основного контента -->
+    <script src="/mobile-fixes.js"></script>
     <script src="/api.js" defer></script>
     <script src="/seo.js" defer></script>
     <script src="/mobile-enhancements.js" defer></script>

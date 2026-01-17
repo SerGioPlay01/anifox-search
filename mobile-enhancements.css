@@ -11,6 +11,87 @@
  */
 
 /* =========================================== */
+/* КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ ДЛЯ МОБИЛЬНЫХ */
+/* =========================================== */
+
+/* КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ СКРОЛЛИНГА НА МОБИЛЬНЫХ */
+@media (max-width: 768px) {
+  /* Принудительно включаем скроллинг для всех элементов */
+  html {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    position: static !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: manipulation !important;
+  }
+  
+  body {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    position: static !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: manipulation !important;
+  }
+  
+  /* Убираем ВСЕ блокировки скролла */
+  .modal-open,
+  .ab-scroll-lock,
+  .preloader-active,
+  .preloader-active body,
+  .preloader-active html,
+  .scroll-locked,
+  .no-scroll {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    position: static !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: manipulation !important;
+  }
+  
+  /* Исправляем основной контейнер */
+  #resultsBox {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    position: static !important;
+  }
+  
+  /* Исправляем прелоадер - НЕ блокируем скролл */
+  #preloader-site-full {
+    position: fixed !important;
+    overflow: hidden !important;
+    z-index: 9999 !important;
+  }
+  
+  /* Когда прелоадер скрыт, гарантируем скролл */
+  #preloader-site-full.hidden {
+    display: none !important;
+  }
+  
+  /* Принудительно восстанавливаем скролл после загрузки */
+  body:not(.preloader-active) {
+    overflow: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  html:not(.preloader-active) {
+    overflow: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* =========================================== */
 /* УЛУЧШЕННОЕ ПОЛЕ ПОИСКА ДЛЯ МОБИЛЬНЫХ */
 /* =========================================== */
 
@@ -394,32 +475,94 @@
 }
 
 /* =========================================== */
-/* АДАПТИВНЫЕ ИЗОБРАЖЕНИЯ */
+/* КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ ЗАГРУЗКИ ИЗОБРАЖЕНИЙ */
 /* =========================================== */
 
 @media (max-width: 768px) {
   .anime-poster img,
   .similar-anime-card img {
-    /* Ленивая загрузка изображений */
-    loading: lazy;
     /* Оптимизация для мобильных */
     image-rendering: auto;
+    /* Улучшаем производительность */
+    image-rendering: crisp-edges;
+  }
+  
+  /* ПОЛНОЕ ИСПРАВЛЕНИЕ ПРОБЛЕМ С ПОСТЕРАМИ */
+  .anime-poster {
+    /* Убираем overflow hidden который может блокировать загрузку */
+    overflow: visible !important;
+    position: relative;
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+  }
+  
+  .anime-poster img {
+    /* Принудительно показываем изображения */
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    
+    /* Исправляем размеры */
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    
+    /* Убираем анимации которые могут мешать */
+    transition: transform 0.3s ease !important;
+    animation: none !important;
+    
+    /* Исправляем проблемы с загрузкой */
+    max-width: 100% !important;
+    max-height: 100% !important;
+  }
+  
+  /* Обработка ошибок загрузки изображений */
+  .anime-poster img[src=""],
+  .anime-poster img:not([src]),
+  .anime-poster img[src*="undefined"],
+  .anime-poster img[src*="null"] {
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%) !important;
+    position: relative;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: white !important;
+    font-size: 2rem !important;
+  }
+  
+  .anime-poster img[src=""]:after,
+  .anime-poster img:not([src]):after,
+  .anime-poster img[src*="undefined"]:after,
+  .anime-poster img[src*="null"]:after {
+    content: "📺" !important;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: white;
+    z-index: 1;
   }
   
   /* Placeholder для изображений */
   .image-placeholder {
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--white);
+    color: white;
     font-size: 2rem;
-    opacity: 0.7;
+    opacity: 1;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
   }
   
   .image-loading {
     position: relative;
     overflow: hidden;
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
   }
   
   .image-loading::after {
@@ -431,6 +574,34 @@
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
     animation: shimmer 1.5s infinite;
+  }
+  
+  /* Стили для ленивой загрузки */
+  img.lazy {
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+    opacity: 0.7;
+  }
+  
+  img.loaded {
+    opacity: 1;
+    background: none;
+  }
+  
+  /* Исправление для битых изображений */
+  img[alt]:after {
+    content: attr(alt);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    max-width: 90%;
+    word-wrap: break-word;
   }
 }
 
@@ -573,11 +744,9 @@
 /* Предотвращаем зум на iOS при фокусе на input */
 @supports (-webkit-touch-callout: none) {
   #searchInput {
-    /* Минимальный размер шрифта для предотвращения зума */
-    font-size: 16px !important;
-    
-    /* Отключаем автокоррекцию и автозаполнение */
+    font-size: 16px !important; /* Предотвращает зум на iOS */
     -webkit-appearance: none;
+    appearance: none;
     -webkit-border-radius: 0;
     border-radius: 16px;
     

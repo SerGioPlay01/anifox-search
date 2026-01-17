@@ -27,11 +27,42 @@
     };
 
     // =========================================
-    // VIEWPORT УПРАВЛЕНИЕ
+    // VIEWPORT УПРАВЛЕНИЕ И ИСПРАВЛЕНИЕ СКРОЛЛА
     // =========================================
     
     function handleViewportChanges() {
         const viewport = document.querySelector('meta[name="viewport"]');
+        
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Принудительно включаем скролл на мобильных
+        function forceEnableScroll() {
+            document.documentElement.style.overflow = 'auto';
+            document.documentElement.style.overflowY = 'auto';
+            document.documentElement.style.overflowX = 'hidden';
+            document.documentElement.style.height = 'auto';
+            document.documentElement.style.minHeight = '100vh';
+            document.documentElement.style.position = 'static';
+            document.documentElement.style.webkitOverflowScrolling = 'touch';
+            document.documentElement.style.touchAction = 'manipulation';
+            
+            document.body.style.overflow = 'auto';
+            document.body.style.overflowY = 'auto';
+            document.body.style.overflowX = 'hidden';
+            document.body.style.height = 'auto';
+            document.body.style.minHeight = '100vh';
+            document.body.style.position = 'static';
+            document.body.style.webkitOverflowScrolling = 'touch';
+            document.body.style.touchAction = 'manipulation';
+        }
+        
+        // Принудительно включаем скролл сразу
+        if (isMobile()) {
+            forceEnableScroll();
+            
+            // Повторяем через небольшие интервалы для надежности
+            setTimeout(forceEnableScroll, 100);
+            setTimeout(forceEnableScroll, 500);
+            setTimeout(forceEnableScroll, 1000);
+        }
         
         // Обработка изменения ориентации
         window.addEventListener('orientationchange', () => {
@@ -39,6 +70,11 @@
                 // Принудительный пересчет viewport
                 viewport.setAttribute('content', 
                     'width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover');
+                
+                // Принудительно включаем скролл после поворота
+                if (isMobile()) {
+                    forceEnableScroll();
+                }
             }, 100);
         });
 
@@ -57,7 +93,33 @@
                     // Виртуальная клавиатура закрыта
                     document.body.classList.remove('keyboard-active');
                 }
+                
+                // Всегда поддерживаем скролл
+                forceEnableScroll();
             });
+        }
+        
+        // Отслеживаем изменения классов, которые могут блокировать скролл
+        if (isMobile()) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        const target = mutation.target;
+                        if (target === document.documentElement || target === document.body) {
+                            // Если добавлены классы, блокирующие скролл, принудительно включаем его
+                            const blockingClasses = ['modal-open', 'ab-scroll-lock', 'preloader-active', 'scroll-locked', 'no-scroll'];
+                            const hasBlockingClass = blockingClasses.some(cls => target.classList.contains(cls));
+                            
+                            if (hasBlockingClass) {
+                                setTimeout(forceEnableScroll, 10);
+                            }
+                        }
+                    }
+                });
+            });
+            
+            observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+            observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
         }
     }
 
@@ -232,24 +294,52 @@
     }
 
     // =========================================
-    // ОПТИМИЗАЦИЯ ИЗОБРАЖЕНИЙ
+    // КРИТИЧЕСКАЯ ОПТИМИЗАЦИЯ ИЗОБРАЖЕНИЙ ДЛЯ МОБИЛЬНЫХ
     // =========================================
     
     function optimizeImages() {
         if (!isMobile()) return;
         
-        // Ленивая загрузка изображений
+        // Глобальная функция для обработки ошибок изображений
+        window.handleImageError = function(img) {
+            if (img.dataset.errorHandled) return; // Предотвращаем повторную обработку
+            
+            img.dataset.errorHandled = 'true';
+            img.style.background = 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)';
+            img.style.display = 'flex';
+            img.style.alignItems = 'center';
+            img.style.justifyContent = 'center';
+            img.style.color = 'white';
+            img.style.fontSize = '2rem';
+            img.style.position = 'relative';
+            img.innerHTML = '<span style="z-index: 1; pointer-events: none;">📺</span>';
+            img.onerror = null;
+        };
+        
+        // Ленивая загрузка изображений с улучшенной обработкой ошибок
         const images = document.querySelectorAll('img[data-src]');
         
         const imageObserver = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const img = entry.target;
-                    img.src = img.dataset.src;
+                    
+                    // Устанавливаем обработчик ошибок
+                    img.onerror = () => window.handleImageError(img);
+                    
+                    // Загружаем изображение
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                    }
+                    
                     img.classList.remove('image-loading');
                     observer.unobserve(img);
                 }
             });
+        }, {
+            rootMargin: '300px 0px', // Увеличенная область для мобильных
+            threshold: 0.01
         });
         
         images.forEach(img => {
@@ -257,14 +347,54 @@
             imageObserver.observe(img);
         });
         
-        // Обработка ошибок загрузки изображений
+        // Обработка уже загруженных изображений
         document.addEventListener('error', (e) => {
             if (e.target.tagName === 'IMG') {
-                const img = e.target;
-                img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
-                img.classList.add('image-placeholder');
+                window.handleImageError(e.target);
             }
         }, true);
+        
+        // Принудительная проверка всех изображений на странице
+        function checkAllImages() {
+            const allImages = document.querySelectorAll('img');
+            allImages.forEach(img => {
+                // Проверяем изображения без src или с пустым src
+                if (!img.src || img.src === '' || img.src.includes('undefined') || img.src.includes('null')) {
+                    window.handleImageError(img);
+                }
+                
+                // Добавляем обработчик ошибок если его нет
+                if (!img.onerror && !img.dataset.errorHandled) {
+                    img.onerror = () => window.handleImageError(img);
+                }
+            });
+        }
+        
+        // Проверяем изображения сразу и через интервалы
+        checkAllImages();
+        setTimeout(checkAllImages, 1000);
+        setTimeout(checkAllImages, 3000);
+        
+        // Наблюдаем за добавлением новых изображений
+        const imageAddObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) { // Element node
+                        const newImages = node.tagName === 'IMG' ? [node] : node.querySelectorAll('img');
+                        newImages.forEach(img => {
+                            if (!img.onerror && !img.dataset.errorHandled) {
+                                img.onerror = () => window.handleImageError(img);
+                            }
+                        });
+                    }
+                });
+            });
+        });
+        
+        imageAddObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 
     // =========================================

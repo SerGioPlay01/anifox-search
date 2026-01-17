@@ -399,9 +399,9 @@ function debounceSearch(func, delay = 500) {
     };
 }
 
-// Оптимизированная ленивая загрузка изображений
+// Оптимизированная ленивая загрузка изображений с исправлениями для мобильных
 function lazyLoadImages() {
-    const images = document.querySelectorAll('img[data-src]');
+    const images = document.querySelectorAll('img[data-src], img:not([src]), img[src=""], img[src*="undefined"]');
     
     if ('IntersectionObserver' in window) {
         const imageObserver = new IntersectionObserver((entries, observer) => {
@@ -412,13 +412,34 @@ function lazyLoadImages() {
                     // Добавляем обработчик ошибок перед загрузкой
                     img.onerror = function() {
                         console.log('Failed to load image:', this.dataset.src || this.src);
-                        this.src = '/resources/anime-placeholder.svg';
+                        // Создаем placeholder вместо битого изображения
+                        this.style.background = 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)';
+                        this.style.display = 'flex';
+                        this.style.alignItems = 'center';
+                        this.style.justifyContent = 'center';
+                        this.style.color = 'white';
+                        this.style.fontSize = '2rem';
+                        this.style.position = 'relative';
+                        this.innerHTML = '<span style="z-index: 1;">📺</span>';
                         this.onerror = null;
                     };
                     
                     // Загружаем изображение
-                    img.src = img.dataset.src;
-                    img.removeAttribute('data-src');
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                    } else if (!img.src || img.src === '' || img.src.includes('undefined')) {
+                        // Если нет src, создаем placeholder
+                        img.style.background = 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)';
+                        img.style.display = 'flex';
+                        img.style.alignItems = 'center';
+                        img.style.justifyContent = 'center';
+                        img.style.color = 'white';
+                        img.style.fontSize = '2rem';
+                        img.style.position = 'relative';
+                        img.innerHTML = '<span style="z-index: 1;">📺</span>';
+                    }
+                    
                     img.classList.remove('lazy');
                     img.classList.add('loaded');
                     
@@ -427,7 +448,7 @@ function lazyLoadImages() {
             });
         }, {
             // Увеличиваем область предзагрузки для мобильных
-            rootMargin: window.innerWidth <= 768 ? '100px 0px' : '50px 0px',
+            rootMargin: window.innerWidth <= 768 ? '300px 0px' : '100px 0px',
             threshold: 0.01
         });
 
@@ -440,11 +461,21 @@ function lazyLoadImages() {
         // Fallback для старых браузеров
         images.forEach(img => {
             img.onerror = function() {
-                this.src = '/resources/anime-placeholder.svg';
+                this.style.background = 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)';
+                this.style.display = 'flex';
+                this.style.alignItems = 'center';
+                this.style.justifyContent = 'center';
+                this.style.color = 'white';
+                this.style.fontSize = '2rem';
+                this.style.position = 'relative';
+                this.innerHTML = '<span style="z-index: 1;">📺</span>';
                 this.onerror = null;
             };
-            img.src = img.dataset.src;
-            img.removeAttribute('data-src');
+            
+            if (img.dataset.src) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+            }
             img.classList.add('loaded');
         });
     }
@@ -678,15 +709,37 @@ async function safeCreateAnimeCard(item) {
     }
 }
 
+// Безопасная пакетная функция создания карточек
+async function safeCreateAnimeCards(animeList) {
+    try {
+        return await createAnimeCardsWithPosters(animeList);
+    } catch (error) {
+        console.error('Error in batch card creation, falling back to individual creation:', error);
+        // Fallback к индивидуальному созданию карточек
+        return Promise.all(animeList.map(safeCreateAnimeCard));
+    }
+}
+
 function createFallbackCard(item) {
     // Создаем короткий ID для аниме
     const animeId = generateAnimeId(item.link);
     const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(item.title)}`;
     
+    // ИСПРАВЛЕНО: Пытаемся использовать постер из Kodik API даже в fallback
+    let posterUrl = '/resources/anime-placeholder.svg';
+    if (item.material_data?.poster_url) {
+        posterUrl = item.material_data.poster_url;
+    } else if (item.screenshots && item.screenshots.length > 0) {
+        posterUrl = item.screenshots[0];
+    }
+    
     return `
     <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(item.title)}', '${item.link}')" style="cursor: pointer;">
         <div class="anime-poster">
-            <img src="/resources/anime-placeholder.svg" alt="Постер ${escapeHtml(item.title)}" loading="lazy">
+            <img src="${posterUrl}" 
+                 alt="Постер ${escapeHtml(item.title)}" 
+                 loading="eager"
+                 onerror="window.fixBrokenImage ? window.fixBrokenImage(this) : (this.onerror=null, this.src='/resources/anime-placeholder.svg');">
             <div class="anime-overlay">
                 <div class="play-button">
                     <i class="fas fa-play"></i>
@@ -717,6 +770,132 @@ function createFallbackCard(item) {
     </div>`;
 }
 
+// Батчинг запросов постеров для оптимизации
+class PosterBatcher {
+    constructor() {
+        this.queue = [];
+        this.processing = false;
+        this.batchSize = 3; // Обрабатываем по 3 постера одновременно
+        this.batchDelay = 1000; // Задержка между батчами
+    }
+
+    async getPoster(title) {
+        return new Promise((resolve) => {
+            this.queue.push({ title, resolve });
+            this.processBatch();
+        });
+    }
+
+    async processBatch() {
+        if (this.processing || this.queue.length === 0) return;
+        
+        this.processing = true;
+        
+        while (this.queue.length > 0) {
+            const batch = this.queue.splice(0, this.batchSize);
+            
+            // Обрабатываем батч параллельно
+            const promises = batch.map(async ({ title, resolve }) => {
+                try {
+                    const poster = await getShikimoriPoster(title);
+                    resolve(poster);
+                } catch (error) {
+                    console.warn('Poster batch error:', error);
+                    resolve(null);
+                }
+            });
+            
+            await Promise.all(promises);
+            
+            // Задержка между батчами
+            if (this.queue.length > 0) {
+                await new Promise(resolve => setTimeout(resolve, this.batchDelay));
+            }
+        }
+        
+        this.processing = false;
+    }
+}
+
+const posterBatcher = new PosterBatcher();
+
+// Rate limiting для Shikimori API
+class ShikimoriRateLimiter {
+    constructor() {
+        this.requests = [];
+        this.maxRequests = 5; // Максимум 5 запросов
+        this.timeWindow = 60000; // За 60 секунд
+        this.minDelay = 200; // Минимальная задержка между запросами
+        this.lastRequestTime = 0;
+    }
+
+    async waitForSlot() {
+        const now = Date.now();
+        
+        // Очищаем старые запросы
+        this.requests = this.requests.filter(time => now - time < this.timeWindow);
+        
+        // Проверяем лимит
+        if (this.requests.length >= this.maxRequests) {
+            const oldestRequest = Math.min(...this.requests);
+            const waitTime = this.timeWindow - (now - oldestRequest) + 100;
+            console.log(`Shikimori rate limit: waiting ${waitTime}ms`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            return this.waitForSlot();
+        }
+        
+        // Проверяем минимальную задержку
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        if (timeSinceLastRequest < this.minDelay) {
+            const waitTime = this.minDelay - timeSinceLastRequest;
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        this.requests.push(Date.now());
+        this.lastRequestTime = Date.now();
+    }
+}
+
+const shikimoriLimiter = new ShikimoriRateLimiter();
+
+// Пакетная загрузка постеров из Shikimori для улучшения производительности
+async function batchLoadShikimoriPosters(animeList) {
+    const BATCH_SIZE = 10; // Загружаем по 10 постеров одновременно
+    const results = new Map();
+    
+    // Разбиваем список на батчи
+    for (let i = 0; i < animeList.length; i += BATCH_SIZE) {
+        const batch = animeList.slice(i, i + BATCH_SIZE);
+        
+        // Загружаем батч параллельно
+        const batchPromises = batch.map(async (anime) => {
+            try {
+                const poster = await getShikimoriPoster(anime.title);
+                return { title: anime.title, poster };
+            } catch (error) {
+                console.warn(`Ошибка загрузки постера для ${anime.title}:`, error);
+                return { title: anime.title, poster: null };
+            }
+        });
+        
+        const batchResults = await Promise.allSettled(batchPromises);
+        
+        // Сохраняем результаты
+        batchResults.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value) {
+                results.set(result.value.title, result.value.poster);
+            }
+        });
+        
+        // Небольшая пауза между батчами для снижения нагрузки на API
+        if (i + BATCH_SIZE < animeList.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+    
+    return results;
+}
+
 // Быстрое получение постера из Shikimori без полной загрузки данных
 async function getShikimoriPoster(title) {
     const cacheKey = `poster_${title.toLowerCase().trim()}`;
@@ -730,10 +909,13 @@ async function getShikimoriPoster(title) {
         }
     } catch (e) {}
 
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 5000);
-
     try {
+        // Ждем разрешения на запрос
+        await shikimoriLimiter.waitForSlot();
+        
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 8000);
+
         const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(title)}&limit=1`;
         const response = await fetch(searchUrl, {
             signal: ctrl.signal,
@@ -745,7 +927,15 @@ async function getShikimoriPoster(title) {
 
         clearTimeout(timeout);
 
-        if (!response.ok) return null;
+        if (response.status === 429) {
+            console.warn('Shikimori rate limit exceeded, using fallback');
+            return null;
+        }
+
+        if (!response.ok) {
+            console.warn(`Shikimori API error: ${response.status}`);
+            return null;
+        }
 
         const data = await response.json();
         if (!data || data.length === 0) return null;
@@ -764,7 +954,7 @@ async function getShikimoriPoster(title) {
 
         return posterUrl;
     } catch (e) {
-        clearTimeout(timeout);
+        console.warn('Shikimori poster request failed:', e.message);
         return null;
     }
 }
@@ -893,10 +1083,13 @@ async function fetchShikimoriInfo(title, attempt = 1) {
         }
     } catch (e) {}
 
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 8000);
-
     try {
+        // Ждем разрешения на запрос
+        await shikimoriLimiter.waitForSlot();
+        
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 8000);
+
         const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(title)}&limit=1`;
         const response = await fetch(searchUrl, {
             signal: ctrl.signal,
@@ -908,6 +1101,15 @@ async function fetchShikimoriInfo(title, attempt = 1) {
 
         clearTimeout(timeout);
 
+        if (response.status === 429) {
+            console.warn('Shikimori rate limit exceeded for:', title);
+            if (attempt < 2) {
+                await new Promise(r => setTimeout(r, 5000)); // Ждем 5 секунд
+                return fetchShikimoriInfo(title, attempt + 1);
+            }
+            return getFallbackShikimoriData(title);
+        }
+
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
@@ -917,6 +1119,9 @@ async function fetchShikimoriInfo(title, attempt = 1) {
         let detailedInfo = null;
         
         try {
+            // Ждем еще один слот для детальной информации
+            await shikimoriLimiter.waitForSlot();
+            
             const detailUrl = `${SHIKIMORI_API_BASE}/animes/${anime.id}`;
             const detailResponse = await fetch(detailUrl, {
                 signal: ctrl.signal,
@@ -1658,6 +1863,120 @@ function getAnimeDataById(animeId) {
 }
 
 /* ---------- CARD ---------- */
+// Улучшенная функция создания карточек с пакетной загрузкой постеров
+async function createAnimeCardsWithPosters(animeList) {
+    // ОПТИМИЗИРОВАНО: Загружаем постеры из Shikimori только для аниме без постеров в Kodik
+    const animeNeedingShikimoriPosters = animeList.filter(item => 
+        !item.material_data?.poster_url && 
+        (!item.screenshots || item.screenshots.length === 0)
+    );
+    
+    const posterMap = animeNeedingShikimoriPosters.length > 0 
+        ? await batchLoadShikimoriPosters(animeNeedingShikimoriPosters)
+        : new Map();
+    
+    // Создаем карточки с оптимизированной загрузкой постеров
+    const cardPromises = animeList.map(async (item) => {
+        try {
+            return await createAnimeCardWithPoster(item, posterMap.get(item.title));
+        } catch (error) {
+            console.error('Error creating anime card:', error);
+            return createFallbackCard(item);
+        }
+    });
+    
+    return Promise.all(cardPromises);
+}
+
+// Создание карточки аниме с предзагруженным постером
+async function createAnimeCardWithPoster(item, shikimoriPoster = null) {
+    const t = item.title;
+    const favs = await getFavorites();
+    const isFav = favs.some(f => f.link === item.link);
+
+    // Создаем короткий ID для аниме
+    const animeId = generateAnimeId(item.link);
+    
+    // ИСПРАВЛЕНО: Определяем постер с приоритетом Kodik API
+    let posterUrl = '/resources/anime-placeholder.svg';
+    
+    // 1. Приоритет - Kodik API material_data.poster_url
+    if (item.material_data?.poster_url) {
+        posterUrl = item.material_data.poster_url;
+    }
+    // 2. Резерв - Kodik API screenshots[0]
+    else if (item.screenshots && item.screenshots.length > 0) {
+        posterUrl = item.screenshots[0];
+    }
+    // 3. Последний резерв - предзагруженный Shikimori постер
+    else if (shikimoriPoster) {
+        posterUrl = shikimoriPoster;
+    }
+    
+    // Оптимизируем URL изображения
+    if (posterUrl && posterUrl !== '/resources/anime-placeholder.svg') {
+        posterUrl = optimizeImageUrl(posterUrl);
+    }
+
+    // Получаем базовую информацию
+    const year = item.year || 'Неизвестно';
+    const rating = item.material_data?.rating || null;
+    const episodes = item.episodes_count || null;
+
+    return `
+    <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(t)}', '${item.link}')" style="cursor: pointer;">
+        <div class="anime-poster">
+            <img src="${posterUrl}" 
+                 alt="Постер ${escapeHtml(t)}" 
+                 loading="lazy" 
+                 decoding="async"
+                 onerror="this.onerror=null; this.src='/resources/anime-placeholder.svg';"
+                 onload="this.style.opacity='1';"
+                 style="opacity: 0; transition: opacity 0.3s ease;">
+            <div class="anime-overlay">
+                <div class="play-button">
+                    <i class="fas fa-play"></i>
+                </div>
+                ${rating ? `
+                <div class="anime-rating">
+                    <i class="fas fa-star"></i>
+                    <span>${rating}</span>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+        
+        <div class="anime-info">
+            <h3 class="anime-title" title="${escapeHtml(t)}">${escapeHtml(t)}</h3>
+            
+            <div class="anime-meta">
+                <span class="anime-year">
+                    <i class="fas fa-calendar"></i>
+                    ${year}
+                </span>
+                ${episodes ? `
+                <span class="anime-episodes">
+                    <i class="fas fa-film"></i>
+                    ${episodes} эп.
+                </span>
+                ` : ''}
+            </div>
+        </div>
+
+        <div class="anime-actions" onclick="event.stopPropagation();">
+            <button class="action-btn favorite-btn ${isFav ? 'active' : ''}" data-link="${item.link}"
+                    onclick="toggleFavorite('${escapeHtml(t).replace(/'/g, "\\'")}','${item.link}')"
+                    title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
+                <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
+            </button>
+
+            <button class="action-btn share-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
+                <i class="fas fa-share"></i>
+            </button>
+        </div>
+    </div>`;
+}
+
 async function createAnimeCard(item) {
     const t = item.title;
     const favs = await getFavorites();
@@ -1669,32 +1988,36 @@ async function createAnimeCard(item) {
     // Создаем ссылку на страницу деталей в новом формате
     const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(t)}`;
 
-    // Получаем постер приоритетно из Shikimori API
+    // ИСПРАВЛЕНО: Получаем постер приоритетно из Kodik API
     let posterUrl = '/resources/anime-placeholder.svg';
     
     try {
-        // Быстрое получение постера из Shikimori
-        const shikimoriPoster = await getShikimoriPoster(t);
-        if (shikimoriPoster) {
-            posterUrl = shikimoriPoster;
-        } else {
-            // Резервные источники если Shikimori не дал постер:
-            // 1. Kodik API - material_data.poster_url
-            // 2. Kodik API - screenshots[0]
-            if (item.material_data?.poster_url) {
-                posterUrl = item.material_data.poster_url;
-            } else if (item.screenshots && item.screenshots.length > 0) {
-                posterUrl = item.screenshots[0];
+        // 1. Приоритет - Kodik API material_data.poster_url
+        if (item.material_data?.poster_url) {
+            posterUrl = item.material_data.poster_url;
+            console.log('Используем постер из Kodik material_data:', posterUrl);
+        }
+        // 2. Резерв - Kodik API screenshots[0]
+        else if (item.screenshots && item.screenshots.length > 0) {
+            posterUrl = item.screenshots[0];
+            console.log('Используем скриншот из Kodik:', posterUrl);
+        }
+        // 3. Последний резерв - Shikimori API (только если нет постеров из Kodik)
+        else {
+            try {
+                const shikimoriPoster = await posterBatcher.getPoster(t);
+                if (shikimoriPoster) {
+                    posterUrl = shikimoriPoster;
+                    console.log('Используем постер из Shikimori:', posterUrl);
+                }
+            } catch (shikimoriError) {
+                console.warn('Ошибка получения постера из Shikimori:', shikimoriError);
             }
         }
     } catch (error) {
-        console.warn('Ошибка получения постера из Shikimori:', error);
-        // Используем резервные источники
-        if (item.material_data?.poster_url) {
-            posterUrl = item.material_data.poster_url;
-        } else if (item.screenshots && item.screenshots.length > 0) {
-            posterUrl = item.screenshots[0];
-        }
+        console.warn('Ошибка получения постера:', error);
+        // Используем placeholder
+        posterUrl = '/resources/anime-placeholder.svg';
     }
     
     // Оптимизируем URL изображения
@@ -2442,7 +2765,7 @@ async function renderFavoritesPage() {
         }
 
         const displayedFavorites = currentFavorites.slice(0, currentDisplayCount.favorites);
-        const cards = await Promise.all(displayedFavorites.map(safeCreateAnimeCard));
+        const cards = await safeCreateAnimeCards(displayedFavorites);
 
         let html = `<section class="favorites-section">
             <div class="section-header">
@@ -2525,7 +2848,7 @@ window.loadMoreFavorites = async function() {
             currentDisplayCount.favorites
         );
 
-        const newCards = await Promise.all(newFavorites.map(safeCreateAnimeCard));
+        const newCards = await safeCreateAnimeCards(newFavorites);
         
         // Добавляем карточки с анимацией появления
         newCards.forEach((card, index) => {
@@ -3930,16 +4253,33 @@ function optimizeCardAnimations() {
 
 // Оптимизация прокрутки для мобильных устройств
 function optimizeMobileScrolling() {
-    if ('ontouchstart' in window) {
+    // Убираем все блокировки скролла на мобильных
+    if (window.innerWidth <= 768) {
+        document.body.style.overflow = 'auto';
+        document.body.style.overflowX = 'hidden';
+        document.body.style.overflowY = 'auto';
         document.body.style.webkitOverflowScrolling = 'touch';
-        document.body.style.overflowScrolling = 'touch';
+        document.body.style.height = 'auto';
+        document.body.style.minHeight = '100vh';
+        document.body.style.position = 'static';
         
-        // Предотвращение bounce эффекта
+        // Убираем классы которые могут блокировать скролл
+        document.body.classList.remove('modal-open', 'ab-scroll-lock', 'preloader-active');
+        
+        // Исправляем HTML элемент
+        document.documentElement.style.overflow = 'auto';
+        document.documentElement.style.height = 'auto';
+        document.documentElement.style.minHeight = '100vh';
+        
+        // Предотвращение bounce эффекта только для body
         document.body.addEventListener('touchmove', (e) => {
+            // Разрешаем скролл для всех элементов кроме самого body
             if (e.target === document.body) {
                 e.preventDefault();
             }
         }, { passive: false });
+        
+        console.log('Mobile scrolling optimized');
     }
 }
 
@@ -3963,39 +4303,69 @@ console.log(`📁 GitHub: https://github.com/SerGioPlay01/anifox-search`);
 // Функция для принудительной загрузки изображений на мобильных
 function forceLoadImagesOnMobile() {
     if (window.innerWidth <= 768) {
+        console.log('Forcing image load on mobile...');
+        
         const images = document.querySelectorAll('.anime-poster img');
         
         images.forEach((img, index) => {
+            // Убираем все блокирующие стили
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+            img.style.display = 'block';
+            img.style.transition = 'none';
+            img.style.animation = 'none';
+            
+            // Принудительно устанавливаем loading
+            img.loading = 'eager';
+            img.decoding = 'async';
+            
             // Добавляем задержку для поэтапной загрузки
             setTimeout(() => {
-                if (!img.complete && img.src) {
+                if (!img.complete || img.naturalHeight === 0) {
+                    console.log('Reloading image:', img.src);
+                    
                     // Создаем новое изображение для проверки загрузки
                     const testImg = new Image();
                     
                     testImg.onload = function() {
+                        console.log('Image loaded successfully:', this.src);
                         img.src = this.src;
                         img.classList.add('loaded');
+                        img.style.opacity = '1';
                     };
                     
                     testImg.onerror = function() {
-                        console.log('Failed to load image on mobile:', img.src);
+                        console.log('Failed to load image on mobile:', this.src);
                         img.src = '/resources/anime-placeholder.svg';
                         img.classList.add('loaded');
+                        img.style.opacity = '1';
                     };
                     
-                    // Добавляем параметры для мобильной оптимизации
+                    // Оптимизируем URL для мобильных
                     let mobileSrc = img.src;
-                    if (mobileSrc.includes('shikimori.one')) {
+                    if (mobileSrc && mobileSrc !== '/resources/anime-placeholder.svg') {
+                        // Убираем параметры которые могут мешать
+                        mobileSrc = mobileSrc.split('?')[0];
+                        
+                        // Добавляем HTTPS если нужно
                         mobileSrc = mobileSrc.replace('http://', 'https://');
-                        if (!mobileSrc.includes('?')) {
-                            mobileSrc += '?mobile=1&quality=80';
+                        
+                        // Для Shikimori добавляем мобильные параметры
+                        if (mobileSrc.includes('shikimori.one')) {
+                            mobileSrc += '?mobile=1&w=300&h=400';
                         }
                     }
                     
                     testImg.src = mobileSrc;
+                } else {
+                    // Изображение уже загружено
+                    img.style.opacity = '1';
+                    img.classList.add('loaded');
                 }
-            }, index * 100); // Поэтапная загрузка с интервалом 100мс
+            }, index * 50); // Уменьшаем интервал для быстрой загрузки
         });
+        
+        console.log(`Processing ${images.length} images for mobile`);
     }
 }
 
