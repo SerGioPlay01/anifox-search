@@ -10,7 +10,7 @@
  * 
  * Структура страницы:
  * - Заголовок с мета-тегами
- * - Встроенные стили в едином стиле сайта
+ * - Встроенные стили для оформления
  * - Основной контент политики
  * - Футер с информацией
 -->
@@ -21,34 +21,16 @@
     <title>Политика конфиденциальности - AniFox</title>
     <meta name="description" content="Политика конфиденциальности AniFox. Узнайте, как мы собираем, используем и защищаем ваши данные.">
     
-    <!-- Favicon -->
-    <link rel="icon" href="/favicon/favicon.ico">
-    
     <!-- Styles -->
     <style>
         :root {
-            --primary: #6c5ce7;
-            --primary-dark: #5f3dc4;
-            --primary-light: #a29bfe;
-            --secondary: #fd79a8;
-            --accent: #e17055;
-            --background: #0d0b14;
-            --background-light: #1a1625;
-            --surface: rgba(108, 92, 231, 0.08);
-            --surface-hover: rgba(108, 92, 231, 0.15);
-            --white: #ffffff;
-            --text-primary: #ffffff;
-            --text-secondary: #b2bec3;
-            --text-muted: #74b9ff;
-            --radius: 16px;
-            --radius-small: 8px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --glow: 0 0 0 2px rgba(108, 92, 231, 0.5);
-            --glow-hover: 0 0 0 3px rgba(108, 92, 231, 0.8);
-            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            --gradient-secondary: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
-            --blur: blur(20px);
-            --element-height: 40px;
+            --red: #e30613;
+            --black: #0a0a0a;
+            --white: #f2f2f2;
+            --gray: #666;
+            --dark-gray: #333;
+            --radius: 12px;
+            --transition: .3s;
         }
         
         * {
@@ -58,69 +40,31 @@
         }
         
         body {
-            font-family: "Rubik", system-ui, -apple-system, sans-serif;
-            background: var(--background);
-            color: var(--text-primary);
+            background: var(--black) url('/resources/bg.webp') center/cover fixed;
+            color: var(--white);
+            line-height: 1.6;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
-            line-height: 1.6;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 15% 25%, rgba(108, 92, 231, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 85% 75%, rgba(162, 155, 254, 0.12) 0%, transparent 45%),
-                radial-gradient(circle at 50% 10%, rgba(253, 121, 168, 0.08) 0%, transparent 35%),
-                radial-gradient(circle at 20% 80%, rgba(95, 61, 196, 0.12) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(108, 92, 231, 0.08) 0%, transparent 60%),
-                radial-gradient(circle at 40% 60%, rgba(162, 155, 254, 0.06) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: -1;
-            filter: blur(40px);
-            animation: backgroundFloat 20s ease-in-out infinite;
-        }
-
-        @keyframes backgroundFloat {
-            0%, 100% {
-                transform: translateY(0px) scale(1);
-                opacity: 0.8;
-            }
-            25% {
-                transform: translateY(-10px) scale(1.02);
-                opacity: 0.9;
-            }
-            50% {
-                transform: translateY(-5px) scale(0.98);
-                opacity: 0.85;
-            }
-            75% {
-                transform: translateY(-15px) scale(1.01);
-                opacity: 0.95;
-            }
         }
         
         /* Header */
         .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding: 1rem 2rem;
-            background: rgba(13, 11, 20, 0.85);
-            border-bottom: 1px solid rgba(108, 92, 231, 0.3);
             position: sticky;
             top: 0;
-            z-index: 100;
-            backdrop-filter: var(--blur);
-            height: 80px;
+            z-index: 1000;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .logo-link {
@@ -128,49 +72,33 @@
             align-items: center;
             gap: 0.75rem;
             text-decoration: none;
-            color: var(--text-primary);
-            font-weight: 700;
-            font-size: 1.5rem;
-            transition: var(--transition);
-            height: var(--element-height);
+            color: var(--white);
+            font-weight: 600;
+            font-size: 1.25rem;
         }
         
         .logo-link:hover {
-            transform: translateY(-2px);
-            color: var(--primary-light);
-        }
-
-        .logo-text {
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--red);
         }
         
         .nav-btn {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0 1.5rem;
-            height: var(--element-height);
-            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--white);
+            padding: 0.5rem 1rem;
             border-radius: var(--radius);
-            background: var(--surface);
-            color: var(--text-secondary);
-            font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
             text-decoration: none;
-            backdrop-filter: var(--blur);
-            border: 2px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
         }
         
         .nav-btn:hover {
-            color: var(--text-primary);
-            background: var(--surface-hover);
-            transform: translateY(-2px);
-            border-color: var(--primary);
-            box-shadow: var(--glow-hover);
+            background: var(--red);
+            border-color: var(--red);
         }
         
         /* Main Content */
@@ -183,45 +111,34 @@
         }
         
         .policy-container {
-            background: rgba(26, 22, 37, 0.6);
-            border: 2px solid rgba(108, 92, 231, 0.2);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: var(--radius);
             padding: 3rem;
-            backdrop-filter: var(--blur);
-            transition: var(--transition);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .policy-header {
             text-align: center;
             margin-bottom: 3rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid rgba(108, 92, 231, 0.3);
         }
         
         .policy-header h1 {
             font-size: 2.5rem;
             margin-bottom: 1rem;
-            color: var(--text-primary);
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
+            color: var(--white);
         }
         
         .policy-header p {
-            color: var(--text-secondary);
+            color: var(--gray);
             font-size: 1.1rem;
         }
         
         .last-updated {
             text-align: center;
-            color: var(--text-muted);
+            color: var(--gray);
             margin-bottom: 2rem;
             font-style: italic;
-            padding: 1rem;
-            background: var(--surface);
-            border-radius: var(--radius-small);
         }
         
         /* Policy Sections */
@@ -230,72 +147,59 @@
         }
         
         .policy-section h2 {
-            color: var(--primary-light);
+            color: var(--red);
             font-size: 1.5rem;
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--primary);
-            font-weight: 600;
+            border-bottom: 2px solid var(--red);
         }
         
         .policy-section h3 {
-            color: var(--text-primary);
+            color: var(--white);
             font-size: 1.2rem;
             margin: 1.5rem 0 0.75rem;
-            font-weight: 600;
         }
         
         .policy-section p {
             margin-bottom: 1rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
+            color: var(--gray);
         }
         
         .policy-section ul, .policy-section ol {
             margin: 1rem 0;
             padding-left: 2rem;
-            color: var(--text-secondary);
+            color: var(--gray);
         }
         
         .policy-section li {
             margin-bottom: 0.5rem;
-            line-height: 1.6;
         }
         
         .highlight {
-            background: rgba(108, 92, 231, 0.1);
-            border-left: 4px solid var(--primary);
-            padding: 1.5rem;
+            background: rgba(227, 6, 19, 0.1);
+            border-left: 4px solid var(--red);
+            padding: 1rem 1.5rem;
             margin: 1.5rem 0;
             border-radius: 0 var(--radius) var(--radius) 0;
-            backdrop-filter: var(--blur);
-        }
-
-        .highlight p {
-            color: var(--text-primary);
-            font-weight: 500;
         }
         
         .contact-info {
-            background: var(--surface);
+            background: rgba(255, 255, 255, 0.08);
             border-radius: var(--radius);
             padding: 2rem;
             margin-top: 2rem;
-            border: 1px solid rgba(108, 92, 231, 0.2);
         }
         
         .contact-info h3 {
-            color: var(--primary-light);
+            color: var(--red);
             margin-bottom: 1rem;
-            font-weight: 600;
         }
         
         /* Footer */
         .footer {
-            background: rgba(13, 11, 20, 0.9);
-            border-top: 1px solid rgba(108, 92, 231, 0.3);
+            background: rgba(10, 10, 10, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             margin-top: auto;
-            backdrop-filter: var(--blur);
         }
         
         .footer-content {
@@ -306,37 +210,24 @@
         }
         
         .footer p {
-            color: var(--text-secondary);
+            color: var(--gray);
             margin-bottom: 0.5rem;
-        }
-
-        .footer a {
-            color: var(--text-primary);
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .footer a:hover {
-            color: var(--primary-light);
         }
         
         .back-to-top {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--gradient-primary);
-            color: var(--white);
+            display: inline-block;
+            background: var(--red);
+            color: white;
             padding: 0.75rem 1.5rem;
             border-radius: var(--radius);
             text-decoration: none;
             margin-top: 1rem;
             transition: var(--transition);
-            font-weight: 600;
         }
         
         .back-to-top:hover {
+            background: #ff1a2e;
             transform: translateY(-2px);
-            box-shadow: var(--glow-hover);
         }
         
         /* Responsive */
@@ -397,45 +288,16 @@
 <body>
     <!-- Header -->
     <header class="header">
-        <a href="/" class="logo-link">
-            <!-- Оптимизированный SVG логотип -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 265 275" fill="none"
-                aria-hidden="true">
-                <rect width="40.48" height="283.04" rx="15" transform="matrix(.9066 -.422 .42324 .90602 103.258 17.083)"
-                    fill="url(#paint0_linear)" />
-                <foreignObject x="-94.47" y="2.529" width="453.94" height="366.95">
-                    <div xmlns="http://www.w3.org/1999/xhtml"
-                        style="backdrop-filter:blur(50px);clip-path:url(#bgblur_clip);height:100%;width:100%"></div>
-                </foreignObject>
-                <rect width="40.44" height="283.32" rx="15" transform="matrix(-.5065 -.86224 -.86303 .50515 265 131.88)"
-                    fill="url(#paint1_linear)" />
-                <rect width="40.48" height="283.04" rx="15" transform="matrix(-.9066 -.422 -.42324 .90602 156.62 17.54)"
-                    fill="url(#paint2_linear)" />
-                <defs>
-                    <clipPath id="bgblur_clip" transform="translate(94.47 -2.529)">
-                        <rect width="40.44" height="283.32" rx="15"
-                            transform="matrix(-.5065 -.86224 -.86303 .50515 265 131.88)" />
-                    </clipPath>
-                    <linearGradient id="paint0_linear" x1="20.24" y1="0" x2="27.54" y2="495.89">
-                        <stop stop-color="#fff" />
-                        <stop offset="1" stop-color="#fff" stop-opacity=".7" />
-                    </linearGradient>
-                    <linearGradient id="paint1_linear" x1="25.124" y1="411.96" x2="33.264" y2="-4.776">
-                        <stop stop-color="#22083f" stop-opacity=".7" />
-                        <stop offset="1" stop-color="#6c16c9" />
-                    </linearGradient>
-                    <linearGradient id="paint2_linear" x1="20.24" y1="0" x2="20.24" y2="283.04">
-                        <stop stop-color="#fff" />
-                        <stop offset="1" stop-color="#fff" />
-                    </linearGradient>
-                </defs>
-            </svg>
-            <span class="logo-text">AniFox</span>
-        </a>
-        <a href="/" class="nav-btn">
-            <i class="fas fa-arrow-left"></i>
-            Вернуться на главную
-        </a>
+        <div class="header-content">
+            <a href="/" class="logo-link">
+                <i class="fas fa-fox"></i>
+                <span>AniFox</span>
+            </a>
+            <a href="/" class="nav-btn">
+                <i class="fas fa-arrow-left"></i>
+                Вернуться на главную
+            </a>
+        </div>
     </header>
 
     <!-- Main Content -->
@@ -447,7 +309,7 @@
             </div>
             
             <div class="last-updated">
-                Последнее обновление: 17 января 2025
+                Последнее обновление: 7  октября 2025
             </div>
 
             <div class="policy-section">
@@ -633,13 +495,11 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
-            <p>&copy; 2025 AniFox. Все права защищены.</p>
+            <p>&copy; 2024 AniFox. </p>
             <p>Политика конфиденциальности</p>
             <div style="margin: 1rem 0;">
-                <a href="/" style="color: var(--text-primary); text-decoration: none; margin-right: 1rem;">Главная</a>
-                <a href="/license.html" style="color: var(--text-primary); text-decoration: none; margin-right: 1rem;">Лицензия</a>
-                <a href="/terms-of-service.html" style="color: var(--text-primary); text-decoration: none; margin-right: 1rem;">Условия использования</a>
-                <a href="/cookie-policy.html" style="color: var(--text-primary); text-decoration: none;">Политика cookies</a>
+                <a href="/" style="color: var(--white); text-decoration: none; margin-right: 1rem;">Главная</a>
+                <a href="/license.html" style="color: var(--white); text-decoration: none;">Лицензия</a>
             </div>
             <a href="#" class="back-to-top" onclick="scrollToTop()">
                 <i class="fas fa-arrow-up"></i>

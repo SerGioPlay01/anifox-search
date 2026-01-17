@@ -1,30 +1,30 @@
+# AniFox 2.4 - Robots.txt
+# Разработано SerGio Play | https://sergioplay-dev.vercel.app/
+
+# Разрешаем всем поисковым роботам индексировать сайт
 User-agent: *
 Allow: /
 
-# Основные страницы
-Allow: /
-Allow: /anime-detail.html
-Allow: /?page=favorites
+# Разрешаем индексацию популярных поисковых запросов
+Allow: /?q=naruto
+Allow: /?q=attack%20on%20titan
+Allow: /?q=demon%20slayer
+Allow: /?q=one%20piece
+Allow: /?q=death%20note
+Allow: /?q=смотреть%20аниме
+Allow: /?q=аниме%20онлайн
+Allow: /?q=аниме%20бесплатно
 
-# Статические ресурсы
-Allow: /css/
-Allow: /webfonts/
-Allow: /resources/
-Allow: /favicon/
+# Запрещаем индексацию ресурсов и шрифтов
+Disallow: /resources/
+Disallow: /fonts/
+Disallow: /webfonts/
+Disallow: /css/
+Disallow: /js/
 
-# Запрещаем служебные файлы
-Disallow: /api.js
-Disallow: /script.js
-Disallow: /seo.js
-Disallow: /*.js$
-Disallow: /vercel.json
-Disallow: /package.json
-Disallow: /.git/
-Disallow: /.vscode/
-
-# Sitemap
+# Указываем пути к картам сайта
 Sitemap: https://anifox-search.vercel.app/sitemap.xml
 Sitemap: https://anifox-search.vercel.app/sitemap-seo.xml
 
-# Crawl-delay для вежливого краулинга
+# Дополнительные директивы для лучшей индексации
 Crawl-delay: 1

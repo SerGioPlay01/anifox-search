@@ -399,309 +399,20 @@ function debounceSearch(func, delay = 500) {
     };
 }
 
-// ИСПРАВЛЕННАЯ ленивая загрузка изображений для мобильных и десктопа
 function lazyLoadImages() {
-    const images = document.querySelectorAll('img[data-src], img:not([src]), img[src=""], img[src*="undefined"], img[src*="null"]');
-    
-    if ('IntersectionObserver' in window && window.innerWidth > 768) {
-        // Используем IntersectionObserver только на десктопе
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    loadImageSafely(img);
-                    imageObserver.unobserve(img);
-                }
-            });
-        }, {
-            rootMargin: '50px 0px',
-            threshold: 0.1
-        });
-
-        images.forEach(img => {
-            img.classList.add('lazy');
-            imageObserver.observe(img);
-        });
-    } else {
-        // На мобильных загружаем все изображения сразу для лучшей производительности
-        images.forEach(img => {
-            loadImageSafely(img);
-        });
-    }
-}
-
-// ИСПРАВЛЕННАЯ безопасная загрузка изображения с кешированием и retry логикой
-function loadImageSafely(img) {
-    if (img.dataset.loading) return; // Предотвращаем повторную загрузку
-    
-    img.dataset.loading = 'true';
-    
-    // Проверяем кеш успешно загруженных изображений
-    const checkCache = () => {
-        try {
-            const cachedImages = JSON.parse(localStorage.getItem('cachedImages') || '{}');
-            const originalSrc = img.dataset.src || img.src;
-            
-            if (cachedImages[originalSrc] && cachedImages[originalSrc] !== originalSrc) {
-                return cachedImages[originalSrc];
+    const images = document.querySelectorAll('img[data-src]');
+    const imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                imageObserver.unobserve(img);
             }
-        } catch (e) {
-            console.warn('Failed to read image cache:', e);
-        }
-        return null;
-    };
-    
-    // Сохраняем в кеш успешно загруженные изображения
-    const saveToCache = (originalSrc, workingSrc) => {
-        try {
-            const cachedImages = JSON.parse(localStorage.getItem('cachedImages') || '{}');
-            cachedImages[originalSrc] = workingSrc;
-            
-            // Ограничиваем размер кеша
-            const keys = Object.keys(cachedImages);
-            if (keys.length > 100) {
-                // Удаляем старые записи
-                keys.slice(0, 20).forEach(key => delete cachedImages[key]);
-            }
-            
-            localStorage.setItem('cachedImages', JSON.stringify(cachedImages));
-        } catch (e) {
-            console.warn('Failed to save to image cache:', e);
-        }
-    };
-    
-    // Обработчик успешной загрузки
-    img.onload = function() {
-        this.classList.remove('lazy', 'loading');
-        this.classList.add('loaded');
-        this.style.opacity = '1';
-        this.dataset.loading = 'false';
-        
-        // Сохраняем в кеш если это не placeholder
-        const originalSrc = this.dataset.originalSrc || this.dataset.src;
-        if (originalSrc && !this.src.includes('placeholder') && !this.src.includes('data:image')) {
-            saveToCache(originalSrc, this.src);
-        }
-    };
-    
-    // Обработчик ошибки с retry логикой
-    img.onerror = function() {
-        this.dataset.loading = 'false';
-        
-        // Пробуем альтернативные источники
-        const retryCount = parseInt(this.dataset.retryCount || '0');
-        const originalSrc = this.dataset.originalSrc || this.dataset.src || this.src;
-        
-        if (retryCount < 2 && originalSrc) {
-            this.dataset.retryCount = (retryCount + 1).toString();
-            
-            // Пробуем разные варианты URL
-            const alternatives = [
-                originalSrc.replace(/\/original\//, '/preview/'),
-                originalSrc.replace(/\/x96\//, '/x48/'),
-                originalSrc.replace('https://', 'http://'),
-                originalSrc + '?v=' + Date.now()
-            ];
-            
-            const nextUrl = alternatives[retryCount];
-            if (nextUrl && nextUrl !== this.src) {
-                console.log(`Retry ${retryCount + 1} for image:`, nextUrl);
-                setTimeout(() => {
-                    this.src = nextUrl;
-                }, 500 * (retryCount + 1)); // Увеличиваем задержку с каждой попыткой
-                return;
-            }
-        }
-        
-        // Все попытки исчерпаны, показываем placeholder
-        handleImageError(this);
-    };
-    
-    // Определяем URL для загрузки
-    let imageUrl = img.dataset.src || img.src;
-    
-    if (imageUrl && imageUrl !== '' && !imageUrl.includes('undefined') && !imageUrl.includes('null')) {
-        // Проверяем кеш
-        const cachedUrl = checkCache();
-        if (cachedUrl) {
-            imageUrl = cachedUrl;
-        }
-        
-        // Сохраняем оригинальный URL
-        if (!img.dataset.originalSrc) {
-            img.dataset.originalSrc = img.dataset.src || img.src;
-        }
-        
-        // Добавляем стили загрузки
-        img.classList.add('loading');
-        img.style.opacity = '0.7';
-        img.style.transition = 'opacity 0.3s ease';
-        
-        // Загружаем изображение
-        img.src = imageUrl;
-        img.removeAttribute('data-src');
-        
-    } else if (!img.src || img.src === '' || img.src.includes('undefined') || img.src.includes('null')) {
-        // Нет валидного URL, сразу показываем placeholder
-        img.dataset.loading = 'false';
-        handleImageError(img);
-    } else {
-        // Если src уже есть и валидный, просто помечаем как загруженное
-        img.classList.remove('lazy', 'loading');
-        img.classList.add('loaded');
-        img.style.opacity = '1';
-        img.dataset.loading = 'false';
-    }
-}
-
-// Оптимизированный скроллинг с throttling
-let scrollTimeout = null;
-let isScrolling = false;
-
-function optimizeScrollPerformance() {
-    const scrollToTopBtn = document.getElementById('scrollToTop');
-    
-    function handleScroll() {
-        if (!isScrolling) {
-            window.requestAnimationFrame(() => {
-                if (scrollToTopBtn) {
-                    scrollToTopBtn.classList.toggle("show", window.scrollY > 300);
-                }
-                isScrolling = false;
-            });
-            isScrolling = true;
-        }
-    }
-    
-    // Throttled scroll handler
-    window.addEventListener('scroll', handleScroll, { passive: true });
-}
-
-// Виртуализация для больших списков
-class VirtualScroller {
-    constructor(container, itemHeight = 400, buffer = 5) {
-        this.container = container;
-        this.itemHeight = itemHeight;
-        this.buffer = buffer;
-        this.items = [];
-        this.visibleItems = new Map();
-        this.scrollTop = 0;
-        this.containerHeight = 0;
-        
-        this.init();
-    }
-    
-    init() {
-        this.container.style.position = 'relative';
-        this.container.addEventListener('scroll', this.handleScroll.bind(this), { passive: true });
-        this.updateContainerHeight();
-    }
-    
-    setItems(items) {
-        this.items = items;
-        this.updateVirtualHeight();
-        this.render();
-    }
-    
-    updateContainerHeight() {
-        this.containerHeight = this.container.clientHeight;
-    }
-    
-    updateVirtualHeight() {
-        const totalHeight = this.items.length * this.itemHeight;
-        let spacer = this.container.querySelector('.virtual-spacer');
-        
-        if (!spacer) {
-            spacer = document.createElement('div');
-            spacer.className = 'virtual-spacer';
-            spacer.style.position = 'absolute';
-            spacer.style.top = '0';
-            spacer.style.left = '0';
-            spacer.style.right = '0';
-            spacer.style.pointerEvents = 'none';
-            this.container.appendChild(spacer);
-        }
-        
-        spacer.style.height = `${totalHeight}px`;
-    }
-    
-    handleScroll() {
-        this.scrollTop = this.container.scrollTop;
-        this.render();
-    }
-    
-    render() {
-        const startIndex = Math.max(0, Math.floor(this.scrollTop / this.itemHeight) - this.buffer);
-        const endIndex = Math.min(
-            this.items.length - 1,
-            Math.ceil((this.scrollTop + this.containerHeight) / this.itemHeight) + this.buffer
-        );
-        
-        // Удаляем элементы, которые больше не видны
-        this.visibleItems.forEach((element, index) => {
-            if (index < startIndex || index > endIndex) {
-                element.remove();
-                this.visibleItems.delete(index);
-            }
-        });
-        
-        // Добавляем новые видимые элементы
-        for (let i = startIndex; i <= endIndex; i++) {
-            if (!this.visibleItems.has(i) && this.items[i]) {
-                const element = this.createItemElement(this.items[i], i);
-                this.visibleItems.set(i, element);
-                this.container.appendChild(element);
-            }
-        }
-    }
-    
-    createItemElement(item, index) {
-        const element = document.createElement('div');
-        element.style.position = 'absolute';
-        element.style.top = `${index * this.itemHeight}px`;
-        element.style.left = '0';
-        element.style.right = '0';
-        element.style.height = `${this.itemHeight}px`;
-        element.innerHTML = item;
-        return element;
-    }
-}
-
-// Оптимизация анимаций с requestAnimationFrame
-function smoothTransition(element, property, from, to, duration = 300) {
-    return new Promise(resolve => {
-        const start = performance.now();
-        const change = to - from;
-        
-        function animate(currentTime) {
-            const elapsed = currentTime - start;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // Easing function (ease-out)
-            const easeOut = 1 - Math.pow(1 - progress, 3);
-            const currentValue = from + (change * easeOut);
-            
-            element.style[property] = `${currentValue}px`;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                resolve();
-            }
-        }
-        
-        requestAnimationFrame(animate);
-    });
-}
-
-// Оптимизация DOM операций
-function batchDOMUpdates(updates) {
-    return new Promise(resolve => {
-        requestAnimationFrame(() => {
-            updates.forEach(update => update());
-            resolve();
         });
     });
+
+    images.forEach(img => imageObserver.observe(img));
 }
 
 const fetchCache = new Map();
@@ -762,8 +473,7 @@ function removeLoadingIndicator() {
 
 function createLoadMoreButton(text, onClick, id = 'loadMoreBtn') {
     return `<button class="load-more-btn" id="${id}" onclick="${onClick}">
-        <i class="fas fa-arrow-down"></i> 
-        <span class="btn-text">${text}</span>
+        <i class="fas fa-arrow-down"></i> ${text}
     </button>`;
 }
 
@@ -782,510 +492,24 @@ async function safeCreateAnimeCard(item) {
     }
 }
 
-// Безопасная пакетная функция создания карточек
-async function safeCreateAnimeCards(animeList) {
-    try {
-        return await createAnimeCardsWithPosters(animeList);
-    } catch (error) {
-        console.error('Error in batch card creation, falling back to individual creation:', error);
-        // Fallback к индивидуальному созданию карточек
-        return Promise.all(animeList.map(safeCreateAnimeCard));
-    }
-}
-
 function createFallbackCard(item) {
-    // Создаем короткий ID для аниме
-    const animeId = generateAnimeId(item.link);
-    const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(item.title)}`;
-    
-    // ИСПРАВЛЕНО: Пытаемся использовать постер из Kodik API даже в fallback
-    let posterUrl = '/resources/anime-placeholder.svg';
-    if (item.material_data?.poster_url) {
-        posterUrl = item.material_data.poster_url;
-    } else if (item.screenshots && item.screenshots.length > 0) {
-        posterUrl = item.screenshots[0];
-    }
-    
     return `
-    <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(item.title)}', '${item.link}')" style="cursor: pointer;">
-        <div class="anime-poster">
-            <img src="${posterUrl}" 
-                 alt="Постер ${escapeHtml(item.title)}" 
-                 loading="eager"
-                 onerror="window.fixBrokenImage ? window.fixBrokenImage(this) : (this.onerror=null, this.src='/resources/anime-placeholder.svg');">
-            <div class="anime-overlay">
-                <div class="play-button">
-                    <i class="fas fa-play"></i>
-                </div>
+    <div class="card fade-in">
+        <div class="card-header">
+            <h3 class="h2_name">${escapeHtml(item.title)}</h3>
+            <div class="info-links">
+                <a href="https://shikimori.one/animes?search=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
+                <a href="https://anilist.co/search/anime?search=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
+                <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
             </div>
         </div>
-        
-        <div class="anime-info">
-            <h3 class="anime-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
-            
-            <div class="anime-meta">
-                <span class="anime-year">
-                    <i class="fas fa-calendar"></i>
-                    ${item.year || 'Неизвестно'}
-                </span>
-            </div>
-        </div>
-
-        <div class="anime-actions" onclick="event.stopPropagation();">
-            <button class="action-btn favorite-btn" data-link="${item.link}" onclick="toggleFavorite('${escapeHtml(item.title).replace(/'/g, "\\'")}','${item.link}')" title="Добавить в избранное">
-                <i class="far fa-heart"></i>
-            </button>
-
-            <button class="action-btn share-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
-                <i class="fas fa-share"></i>
+        <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${escapeHtml(item.title)}"></iframe>
+        <div class="card-actions">
+            <button class="action-btn favorite-btn" data-link="${item.link}" onclick="toggleFavorite('${escapeHtml(item.title).replace(/'/g, "\\'")}','${item.link}')" title="Удалить из избранного">
+                <i class="fas fa-heart"></i>
             </button>
         </div>
     </div>`;
-}
-
-// Батчинг запросов постеров для оптимизации
-class PosterBatcher {
-    constructor() {
-        this.queue = [];
-        this.processing = false;
-        this.batchSize = 3; // Обрабатываем по 3 постера одновременно
-        this.batchDelay = 1000; // Задержка между батчами
-    }
-
-    async getPoster(title) {
-        return new Promise((resolve) => {
-            this.queue.push({ title, resolve });
-            this.processBatch();
-        });
-    }
-
-    async processBatch() {
-        if (this.processing || this.queue.length === 0) return;
-        
-        this.processing = true;
-        
-        while (this.queue.length > 0) {
-            const batch = this.queue.splice(0, this.batchSize);
-            
-            // Обрабатываем батч параллельно
-            const promises = batch.map(async ({ title, resolve }) => {
-                try {
-                    const poster = await getShikimoriPoster(title);
-                    resolve(poster);
-                } catch (error) {
-                    console.warn('Poster batch error:', error);
-                    resolve(null);
-                }
-            });
-            
-            await Promise.all(promises);
-            
-            // Задержка между батчами
-            if (this.queue.length > 0) {
-                await new Promise(resolve => setTimeout(resolve, this.batchDelay));
-            }
-        }
-        
-        this.processing = false;
-    }
-}
-
-const posterBatcher = new PosterBatcher();
-
-// Многоуровневое кеширование постеров
-class PosterCacheManager {
-    constructor() {
-        this.memoryCache = new Map(); // Быстрый кеш в памяти
-        this.localStorageCache = new Map(); // Кеш в localStorage
-        this.maxMemorySize = 100; // Максимум элементов в памяти
-        this.maxLocalStorageSize = 500; // Максимум элементов в localStorage
-        this.cacheVersion = '2.4';
-        this.cacheTTL = 7 * 24 * 60 * 60 * 1000; // 7 дней
-        
-        this.initLocalStorageCache();
-    }
-
-    // Инициализация кеша из localStorage
-    initLocalStorageCache() {
-        try {
-            const cached = localStorage.getItem('posterCache_v' + this.cacheVersion);
-            if (cached) {
-                const data = JSON.parse(cached);
-                const now = Date.now();
-                
-                // Фильтруем устаревшие записи
-                Object.entries(data).forEach(([key, value]) => {
-                    if (now - value.timestamp < this.cacheTTL) {
-                        this.localStorageCache.set(key, value);
-                    }
-                });
-                
-                console.log(`Loaded ${this.localStorageCache.size} posters from localStorage cache`);
-            }
-        } catch (error) {
-            console.warn('Failed to load poster cache from localStorage:', error);
-            this.clearLocalStorageCache();
-        }
-    }
-
-    // Сохранение кеша в localStorage
-    saveToLocalStorage() {
-        try {
-            const cacheData = {};
-            this.localStorageCache.forEach((value, key) => {
-                cacheData[key] = value;
-            });
-            
-            localStorage.setItem('posterCache_v' + this.cacheVersion, JSON.stringify(cacheData));
-        } catch (error) {
-            console.warn('Failed to save poster cache to localStorage:', error);
-            // Если места не хватает, очищаем старые записи
-            this.cleanupLocalStorageCache();
-        }
-    }
-
-    // Очистка старых записей из localStorage
-    cleanupLocalStorageCache() {
-        const now = Date.now();
-        let cleaned = 0;
-        
-        this.localStorageCache.forEach((value, key) => {
-            if (now - value.timestamp > this.cacheTTL) {
-                this.localStorageCache.delete(key);
-                cleaned++;
-            }
-        });
-        
-        // Если все еще слишком много записей, удаляем самые старые
-        if (this.localStorageCache.size > this.maxLocalStorageSize) {
-            const entries = Array.from(this.localStorageCache.entries())
-                .sort((a, b) => a[1].timestamp - b[1].timestamp);
-            
-            const toDelete = entries.slice(0, entries.length - this.maxLocalStorageSize);
-            toDelete.forEach(([key]) => {
-                this.localStorageCache.delete(key);
-                cleaned++;
-            });
-        }
-        
-        if (cleaned > 0) {
-            console.log(`Cleaned ${cleaned} old poster cache entries`);
-            this.saveToLocalStorage();
-        }
-    }
-
-    // Очистка кеша localStorage
-    clearLocalStorageCache() {
-        try {
-            localStorage.removeItem('posterCache_v' + this.cacheVersion);
-            this.localStorageCache.clear();
-        } catch (error) {
-            console.warn('Failed to clear localStorage cache:', error);
-        }
-    }
-
-    // Получение постера из кеша
-    get(title) {
-        const key = this.getCacheKey(title);
-        
-        // Сначала проверяем память
-        if (this.memoryCache.has(key)) {
-            const cached = this.memoryCache.get(key);
-            if (Date.now() - cached.timestamp < this.cacheTTL) {
-                return cached.url;
-            } else {
-                this.memoryCache.delete(key);
-            }
-        }
-        
-        // Затем проверяем localStorage
-        if (this.localStorageCache.has(key)) {
-            const cached = this.localStorageCache.get(key);
-            if (Date.now() - cached.timestamp < this.cacheTTL) {
-                // Копируем в память для быстрого доступа
-                this.memoryCache.set(key, cached);
-                this.cleanupMemoryCache();
-                return cached.url;
-            } else {
-                this.localStorageCache.delete(key);
-            }
-        }
-        
-        return null;
-    }
-
-    // Сохранение постера в кеш
-    set(title, url) {
-        if (!title || !url || url === '/resources/anime-placeholder.svg') return;
-        
-        const key = this.getCacheKey(title);
-        const cacheEntry = {
-            url: url,
-            timestamp: Date.now()
-        };
-        
-        // Сохраняем в память
-        this.memoryCache.set(key, cacheEntry);
-        this.cleanupMemoryCache();
-        
-        // Сохраняем в localStorage
-        this.localStorageCache.set(key, cacheEntry);
-        
-        // Периодически сохраняем в localStorage (не каждый раз для производительности)
-        if (Math.random() < 0.1) { // 10% вероятность
-            this.saveToLocalStorage();
-        }
-    }
-
-    // Очистка кеша памяти
-    cleanupMemoryCache() {
-        if (this.memoryCache.size > this.maxMemorySize) {
-            const entries = Array.from(this.memoryCache.entries())
-                .sort((a, b) => a[1].timestamp - b[1].timestamp);
-            
-            const toDelete = entries.slice(0, entries.length - this.maxMemorySize);
-            toDelete.forEach(([key]) => {
-                this.memoryCache.delete(key);
-            });
-        }
-    }
-
-    // Генерация ключа кеша
-    getCacheKey(title) {
-        return title.toLowerCase().trim().replace(/[^\w\s]/g, '').replace(/\s+/g, '_');
-    }
-
-    // Предзагрузка постеров
-    async preloadPosters(titles) {
-        const uncachedTitles = titles.filter(title => !this.get(title));
-        
-        if (uncachedTitles.length === 0) {
-            console.log('All posters already cached');
-            return;
-        }
-        
-        console.log(`Preloading ${uncachedTitles.length} posters...`);
-        
-        // Загружаем по батчам
-        const batchSize = 3;
-        for (let i = 0; i < uncachedTitles.length; i += batchSize) {
-            const batch = uncachedTitles.slice(i, i + batchSize);
-            
-            const promises = batch.map(async (title) => {
-                try {
-                    const poster = await getShikimoriPoster(title);
-                    if (poster) {
-                        this.set(title, poster);
-                    }
-                } catch (error) {
-                    console.warn(`Failed to preload poster for ${title}:`, error);
-                }
-            });
-            
-            await Promise.allSettled(promises);
-            
-            // Небольшая пауза между батчами
-            if (i + batchSize < uncachedTitles.length) {
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-        }
-        
-        // Сохраняем в localStorage после предзагрузки
-        this.saveToLocalStorage();
-    }
-
-    // Получение статистики кеша
-    getStats() {
-        return {
-            memorySize: this.memoryCache.size,
-            localStorageSize: this.localStorageCache.size,
-            maxMemorySize: this.maxMemorySize,
-            maxLocalStorageSize: this.maxLocalStorageSize
-        };
-    }
-}
-
-// Глобальный экземпляр менеджера кеша постеров
-const posterCache = new PosterCacheManager();
-
-// Rate limiting для Shikimori API
-class ShikimoriRateLimiter {
-    constructor() {
-        this.requests = [];
-        this.maxRequests = 5; // Максимум 5 запросов
-        this.timeWindow = 60000; // За 60 секунд
-        this.minDelay = 200; // Минимальная задержка между запросами
-        this.lastRequestTime = 0;
-    }
-
-    async waitForSlot() {
-        const now = Date.now();
-        
-        // Очищаем старые запросы
-        this.requests = this.requests.filter(time => now - time < this.timeWindow);
-        
-        // Проверяем лимит
-        if (this.requests.length >= this.maxRequests) {
-            const oldestRequest = Math.min(...this.requests);
-            const waitTime = this.timeWindow - (now - oldestRequest) + 100;
-            console.log(`Shikimori rate limit: waiting ${waitTime}ms`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            return this.waitForSlot();
-        }
-        
-        // Проверяем минимальную задержку
-        const timeSinceLastRequest = now - this.lastRequestTime;
-        if (timeSinceLastRequest < this.minDelay) {
-            const waitTime = this.minDelay - timeSinceLastRequest;
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-        }
-        
-        this.requests.push(Date.now());
-        this.lastRequestTime = Date.now();
-    }
-}
-
-const shikimoriLimiter = new ShikimoriRateLimiter();
-
-// Пакетная загрузка постеров из Shikimori с улучшенным кешированием
-async function batchLoadShikimoriPosters(animeList) {
-    const BATCH_SIZE = 5; // Уменьшаем размер батча для лучшей производительности
-    const results = new Map();
-    
-    // Сначала проверяем кеш для всех аниме
-    const uncachedAnime = [];
-    
-    for (const anime of animeList) {
-        const cachedPoster = posterCache.get(anime.title);
-        if (cachedPoster) {
-            results.set(anime.title, cachedPoster);
-        } else {
-            uncachedAnime.push(anime);
-        }
-    }
-    
-    console.log(`Found ${results.size} cached posters, need to load ${uncachedAnime.length} more`);
-    
-    if (uncachedAnime.length === 0) {
-        return results;
-    }
-    
-    // Разбиваем некешированные аниме на батчи
-    for (let i = 0; i < uncachedAnime.length; i += BATCH_SIZE) {
-        const batch = uncachedAnime.slice(i, i + BATCH_SIZE);
-        
-        // Загружаем батч параллельно
-        const batchPromises = batch.map(async (anime) => {
-            try {
-                const poster = await getShikimoriPoster(anime.title);
-                return { title: anime.title, poster };
-            } catch (error) {
-                console.warn(`Ошибка загрузки постера для ${anime.title}:`, error);
-                return { title: anime.title, poster: null };
-            }
-        });
-        
-        const batchResults = await Promise.allSettled(batchPromises);
-        
-        // Сохраняем результаты
-        batchResults.forEach((result, index) => {
-            if (result.status === 'fulfilled' && result.value) {
-                const { title, poster } = result.value;
-                if (poster) {
-                    results.set(title, poster);
-                    // Постер уже сохранен в кеш в функции getShikimoriPoster
-                }
-            }
-        });
-        
-        // Пауза между батчами для снижения нагрузки на API
-        if (i + BATCH_SIZE < uncachedAnime.length) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-        }
-    }
-    
-    // Сохраняем кеш в localStorage после загрузки
-    posterCache.saveToLocalStorage();
-    
-    return results;
-}
-
-// Быстрое получение постера из Shikimori с кешированием
-async function getShikimoriPoster(title) {
-    // Сначала проверяем кеш постеров
-    const cachedPoster = posterCache.get(title);
-    if (cachedPoster) {
-        return cachedPoster;
-    }
-
-    const cacheKey = `poster_${title.toLowerCase().trim()}`;
-    const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 дней для постеров
-
-    try {
-        // Проверяем кэш IndexedDB
-        const cached = await dbGet(STORE_SHIKIMORI_CACHE, cacheKey);
-        if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
-            // Сохраняем в кеш постеров для быстрого доступа
-            if (cached.data) {
-                posterCache.set(title, cached.data);
-            }
-            return cached.data;
-        }
-    } catch (e) {}
-
-    try {
-        // Ждем разрешения на запрос
-        await shikimoriLimiter.waitForSlot();
-        
-        const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 8000);
-
-        const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(title)}&limit=1`;
-        const response = await fetch(searchUrl, {
-            signal: ctrl.signal,
-            headers: {
-                "User-Agent": "AniFox/2.4 (https://anifox-search.vercel.app)",
-                Accept: "application/json",
-            },
-        });
-
-        clearTimeout(timeout);
-
-        if (response.status === 429) {
-            console.warn('Shikimori rate limit exceeded, using fallback');
-            return null;
-        }
-
-        if (!response.ok) {
-            console.warn(`Shikimori API error: ${response.status}`);
-            return null;
-        }
-
-        const data = await response.json();
-        if (!data || data.length === 0) return null;
-
-        const anime = data[0];
-        const posterUrl = anime.image ? `https://shikimori.one${anime.image.x312 || anime.image.original}` : null;
-
-        // Кэшируем результат в IndexedDB
-        try {
-            await dbPut(STORE_SHIKIMORI_CACHE, {
-                query: cacheKey,
-                data: posterUrl,
-                cachedAt: Date.now(),
-            });
-        } catch (e) {}
-
-        // Сохраняем в кеш постеров
-        if (posterUrl) {
-            posterCache.set(title, posterUrl);
-        }
-
-        return posterUrl;
-    } catch (e) {
-        console.warn('Shikimori poster request failed:', e.message);
-        return null;
-    }
 }
 
 function escapeHtml(unsafe) {
@@ -1296,152 +520,6 @@ function escapeHtml(unsafe) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-}
-
-// Проверка доступности изображения
-async function isImageAccessible(url) {
-    try {
-        // Для локальных изображений всегда возвращаем true
-        if (url.startsWith('/') || url.startsWith('./')) {
-            return true;
-        }
-        
-        // Для Kodik изображений всегда возвращаем true - они надежные
-        if (url.includes('kodikapi.com') || url.includes('kodik-storage') || url.includes('kodik.cc')) {
-            return true;
-        }
-        
-        // Проверяем известные проблемные домены
-        const problematicDomains = [
-            'st.kp.yandex.net',  // Кинопоиск блокирует внешние запросы
-            'avatars.mds.yandex.net'
-        ];
-        
-        for (const domain of problematicDomains) {
-            if (url.includes(domain)) {
-                return false; // Сразу используем плейсхолдер для проблемных доменов
-            }
-        }
-        
-        // Для остальных доменов возвращаем true
-        // Браузер сам обработает CORS ошибки через onerror
-        return true;
-        
-    } catch (error) {
-        return false;
-    }
-}
-
-// Оптимизация URL изображений для лучшей производительности
-function optimizeImageUrl(url, width = 312) {
-    if (!url || url.startsWith('/')) return url;
-    
-    // Обеспечиваем HTTPS
-    url = url.replace('http://', 'https://');
-    
-    // Оптимизация для Shikimori
-    if (url.includes('shikimori.one')) {
-        return url.replace('/original/', `/x${width}/`);
-    }
-    
-    // Для Kodik изображений оставляем как есть - они уже оптимизированы
-    if (url.includes('kodikapi.com') || url.includes('kodik-storage') || url.includes('kodik.cc')) {
-        return url;
-    }
-    
-    return url;
-}
-
-// Глобальная функция для обработки ошибок изображений
-// ИСПРАВЛЕННАЯ функция для обработки ошибок изображений с кешированием
-function handleImageError(img) {
-    if (img.dataset.errorHandled) return; // Предотвращаем повторную обработку
-    
-    img.dataset.errorHandled = 'true';
-    
-    // Пробуем альтернативные источники изображений
-    const currentSrc = img.src;
-    const originalSrc = img.dataset.originalSrc || currentSrc;
-    
-    // Список альтернативных placeholder'ов
-    const fallbackImages = [
-        '/resources/anime-placeholder.svg',
-        '/resources/obl_web.jpg',
-        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM2YzVjZTciLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNhMjliZmUiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2cpIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI0OCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5O6PC90ZXh0Pjwvc3ZnPg=='
-    ];
-    
-    // Если это не placeholder, пробуем загрузить placeholder
-    if (!fallbackImages.includes(currentSrc)) {
-        console.log('Image failed to load, trying placeholder:', currentSrc);
-        
-        // Пробуем первый fallback
-        img.onerror = function() {
-            // Если и placeholder не загрузился, создаем CSS-заглушку
-            createCSSPlaceholder(this);
-        };
-        
-        img.src = fallbackImages[0];
-        return;
-    }
-    
-    // Если даже placeholder не загрузился, создаем CSS-заглушку
-    createCSSPlaceholder(img);
-}
-
-// Создание CSS-заглушки для изображений
-function createCSSPlaceholder(img) {
-    img.onerror = null; // Убираем обработчик ошибок
-    img.removeAttribute('src');
-    img.removeAttribute('data-src');
-    
-    img.style.cssText = `
-        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%) !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        color: white !important;
-        font-size: 2rem !important;
-        position: relative !important;
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover !important;
-        min-height: 200px !important;
-        border-radius: 8px !important;
-    `;
-    
-    // Добавляем иконку
-    img.innerHTML = '<span style="z-index: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">📺</span>';
-}
-
-// Глобальная функция для обработки ошибок изображений
-window.fixBrokenImage = function(img) {
-    if (!img || img.dataset.errorHandled) return; // Предотвращаем повторную обработку
-    
-    img.dataset.errorHandled = 'true';
-    img.style.cssText = `
-        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%) !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        color: white !important;
-        font-size: 2rem !important;
-        position: relative !important;
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover !important;
-    `;
-    img.innerHTML = '<span style="z-index: 1; pointer-events: none;">📺</span>';
-    img.onerror = null;
-    img.onload = null;
-};
-
-// Инициализация обработчиков изображений для существующих элементов
-function initImageHandlers() {
-    document.querySelectorAll('img[src*="shikimori.one"], img[src*="kp.yandex.net"]').forEach(img => {
-        if (!img.onerror) {
-            img.onerror = () => handleImageError(img);
-        }
-    });
 }
 
 // Функция для безопасного парсинга JSON
@@ -1486,13 +564,10 @@ async function fetchShikimoriInfo(title, attempt = 1) {
         }
     } catch (e) {}
 
-    try {
-        // Ждем разрешения на запрос
-        await shikimoriLimiter.waitForSlot();
-        
-        const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 8000);
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
 
+    try {
         const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(title)}&limit=1`;
         const response = await fetch(searchUrl, {
             signal: ctrl.signal,
@@ -1504,15 +579,6 @@ async function fetchShikimoriInfo(title, attempt = 1) {
 
         clearTimeout(timeout);
 
-        if (response.status === 429) {
-            console.warn('Shikimori rate limit exceeded for:', title);
-            if (attempt < 2) {
-                await new Promise(r => setTimeout(r, 5000)); // Ждем 5 секунд
-                return fetchShikimoriInfo(title, attempt + 1);
-            }
-            return getFallbackShikimoriData(title);
-        }
-
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
@@ -1522,9 +588,6 @@ async function fetchShikimoriInfo(title, attempt = 1) {
         let detailedInfo = null;
         
         try {
-            // Ждем еще один слот для детальной информации
-            await shikimoriLimiter.waitForSlot();
-            
             const detailUrl = `${SHIKIMORI_API_BASE}/animes/${anime.id}`;
             const detailResponse = await fetch(detailUrl, {
                 signal: ctrl.signal,
@@ -1554,7 +617,7 @@ async function fetchShikimoriInfo(title, attempt = 1) {
             status: getStatusFromShikimori(finalInfo.status),
             studios: finalInfo.studios ? finalInfo.studios.map((s) => s.name) : [],
             genres: finalInfo.genres ? finalInfo.genres.map((g) => g.russian || g.name) : [],
-            poster_url: finalInfo.image ? `https://shikimori.one${finalInfo.image.x312 || finalInfo.image.original}` : null,
+            poster_url: finalInfo.image ? `https://shikimori.one${finalInfo.image.original}` : null,
             shikimoriId: finalInfo.id,
             shikimoriUrl: `https://shikimori.one${finalInfo.url}`,
         };
@@ -1738,7 +801,7 @@ async function apiWeekly() {
         if (cached && Date.now() - cached.t < TTL) return cached.data;
     } catch {}
     
-    const url = `${BASE.replace("/search", "/list")}?token=${TOKEN}&year=2026&updated_at=1&types=anime,anime-serial&with_material_data=true`;
+    const url = `${BASE.replace("/search", "/list")}?token=${TOKEN}&year=2025&updated_at=1&types=anime,anime-serial&with_material_data=true`;
     const data = await optimizedFetch(url);
     
     dbPut(STORE_SEARCH_RESULTS, { 
@@ -1790,18 +853,15 @@ async function copyToClipboard(text) {
     }
 }
 
-function showNote(msg, type = "info", copyText = null, persistent = false) {
-    // Если не постоянное уведомление, удаляем существующие
-    if (!persistent) {
-        document.querySelectorAll('.notification:not(.persistent)').forEach(n => n.remove());
-    }
+function showNote(msg, type = "info", copyText = null) {
+    document.querySelectorAll('.notification').forEach(n => n.remove());
     
     const n = document.createElement("div");
-    n.className = `notification notification-${type}${persistent ? ' persistent' : ''}`;
+    n.className = `notification notification-${type}`;
     
     // Создаем иконку
     const icon = document.createElement("i");
-    icon.className = `fas fa-${type === "success" ? "check" : type === "error" ? "exclamation-triangle" : type === "warning" ? "exclamation" : "info"}`;
+    icon.className = `fas fa-${type === "success" ? "check" : type === "error" ? "exclamation-triangle" : "info"}`;
     
     // Создаем текст сообщения
     const messageSpan = document.createElement("span");
@@ -1811,7 +871,6 @@ function showNote(msg, type = "info", copyText = null, persistent = false) {
     let copyButton = null;
     if (copyText) {
         copyButton = document.createElement("button");
-        copyButton.className = "notification-copy-btn";
         copyButton.title = "Копировать код защиты";
         copyButton.innerHTML = '<i class="fas fa-copy"></i>';
         copyButton.addEventListener('click', async () => {
@@ -1836,13 +895,8 @@ function showNote(msg, type = "info", copyText = null, persistent = false) {
     
     // Создаем кнопку закрытия
     const closeButton = document.createElement("button");
-    closeButton.className = "notification-close-btn";
     closeButton.innerHTML = '<i class="fas fa-times"></i>';
-    closeButton.addEventListener('click', () => {
-        n.style.opacity = '0';
-        n.style.transform = 'translateX(100%)';
-        setTimeout(() => n.remove(), 300);
-    });
+    closeButton.addEventListener('click', () => n.remove());
     
     // Добавляем все элементы
     n.appendChild(icon);
@@ -1853,106 +907,21 @@ function showNote(msg, type = "info", copyText = null, persistent = false) {
     n.appendChild(closeButton);
     
     document.body.appendChild(n);
-    
-    // Анимация появления
-    setTimeout(() => {
-        n.style.opacity = '1';
-        n.style.transform = 'translateX(0)';
-    }, 10);
-    
-    // Автоматическое удаление для непостоянных уведомлений
-    if (!persistent) {
-        const timeout = copyText ? 8000 : 5000; // Больше времени для уведомлений с кнопкой копирования
-        setTimeout(() => {
-            if (n.parentNode) {
-                n.style.opacity = '0';
-                n.style.transform = 'translateX(100%)';
-                setTimeout(() => n.remove(), 300);
-            }
-        }, timeout);
-    }
-    
-    return n; // Возвращаем элемент для возможности управления им
+    setTimeout(() => n.remove(), 5000); // Увеличиваем время показа для уведомлений с кнопкой копирования
 }
 
-// Функция для скрытия конкретного уведомления
-function hideNote(noteElement) {
-    if (noteElement && noteElement.parentNode) {
-        noteElement.style.opacity = '0';
-        noteElement.style.transform = 'translateX(100%)';
-        setTimeout(() => noteElement.remove(), 300);
-    }
-}
-
-/* ---------- URL OPTIMIZATION ---------- */
-// Создание красивого slug для аниме
-function createAnimeSlug(title) {
-    return title
-        .toLowerCase()
-        .replace(/[«»"']/g, '') // Убираем кавычки
-        .replace(/[^\w\s-]/g, '') // Убираем специальные символы кроме букв, цифр, пробелов и дефисов
-        .replace(/\s+/g, '-') // Заменяем пробелы на дефисы
-        .replace(/-+/g, '-') // Убираем множественные дефисы
-        .replace(/^-|-$/g, '') // Убираем дефисы в начале и конце
-        .substring(0, 100); // Ограничиваем длину
-}
-
-// Навигация к странице аниме с красивым URL
-window.navigateToAnime = function(title, link) {
-    const slug = createAnimeSlug(title);
-    const url = `/anime/${slug}`;
-    
-    // Сохраняем данные аниме в sessionStorage для быстрого доступа
-    const animeData = {
-        title: title,
-        link: link,
-        timestamp: Date.now()
-    };
-    
-    try {
-        sessionStorage.setItem(`anime_${slug}`, JSON.stringify(animeData));
-    } catch (e) {
-        console.warn('SessionStorage недоступен:', e);
-    }
-    
-    // Переходим на страницу
-    window.location.href = url;
-};
-
-// Получение данных аниме из slug
-function getAnimeFromSlug(slug) {
-    try {
-        const data = sessionStorage.getItem(`anime_${slug}`);
-        if (data) {
-            const animeData = JSON.parse(data);
-            // Проверяем, что данные не старше 1 часа
-            if (Date.now() - animeData.timestamp < 3600000) {
-                return animeData;
-            }
-        }
-    } catch (e) {
-        console.warn('Ошибка получения данных из sessionStorage:', e);
-    }
-    return null;
-}
-
-// Улучшенная функция для создания slug (более универсальная)
 function toSlug(str) {
     const map = {
-        а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "sch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
-        А: "A", Б: "B", В: "V", Г: "G", Д: "D", Е: "E", Ё: "E", Ж: "ZH", З: "Z", И: "I", Й: "Y", К: "K", Л: "L", М: "M", Н: "N", О: "O", П: "P", Р: "R", С: "S", Т: "T", У: "U", Ф: "F", Х: "H", Ц: "C", Ч: "CH", Ш: "SH", Щ: "SCH", Ъ: "", Ы: "Y", Ь: "", Э: "E", Ю: "YU", Я: "YA",
-        " ": "-", _: "-", "«": "", "»": "", '"': "", "'": "", "!": "", "?": "", ".": "", ",": "", ":": "", ";": "", "(": "", ")": "", "[": "", "]": "", "{": "", "}": ""
+        а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "sch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya", " ": "-", _: "-",
     };
-    
     return str
+        .toLowerCase()
         .split("")
         .map((ch) => map[ch] || ch)
         .join("")
-        .toLowerCase()
         .replace(/[^a-z0-9\-]/g, "")
         .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "")
-        .substring(0, 100);
+        .replace(/^-|-$/g, "");
 }
 
 function clearOldDynamicMeta() {
@@ -2217,270 +1186,56 @@ function addStructuredData(query, results, canonical) {
     document.head.appendChild(searchScript);
 }
 
-/* ---------- UTILS FOR CARDS ---------- */
-// Функция для генерации короткого ID аниме
-function generateAnimeId(link) {
-    // Создаем короткий хеш из ссылки
-    let hash = 0;
-    for (let i = 0; i < link.length; i++) {
-        const char = link.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Конвертируем в 32-битное число
-    }
-    // Конвертируем в base36 и берем первые 6 символов
-    return Math.abs(hash).toString(36).substring(0, 6);
-}
-
-// Функция для навигации к аниме
-window.navigateToAnime = function(animeId, title, link) {
-    // Сохраняем данные аниме в sessionStorage для быстрого доступа
-    const animeData = {
-        id: animeId,
-        title: title,
-        link: link,
-        timestamp: Date.now()
-    };
-    
-    sessionStorage.setItem(`anime_${animeId}`, JSON.stringify(animeData));
-    
-    // Переходим на страницу деталей
-    const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(title)}`;
-    window.location.href = detailUrl;
-};
-
-// Функция для получения данных аниме по ID
-function getAnimeDataById(animeId) {
-    try {
-        const data = sessionStorage.getItem(`anime_${animeId}`);
-        if (data) {
-            const animeData = JSON.parse(data);
-            // Проверяем, что данные не старше 1 часа
-            if (Date.now() - animeData.timestamp < 3600000) {
-                return animeData;
-            }
-        }
-    } catch (error) {
-        console.warn('Error getting anime data from sessionStorage:', error);
-    }
-    return null;
-}
-
 /* ---------- CARD ---------- */
-// Улучшенная функция создания карточек с пакетной загрузкой постеров
-async function createAnimeCardsWithPosters(animeList) {
-    // ОПТИМИЗИРОВАНО: Загружаем постеры из Shikimori только для аниме без постеров в Kodik
-    const animeNeedingShikimoriPosters = animeList.filter(item => 
-        !item.material_data?.poster_url && 
-        (!item.screenshots || item.screenshots.length === 0)
-    );
-    
-    const posterMap = animeNeedingShikimoriPosters.length > 0 
-        ? await batchLoadShikimoriPosters(animeNeedingShikimoriPosters)
-        : new Map();
-    
-    // Создаем карточки с оптимизированной загрузкой постеров
-    const cardPromises = animeList.map(async (item) => {
-        try {
-            return await createAnimeCardWithPoster(item, posterMap.get(item.title));
-        } catch (error) {
-            console.error('Error creating anime card:', error);
-            return createFallbackCard(item);
-        }
-    });
-    
-    return Promise.all(cardPromises);
-}
-
-// Создание карточки аниме с предзагруженным постером
-async function createAnimeCardWithPoster(item, shikimoriPoster = null) {
+async function createAnimeCard(item) {
     const t = item.title;
     const favs = await getFavorites();
     const isFav = favs.some(f => f.link === item.link);
 
-    // Создаем короткий ID для аниме
-    const animeId = generateAnimeId(item.link);
-    
-    // ИСПРАВЛЕНО: Определяем постер с приоритетом Kodik API и надежным fallback
-    let posterUrl = '/resources/anime-placeholder.svg';
-    
-    // 1. Приоритет - Kodik API material_data.poster_url
-    if (item.material_data?.poster_url) {
-        posterUrl = item.material_data.poster_url;
-    }
-    // 2. Резерв - Kodik API screenshots[0]
-    else if (item.screenshots && item.screenshots.length > 0) {
-        posterUrl = item.screenshots[0];
-    }
-    // 3. Последний резерв - предзагруженный Shikimori постер
-    else if (shikimoriPoster) {
-        posterUrl = shikimoriPoster;
-    }
-    
-    // Оптимизируем URL изображения
-    if (posterUrl && posterUrl !== '/resources/anime-placeholder.svg') {
-        posterUrl = optimizeImageUrl(posterUrl);
-    }
-
-    // Получаем базовую информацию
-    const year = item.year || 'Неизвестно';
-    const rating = item.material_data?.rating || null;
-    const episodes = item.episodes_count || null;
+    const hasInfoData = checkSimpleInfoData(item);
+    const hasShareData = !!(item.link && t);
+    const hasFavData = !!(item.link && t);
 
     return `
-    <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(t)}', '${item.link}')" style="cursor: pointer;">
-        <div class="anime-poster">
-            <img src="${posterUrl}" 
-                 alt="Постер ${escapeHtml(t)}" 
-                 loading="eager" 
-                 decoding="async"
-                 onerror="window.fixBrokenImage ? window.fixBrokenImage(this) : (this.onerror=null, this.src='/resources/anime-placeholder.svg');"
-                 onload="this.style.opacity='1'; this.classList.add('loaded');"
-                 style="opacity: 0; transition: opacity 0.3s ease;">
-            <div class="anime-overlay">
-                <div class="play-button">
-                    <i class="fas fa-play"></i>
-                </div>
-                ${rating ? `
-                <div class="anime-rating">
-                    <i class="fas fa-star"></i>
-                    <span>${rating}</span>
-                </div>
-                ` : ''}
-            </div>
-        </div>
-        
-        <div class="anime-info">
-            <h3 class="anime-title" title="${escapeHtml(t)}">${escapeHtml(t)}</h3>
-            
-            <div class="anime-meta">
-                <span class="anime-year">
-                    <i class="fas fa-calendar"></i>
-                    ${year}
-                </span>
-                ${episodes ? `
-                <span class="anime-episodes">
-                    <i class="fas fa-film"></i>
-                    ${episodes} эп.
-                </span>
-                ` : ''}
-            </div>
-        </div>
-
-        <div class="anime-actions" onclick="event.stopPropagation();">
-            <button class="action-btn favorite-btn ${isFav ? 'active' : ''}" data-link="${item.link}"
-                    onclick="toggleFavorite('${escapeHtml(t).replace(/'/g, "\\'")}','${item.link}')"
-                    title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
-                <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
-            </button>
-
-            <button class="action-btn share-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
-                <i class="fas fa-share"></i>
-            </button>
-        </div>
-    </div>`;
-}
-
-async function createAnimeCard(item) {
-    try {
-        const t = item.title;
-        const favs = await getFavorites();
-        const isFav = favs.some(f => f.link === item.link);
-
-        // Создаем короткий ID для аниме (используем хеш от ссылки)
-        const animeId = generateAnimeId(item.link);
-        
-        // Создаем ссылку на страницу деталей в новом формате
-        const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(t)}`;
-
-        // ИСПРАВЛЕНО: Получаем постер с правильным приоритетом и кешированием
-        let posterUrl = '/resources/anime-placeholder.svg'; // По умолчанию placeholder
-        
-        try {
-            // 1. Приоритет - Kodik API material_data.poster_url
-            if (item.material_data?.poster_url) {
-                posterUrl = item.material_data.poster_url;
-            }
-            // 2. Резерв - прямое поле poster_url
-            else if (item.poster_url) {
-                posterUrl = item.poster_url;
-            }
-            // 3. Резерв - Kodik API screenshots[0]
-            else if (item.screenshots && item.screenshots.length > 0) {
-                posterUrl = item.screenshots[0];
-            }
-            
-            // Оптимизируем URL изображения если это не placeholder
-            if (posterUrl !== '/resources/anime-placeholder.svg') {
-                posterUrl = optimizeImageUrl(posterUrl);
-            }
-        } catch (error) {
-            console.warn('Ошибка получения постера:', error);
-            posterUrl = '/resources/anime-placeholder.svg';
-        }
-
-        // Получаем базовую информацию
-        const year = item.year || 'Неизвестно';
-        const rating = item.material_data?.rating || null;
-        const episodes = item.episodes_count || null;
-
-        return `
-        <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(t)}', '${item.link}')" style="cursor: pointer;">
-            <div class="anime-poster">
-                <img src="${posterUrl}" 
-                     alt="Постер ${escapeHtml(t)}" 
-                     loading="eager"
-                     decoding="async"
-                     onerror="window.fixBrokenImage ? window.fixBrokenImage(this) : (this.onerror=null, this.src='/resources/anime-placeholder.svg');"
-                     onload="this.style.opacity='1';"
-                     style="opacity: 0; transition: opacity 0.3s ease;">
-                <div class="anime-overlay">
-                    <div class="play-button">
-                        <i class="fas fa-play"></i>
-                    </div>
-                    ${rating ? `
-                    <div class="anime-rating">
-                        <i class="fas fa-star"></i>
-                        <span>${rating}</span>
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-            
-            <div class="anime-info">
-                <h3 class="anime-title" title="${escapeHtml(t)}">${escapeHtml(t)}</h3>
-                
-                <div class="anime-meta">
-                    <span class="anime-year">
-                        <i class="fas fa-calendar"></i>
-                        ${year}
-                    </span>
-                    ${episodes ? `
-                    <span class="anime-episodes">
-                        <i class="fas fa-film"></i>
-                        ${episodes} эп.
-                    </span>
-                    ` : ''}
-                </div>
-            </div>
-
-            <div class="anime-actions" onclick="event.stopPropagation();">
-                <button class="action-btn favorite-btn ${isFav ? 'active' : ''}" data-link="${item.link}" onclick="toggleFavorite('${escapeHtml(t).replace(/'/g, "\\'")}','${item.link}')" title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
-                    <i class="fa${isFav ? 's' : 'r'} fa-heart"></i>
-                </button>
-
-                <button class="action-btn share-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
-                    <i class="fas fa-share"></i>
-                </button>
-
-                <a class="action-btn external-btn" href="${detailUrl}" title="Подробнее" onclick="event.stopPropagation();">
+    <div class="card fade-in">
+        <div class="card-header">
+            <h3 class="h2_name">${t}</h3>
+            <div class="info-links">
+                <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="Shikimori">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+                <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="AniList">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+                <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}" target="_blank" class="info-link" title="MyAnimeList">
                     <i class="fas fa-external-link-alt"></i>
                 </a>
             </div>
-        </div>`;
-    } catch (error) {
-        console.error('Ошибка создания карточки аниме:', error);
-        return createFallbackCard(item);
-    }
+        </div>
+        <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+
+        <div class="card-actions">
+            ${hasFavData ? `
+            <button class="action-btn favorite-btn" data-link="${item.link}"
+                    onclick="toggleFavorite('${t.replace(/'/g, "\\'")}','${item.link}')"
+                    title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
+                <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
+            </button>
+            ` : ''}
+
+            ${hasShareData ? `
+            <button class="action-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
+                <i class="fas fa-share"></i>
+            </button>
+            ` : ''}
+
+            ${hasInfoData ? `
+            <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Информация">
+                <i class="fas fa-info-circle"></i>
+            </button>
+            ` : ''}
+        </div>
+    </div>`;
 }
 
 function checkSimpleInfoData(item) {
@@ -3155,7 +1910,7 @@ async function renderFavoritesPage() {
         }
 
         const displayedFavorites = currentFavorites.slice(0, currentDisplayCount.favorites);
-        const cards = await safeCreateAnimeCards(displayedFavorites);
+        const cards = await Promise.all(displayedFavorites.map(safeCreateAnimeCard));
 
         let html = `<section class="favorites-section">
             <div class="section-header">
@@ -3223,41 +1978,20 @@ window.loadMoreFavorites = async function() {
     
     if (!btn || !grid) return;
 
-    // Добавляем класс загрузки с анимацией
-    btn.classList.add('loading');
-    btn.innerHTML = '<i class="fas fa-spinner"></i> <span class="btn-text">Загрузка...</span>';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
     btn.disabled = true;
 
     try {
-        // Небольшая задержка для визуального эффекта
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
         currentDisplayCount.favorites += ITEMS_PER_PAGE.favorites;
         const newFavorites = currentFavorites.slice(
             currentDisplayCount.favorites - ITEMS_PER_PAGE.favorites,
             currentDisplayCount.favorites
         );
 
-        const newCards = await safeCreateAnimeCards(newFavorites);
+        const newCards = await Promise.all(newFavorites.map(safeCreateAnimeCard));
         
-        // Добавляем карточки с анимацией появления
-        newCards.forEach((card, index) => {
-            setTimeout(() => {
-                const cardElement = document.createElement('div');
-                cardElement.innerHTML = card;
-                const actualCard = cardElement.firstElementChild;
-                actualCard.style.opacity = '0';
-                actualCard.style.transform = 'translateY(30px)';
-                
-                grid.appendChild(actualCard);
-                
-                // Анимация появления
-                setTimeout(() => {
-                    actualCard.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
-                    actualCard.style.opacity = '1';
-                    actualCard.style.transform = 'translateY(0)';
-                }, 50);
-            }, index * 100); // Задержка между карточками
+        newCards.forEach(card => {
+            grid.insertAdjacentHTML('beforeend', card);
         });
 
         // Обновляем статистику
@@ -3272,135 +2006,44 @@ window.loadMoreFavorites = async function() {
         }
 
         // Обновляем или удаляем кнопку
-        setTimeout(() => {
-            btn.classList.remove('loading');
-            
-            if (currentDisplayCount.favorites >= currentFavorites.length) {
-                // Анимация исчезновения кнопки
-                btn.style.transition = 'all 0.3s ease';
-                btn.style.opacity = '0';
-                btn.style.transform = 'scale(0.8)';
-                setTimeout(() => btn.remove(), 300);
-            } else {
-                btn.innerHTML = `<i class="fas fa-arrow-down"></i> <span class="btn-text">Показать еще (${currentFavorites.length - currentDisplayCount.favorites})</span>`;
-                btn.disabled = false;
-            }
-        }, newCards.length * 100 + 200);
-
-        await refreshAllFavoriteButtons();
-    } catch (error) {
-        console.error('Error loading more favorites:', error);
-        btn.classList.remove('loading');
-        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span class="btn-text">Ошибка загрузки</span>';
-        btn.disabled = false;
-        
-        setTimeout(() => {
-            btn.innerHTML = `<i class="fas fa-arrow-down"></i> <span class="btn-text">Показать еще</span>`;
-        }, 2000);
-    }
-};
-
-// Улучшенная функция показа модального окна очистки
-function showClearFavoritesModal() {
-    // Создаем модальное окно динамически для лучшего контроля
-    const modalHTML = `
-    <div class="modal-overlay" id="clearFavoritesModal" onclick="handleClearModalOverlayClick(event)">
-        <div class="modal-content clear-favorites-modal" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeClearFavoritesModal()">&times;</button>
-            <div class="modal-header">
-                <div class="modal-icon danger">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <h2 class="modal-title">Очистить избранное?</h2>
-                <p class="modal-subtitle">Это действие нельзя отменить</p>
-            </div>
-            
-            <div class="modal-body">
-                <div class="warning-info">
-                    <div class="warning-item">
-                        <i class="fas fa-trash"></i>
-                        <span>Все избранные аниме будут удалены</span>
-                    </div>
-                    <div class="warning-item">
-                        <i class="fas fa-undo-alt"></i>
-                        <span>Восстановить данные будет невозможно</span>
-                    </div>
-                    <div class="warning-item">
-                        <i class="fas fa-download"></i>
-                        <span>Рекомендуем сначала создать экспорт</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-actions">
-                <button class="modal-btn secondary" onclick="closeClearFavoritesModal()">
-                    <i class="fas fa-times"></i> Отмена
-                </button>
-                <button class="modal-btn primary" onclick="exportBeforeClear()">
-                    <i class="fas fa-download"></i> Экспорт и очистка
-                </button>
-                <button class="modal-btn danger" onclick="confirmClearFavorites()">
-                    <i class="fas fa-trash"></i> Очистить
-                </button>
-            </div>
-        </div>
-    </div>`;
-    
-    document.body.insertAdjacentHTML("beforeend", modalHTML);
-    document.body.classList.add("modal-open");
-    
-    // Добавляем обработчики
-    document.addEventListener('keydown', handleClearModalEscapeKey);
-}
-
-// Новая функция для экспорта перед очисткой
-window.exportBeforeClear = async () => {
-    try {
-        const exportResult = await exportFavorites();
-        if (!exportResult) {
-            showNote("Нет данных для экспорта", "info");
-            return;
+        if (currentDisplayCount.favorites >= currentFavorites.length) {
+            btn.remove();
+        } else {
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще (${currentFavorites.length - currentDisplayCount.favorites})`;
+            btn.disabled = false;
         }
 
-        // Автоматически скачиваем файл
-        const blob = new Blob([exportResult.data], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `anifox-favorites-backup-${new Date().toISOString().split('T')[0]}.txt`;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        await refreshAllFavoriteButtons();
 
-        // Копируем код в буфер обмена
-        await copyToClipboard(exportResult.code);
-        
-        showNote(`📁 Резервная копия создана (${exportResult.count} аниме). Код: ${exportResult.code}`, "success");
-        
-        // Небольшая задержка перед очисткой
-        setTimeout(() => {
-            confirmClearFavorites();
-        }, 1000);
-        
     } catch (error) {
-        console.error("Export before clear error:", error);
-        showNote(`❌ Ошибка при создании резервной копии: ${error.message}`, "error");
+        console.error('Error loading more favorites:', error);
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Ошибка загрузки';
+        setTimeout(() => {
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще (${currentFavorites.length - currentDisplayCount.favorites + ITEMS_PER_PAGE.favorites})`;
+            btn.disabled = false;
+        }, 2000);
     }
-};
+}
+
+// Функции для работы с модальным окном очистки избранного
+function showClearFavoritesModal() {
+    const modal = document.getElementById('clearFavoritesModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        
+        // Добавляем обработчики
+        modal.addEventListener('click', handleClearModalOverlayClick);
+        document.addEventListener('keydown', handleClearModalEscapeKey);
+    }
+}
 
 function closeClearFavoritesModal() {
     const modal = document.getElementById('clearFavoritesModal');
     if (modal) {
-        modal.style.opacity = '0';
-        modal.style.transform = 'scale(0.95)';
-        
-        setTimeout(() => {
-            modal.remove();
-            document.body.classList.remove('modal-open');
-        }, 200);
-        
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        modal.removeEventListener('click', handleClearModalOverlayClick);
         document.removeEventListener('keydown', handleClearModalEscapeKey);
     }
 }
@@ -3425,28 +2068,21 @@ async function confirmClearFavorites() {
         confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Очистка...';
         confirmBtn.disabled = true;
         
-        // Очищаем базу данных
         await dbClear(STORE_FAVORITES);
         clearFavoritesCache();
-        
-        // Обновляем глобальные переменные
         currentFavorites = [];
         currentDisplayCount.favorites = ITEMS_PER_PAGE.favorites;
-        
-        // Мгновенно обновляем интерфейс без перезагрузки
+        await refreshAllFavoriteButtons();
+
         if (location.search.includes("page=favorites")) {
-            await renderFavoritesPage();
+            renderFavoritesPage();
         }
         
-        // Обновляем все кнопки избранного на сайте
-        await refreshAllFavoriteButtons();
-        
         closeClearFavoritesModal();
-        showNote("✅ Избранное полностью очищено", "success");
-        
+        showNote("Избранное очищено", "success");
     } catch (e) {
         console.error("Clear favorites error:", e);
-        showNote(`❌ Ошибка при очистке избранного: ${e.message}`, "error");
+        showNote("Ошибка при очистке избранного", "error");
     } finally {
         // Восстанавливаем кнопку
         const confirmBtn = document.querySelector('#clearFavoritesModal .modal-btn.danger');
@@ -3456,8 +2092,6 @@ async function confirmClearFavorites() {
         }
     }
 }
-
-window.clearFavorites = showClearFavoritesModal;
 
 window.clearFavorites = showClearFavoritesModal;
 
@@ -3578,18 +2212,13 @@ async function confirmCodeInput() {
 // Глобальные функции для экспорта/импорта
 window.exportFavoritesToFile = async () => {
     try {
-        // Показываем индикатор загрузки
-        const loadingNote = showNote("Подготовка экспорта...", "info", null, true);
-        
         const exportResult = await exportFavorites();
         if (!exportResult) {
-            hideNote(loadingNote);
             showNote("Нет данных для экспорта", "info");
             return;
         }
 
         if (!exportResult.data || !exportResult.code) {
-            hideNote(loadingNote);
             throw new Error("Неверные данные экспорта");
         }
 
@@ -3607,131 +2236,42 @@ window.exportFavoritesToFile = async () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        hideNote(loadingNote);
-
-        // Показываем уведомление с информацией об автоматическом копировании
-        if (copySuccess) {
-            showNote(`✅ Избранное экспортировано (${exportResult.count} аниме). Код защиты скопирован в буфер обмена!`, "success", exportResult.code);
-        } else {
-            showNote(`✅ Избранное экспортировано (${exportResult.count} аниме). Код защиты: ${exportResult.code}`, "success", exportResult.code);
-        }
-
-        // Обновляем кнопку экспорта с анимацией успеха
-        const exportBtn = document.querySelector('button[onclick="exportFavoritesToFile()"]');
-        if (exportBtn) {
-            const originalHTML = exportBtn.innerHTML;
-            exportBtn.innerHTML = '<i class="fas fa-check"></i> Экспортировано';
-            exportBtn.classList.add('success-state');
-            
-            setTimeout(() => {
-                exportBtn.innerHTML = originalHTML;
-                exportBtn.classList.remove('success-state');
-            }, 2000);
-        }
+        // Показываем уведомление с информацией об автоматическом копировании с небольшой задержкой
+        setTimeout(() => {
+            if (copySuccess) {
+                showNote(`Избранное экспортировано (${exportResult.count} аниме). Код защиты автоматически скопирован в буфер обмена!`, "success", exportResult.code);
+            } else {
+                showNote(`Избранное экспортировано (${exportResult.count} аниме). Код защиты: ${exportResult.code}`, "success", exportResult.code);
+            }
+        }, 500);
     } catch (error) {
         console.error("Export to file error:", error);
-        showNote(`❌ Ошибка при экспорте в файл: ${error.message}`, "error");
+        showNote(`Ошибка при экспорте в файл: ${error.message}`, "error");
     }
 };
 
-// Улучшенная функция для показа модального окна импорта
+// Функция для показа модального окна импорта
 window.showImportModal = () => {
     const modalHTML = `
-    <div class="modal-overlay import-modal-overlay" onclick="closeImportModal(event)">
+    <div class="modal-overlay" onclick="closeImportModal(event)">
         <div class="modal-content import-modal" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeImportModal()">&times;</button>
-            <div class="import-modal-header">
-                <h2 class="modal-title">
-                    <i class="fas fa-file-import"></i> Импорт избранного
-                </h2>
-                <p class="modal-subtitle">Восстановите свою коллекцию избранных аниме</p>
+            <h2 class="modal-title">Импорт избранного</h2>
+            <div class="import-option-single">
+                <h3><i class="fas fa-file-upload"></i> Из файла</h3>
+                <p>Выберите файл с экспортированным избранным</p>
+                <button class="modal-btn primary" onclick="selectImportFile();">
+                    <i class="fas fa-upload"></i> Выбрать файл
+                </button>
             </div>
-            
-            <div class="import-methods">
-                <div class="import-method">
-                    <div class="import-method-icon">
-                        <i class="fas fa-file-upload"></i>
-                    </div>
-                    <div class="import-method-content">
-                        <h3>Из файла</h3>
-                        <p>Выберите файл с экспортированным избранным (.txt)</p>
-                        <button class="modal-btn primary" onclick="selectImportFile()">
-                            <i class="fas fa-upload"></i> Выбрать файл
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="import-method">
-                    <div class="import-method-icon">
-                        <i class="fas fa-link"></i>
-                    </div>
-                    <div class="import-method-content">
-                        <h3>По ссылке</h3>
-                        <p>Вставьте ссылку для импорта избранного</p>
-                        <div class="import-url-input">
-                            <input type="url" id="importUrlInput" placeholder="https://anifox-search.vercel.app/?import=..." />
-                            <button class="modal-btn secondary" onclick="importFromUrl()">
-                                <i class="fas fa-download"></i> Импорт
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
             <div class="import-info">
-                <div class="info-item">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Для импорта требуется код защиты, который был создан при экспорте</span>
-                </div>
-                <div class="info-item">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Дубликаты автоматически исключаются при импорте</span>
-                </div>
+                <p><i class="fas fa-info-circle"></i> Для импорта требуется код защиты, который был создан при экспорте</p>
             </div>
         </div>
     </div>`;
     
     document.body.insertAdjacentHTML("beforeend", modalHTML);
     document.body.classList.add("modal-open");
-    
-    // Фокус на поле ввода URL
-    setTimeout(() => {
-        const urlInput = document.getElementById('importUrlInput');
-        if (urlInput) {
-            urlInput.focus();
-            
-            // Обработчик Enter для быстрого импорта
-            urlInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    importFromUrl();
-                }
-            });
-        }
-    }, 100);
-};
-
-// Новая функция для импорта по URL
-window.importFromUrl = () => {
-    const urlInput = document.getElementById('importUrlInput');
-    if (!urlInput || !urlInput.value.trim()) {
-        showNote("Введите ссылку для импорта", "warning");
-        return;
-    }
-    
-    try {
-        const url = new URL(urlInput.value.trim());
-        const importData = url.searchParams.get('import');
-        const code = url.searchParams.get('code');
-        
-        if (!importData || !code) {
-            throw new Error("Неверная ссылка для импорта");
-        }
-        
-        closeImportModal();
-        processImport(importData, code);
-    } catch (error) {
-        showNote("Неверная ссылка для импорта", "error");
-    }
 };
 
 // Функция для выбора файла импорта
@@ -3739,53 +2279,21 @@ window.selectImportFile = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.txt';
-    input.multiple = false;
-    
     input.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         try {
-            // Показываем индикатор загрузки
-            const loadingNote = showNote("Чтение файла...", "info", null, true);
-            
             const text = await file.text();
-            hideNote(loadingNote);
-            
             closeImportModal();
             showCodeInputModal(text.trim());
         } catch (error) {
             console.error("Import from file error:", error);
-            showNote(`❌ Ошибка при чтении файла: ${error.message}`, "error");
+            showNote(`Ошибка при чтении файла: ${error.message}`, "error");
         }
     };
-    
     input.click();
 };
-
-// Улучшенная функция обработки импорта
-async function processImport(importData, code) {
-    try {
-        const loadingNote = showNote("Импорт избранного...", "info", null, true);
-        
-        const result = await importFavorites(importData, code);
-        hideNote(loadingNote);
-        
-        if (result.imported > 0) {
-            showNote(`✅ Импортировано ${result.imported} из ${result.total} аниме${result.duplicates > 0 ? ` (${result.duplicates} дубликатов пропущено)` : ''}`, "success");
-            
-            // Мгновенное обновление страницы избранного без перезагрузки
-            if (location.search.includes("page=favorites")) {
-                await renderFavoritesPage();
-            }
-        } else {
-            showNote(`ℹ️ Все аниме из файла уже есть в избранном (${result.total} проверено)`, "info");
-        }
-    } catch (error) {
-        console.error("Process import error:", error);
-        showNote(`❌ Ошибка импорта: ${error.message}`, "error");
-    }
-}
 
 window.importFavoritesFromFile = () => {
     const input = document.createElement('input');
@@ -3808,54 +2316,32 @@ window.importFavoritesFromFile = () => {
 
 window.shareFavoritesLink = async () => {
     try {
-        const loadingNote = showNote("Создание ссылки...", "info", null, true);
-        
         const shareResult = await shareFavorites();
-        hideNote(loadingNote);
-        
         if (!shareResult) return;
 
         if (navigator.share) {
             await navigator.share({
-                title: 'Мое избранное аниме - AniFox',
+                title: 'Мое избранное аниме',
                 text: `Поделиться избранным (${shareResult.count} аниме)`,
                 url: shareResult.url
             });
         } else {
             await navigator.clipboard.writeText(shareResult.url);
-            showNote(`🔗 Ссылка скопирована! Код защиты: ${shareResult.code}`, "success", shareResult.code);
-        }
-        
-        // Обновляем кнопку с анимацией успеха
-        const shareBtn = document.querySelector('button[onclick="shareFavoritesLink()"]');
-        if (shareBtn) {
-            const originalHTML = shareBtn.innerHTML;
-            shareBtn.innerHTML = '<i class="fas fa-check"></i> Ссылка создана';
-            shareBtn.classList.add('success-state');
-            
-            setTimeout(() => {
-                shareBtn.innerHTML = originalHTML;
-                shareBtn.classList.remove('success-state');
-            }, 2000);
+            showNote(`Ссылка скопирована! Код защиты: ${shareResult.code}`, "success", shareResult.code);
         }
     } catch (error) {
         console.error("Share link error:", error);
-        showNote("❌ Ошибка при создании ссылки", "error");
+        showNote("Ошибка при создании ссылки", "error");
     }
 };
 
 window.closeImportModal = (e) => {
-    if (e && e.target !== e.currentTarget) return;
-    
-    const modal = document.querySelector(".import-modal-overlay");
+    if (e && e.target !== document.querySelector(".modal-overlay")) return;
+    // Ищем модальное окно импорта (то, которое было создано динамически)
+    const modal = document.querySelector(".modal-overlay:not(#codeInputModal):not(#clearFavoritesModal)");
     if (modal) {
-        modal.style.opacity = '0';
-        modal.style.transform = 'scale(0.95)';
-        
-        setTimeout(() => {
-            modal.remove();
-            document.body.classList.remove("modal-open");
-        }, 200);
+        modal.remove();
+        document.body.classList.remove("modal-open");
     }
 };
 
@@ -4073,11 +2559,8 @@ async function search(queryParam = null) {
 
         await renderSearchResults(q, currentSearchResults, data);
         
-        // Создаем красивый URL для поиска
         const slug = toSlug(q);
-        const cleanUrl = `/search/${slug}`;
-        history.replaceState({ query: q, type: 'search' }, null, cleanUrl);
-        
+        history.replaceState(null, null, `/search/${slug}`);
         if (input) input.value = "";
         updateSEOMeta(data);
         
@@ -4250,7 +2733,7 @@ function updateHeader() {
 
 window.navigateToHome = (e) => {
     if (e) e.preventDefault();
-    history.replaceState({ type: 'home' }, null, "/");
+    history.replaceState(null, null, "/");
     updateHeader();
     renderWeekly();
     
@@ -4260,8 +2743,11 @@ window.navigateToHome = (e) => {
 
 window.navigateToFavorites = () => {
     // Всегда используем корневой путь для избранного
-    const url = "/favorites";
-    history.replaceState({ type: 'favorites' }, null, url);
+    const basePath = "/";
+    const url = location.search
+        ? `${basePath}${location.search}${location.search.includes("?") ? "&" : "?"}page=favorites`
+        : `${basePath}?page=favorites`;
+    history.replaceState(null, null, url);
     updateHeader();
     renderFavoritesPage();
     
@@ -4461,15 +2947,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const importData = urlParams.get('import');
                 const code = urlParams.get('code');
                 
-                // Показываем индикатор загрузки
-                const loadingNote = showNote("🔄 Автоматический импорт избранного...", "info", null, true);
-                
                 try {
                     const result = await importFavorites(importData, code);
-                    hideNote(loadingNote);
-                    
-                    if (result && result.imported > 0) {
-                        let message = `✅ Импортировано ${result.imported} из ${result.total} аниме`;
+                    if (result) {
+                        let message = `Импортировано ${result.imported} из ${result.total} аниме`;
                         if (result.duplicates > 0) {
                             message += ` (${result.duplicates} дубликатов пропущено)`;
                         }
@@ -4479,28 +2960,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                         const cleanUrl = location.origin + "/";
                         history.replaceState(null, null, cleanUrl);
                         
-                        // Переходим на страницу избранного с небольшой задержкой
-                        setTimeout(() => {
-                            navigateToFavorites();
-                        }, 1500);
-                        return;
-                    } else if (result && result.imported === 0) {
-                        showNote(`ℹ️ Все аниме из ссылки уже есть в избранном (${result.total} проверено)`, "info");
-                        
-                        // Очищаем URL и переходим на избранное
-                        const cleanUrl = location.origin + "/";
-                        history.replaceState(null, null, cleanUrl);
-                        setTimeout(() => {
-                            navigateToFavorites();
-                        }, 2000);
+                        // Переходим на страницу избранного
+                        navigateToFavorites();
                         return;
                     }
                 } catch (error) {
-                    hideNote(loadingNote);
-                    console.error("Auto import error:", error);
-                    showNote(`❌ Ошибка автоматического импорта: ${error.message}`, "error");
+                    console.error("Auto-import error:", error);
+                    showNote(`Ошибка импорта: ${error.message}`, "error");
                     
-                    // Очищаем URL от неверных параметров
+                    // Очищаем URL от параметров импорта
                     const cleanUrl = location.origin + "/";
                     history.replaceState(null, null, cleanUrl);
                 }
@@ -4519,45 +2987,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (btn) {
-            optimizeScrollPerformance(); // Используем оптимизированный скроллинг
+            window.addEventListener("scroll", () =>
+                btn.classList.toggle("show", window.scrollY > 300)
+            );
             btn.addEventListener("click", () =>
                 window.scrollTo({ top: 0, behavior: "smooth" })
             );
-        }
-        
-        // Оптимизация производительности
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => {
-                // Предзагрузка критических ресурсов
-                preloadCriticalResources();
-                // Оптимизация изображений
-                optimizeImages();
-                // Мобильные оптимизации
-                if (window.innerWidth <= 768) {
-                    forceLoadImagesOnMobile();
-                    optimizeImagesForMobile();
-                }
-            });
-        } else {
-            setTimeout(() => {
-                preloadCriticalResources();
-                optimizeImages();
-                if (window.innerWidth <= 768) {
-                    forceLoadImagesOnMobile();
-                    optimizeImagesForMobile();
-                }
-            }, 1000);
-        }
-        
-        // Проверяем сломанные изображения через 2 секунды
-        setTimeout(fixBrokenImages, 2000);
-        
-        // Повторная проверка для мобильных через 5 секунд
-        if (window.innerWidth <= 768) {
-            setTimeout(() => {
-                fixBrokenImages();
-                forceLoadImagesOnMobile();
-            }, 5000);
         }
     } catch (e) {
         console.error("Initialization error:", e);
@@ -4586,349 +3021,6 @@ setInterval(() => {
     }
 }, 60000);
 
-// Функции оптимизации производительности
-function preloadCriticalResources() {
-    // Предзагрузка критических изображений
-    const criticalImages = [
-        '/resources/anime-placeholder.svg',
-        '/resources/obl_web.jpg'
-    ];
-    
-    criticalImages.forEach(src => {
-        const img = new Image();
-        img.src = src;
-    });
-}
-
-function optimizeImages() {
-    // Оптимизация всех изображений на странице
-    const images = document.querySelectorAll('img');
-    images.forEach(img => {
-        // Добавляем декодирование изображений
-        if ('decode' in img) {
-            img.decode().catch(() => {
-                // Игнорируем ошибки декодирования
-            });
-        }
-        
-        // Оптимизация загрузки
-        if (!img.loading) {
-            img.loading = 'lazy';
-        }
-    });
-}
-
-// Оптимизация анимаций карточек
-function optimizeCardAnimations() {
-    const cards = document.querySelectorAll('.anime-card');
-    
-    if ('IntersectionObserver' in window) {
-        const animationObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.animationPlayState = 'running';
-                } else {
-                    entry.target.style.animationPlayState = 'paused';
-                }
-            });
-        }, {
-            rootMargin: '100px 0px'
-        });
-        
-        cards.forEach(card => {
-            animationObserver.observe(card);
-        });
-    }
-}
-
-// Оптимизация прокрутки для мобильных устройств
-function optimizeMobileScrolling() {
-    // Убираем все блокировки скролла на мобильных
-    if (window.innerWidth <= 768) {
-        document.body.style.overflow = 'auto';
-        document.body.style.overflowX = 'hidden';
-        document.body.style.overflowY = 'auto';
-        document.body.style.webkitOverflowScrolling = 'touch';
-        document.body.style.height = 'auto';
-        document.body.style.minHeight = '100vh';
-        document.body.style.position = 'static';
-        
-        // Убираем классы которые могут блокировать скролл
-        document.body.classList.remove('modal-open', 'ab-scroll-lock', 'preloader-active');
-        
-        // Исправляем HTML элемент
-        document.documentElement.style.overflow = 'auto';
-        document.documentElement.style.height = 'auto';
-        document.documentElement.style.minHeight = '100vh';
-        
-        // Предотвращение bounce эффекта только для body
-        document.body.addEventListener('touchmove', (e) => {
-            // Разрешаем скролл для всех элементов кроме самого body
-            if (e.target === document.body) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        console.log('Mobile scrolling optimized');
-    }
-}
-
-// Инициализация оптимизаций
-document.addEventListener('DOMContentLoaded', () => {
-    optimizeMobileScrolling();
-    
-    // Отложенная инициализация тяжелых операций
-    if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => {
-            optimizeCardAnimations();
-        });
-    } else {
-        setTimeout(optimizeCardAnimations, 2000);
-    }
-});
-
 console.log(`🚀 AniFox ${CACHE_VERSION} loaded with button-based loading system`);
 console.log(`💻 Разработано SerGio Play - https://sergioplay-dev.vercel.app/`);
 console.log(`📁 GitHub: https://github.com/SerGioPlay01/anifox-search`);
-// Функция для принудительной загрузки изображений на мобильных
-function forceLoadImagesOnMobile() {
-    if (window.innerWidth <= 768) {
-        console.log('Forcing image load on mobile...');
-        
-        const images = document.querySelectorAll('.anime-poster img');
-        
-        images.forEach((img, index) => {
-            // Убираем все блокирующие стили
-            img.style.opacity = '1';
-            img.style.visibility = 'visible';
-            img.style.display = 'block';
-            img.style.transition = 'none';
-            img.style.animation = 'none';
-            
-            // Принудительно устанавливаем loading
-            img.loading = 'eager';
-            img.decoding = 'async';
-            
-            // Добавляем задержку для поэтапной загрузки
-            setTimeout(() => {
-                if (!img.complete || img.naturalHeight === 0) {
-                    console.log('Reloading image:', img.src);
-                    
-                    // Создаем новое изображение для проверки загрузки
-                    const testImg = new Image();
-                    
-                    testImg.onload = function() {
-                        console.log('Image loaded successfully:', this.src);
-                        img.src = this.src;
-                        img.classList.add('loaded');
-                        img.style.opacity = '1';
-                    };
-                    
-                    testImg.onerror = function() {
-                        console.log('Failed to load image on mobile:', this.src);
-                        img.src = '/resources/anime-placeholder.svg';
-                        img.classList.add('loaded');
-                        img.style.opacity = '1';
-                    };
-                    
-                    // Оптимизируем URL для мобильных
-                    let mobileSrc = img.src;
-                    if (mobileSrc && mobileSrc !== '/resources/anime-placeholder.svg') {
-                        // Убираем параметры которые могут мешать
-                        mobileSrc = mobileSrc.split('?')[0];
-                        
-                        // Добавляем HTTPS если нужно
-                        mobileSrc = mobileSrc.replace('http://', 'https://');
-                        
-                        // Для Shikimori добавляем мобильные параметры
-                        if (mobileSrc.includes('shikimori.one')) {
-                            mobileSrc += '?mobile=1&w=300&h=400';
-                        }
-                    }
-                    
-                    testImg.src = mobileSrc;
-                } else {
-                    // Изображение уже загружено
-                    img.style.opacity = '1';
-                    img.classList.add('loaded');
-                }
-            }, index * 50); // Уменьшаем интервал для быстрой загрузки
-        });
-        
-        console.log(`Processing ${images.length} images for mobile`);
-    }
-}
-
-// Функция для проверки и исправления сломанных изображений
-function fixBrokenImages() {
-    const images = document.querySelectorAll('.anime-poster img');
-    
-    images.forEach(img => {
-        // Проверяем, загружено ли изображение
-        if (img.complete && img.naturalHeight === 0) {
-            console.log('Broken image detected:', img.src);
-            img.src = '/resources/anime-placeholder.svg';
-            img.classList.add('loaded');
-        }
-        
-        // Добавляем обработчик ошибок, если его нет
-        if (!img.onerror) {
-            img.onerror = function() {
-                console.log('Image load error:', this.src);
-                this.src = '/resources/anime-placeholder.svg';
-                this.classList.add('loaded');
-                this.onerror = null;
-            };
-        }
-    });
-}
-
-// Функция для оптимизации изображений на мобильных
-function optimizeImagesForMobile() {
-    if (window.innerWidth <= 768) {
-        const images = document.querySelectorAll('.anime-poster img');
-        
-        images.forEach(img => {
-            // Добавляем атрибуты для лучшей производительности
-            img.setAttribute('decoding', 'async');
-            img.setAttribute('loading', 'lazy');
-            
-            // Оптимизируем URL для мобильных
-            if (img.src && img.src.includes('shikimori.one')) {
-                let optimizedSrc = img.src.replace('http://', 'https://');
-                
-                // Добавляем параметры оптимизации
-                if (!optimizedSrc.includes('?')) {
-                    optimizedSrc += '?w=300&h=400&fit=crop&quality=80';
-                }
-                
-                if (img.src !== optimizedSrc) {
-                    img.src = optimizedSrc;
-                }
-            }
-        });
-    }
-}
-
-// КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ
-
-// Функция для принудительной загрузки изображений на мобильных
-function forceLoadImagesOnMobile() {
-    if (window.innerWidth > 768) return; // Только для мобильных
-    
-    const images = document.querySelectorAll('img[loading="lazy"]');
-    images.forEach(img => {
-        img.loading = 'eager';
-        
-        // Добавляем обработчик ошибок если его нет
-        if (!img.onerror) {
-            img.onerror = () => {
-                if (window.fixBrokenImage) {
-                    window.fixBrokenImage(img);
-                }
-            };
-        }
-    });
-}
-
-// Функция для оптимизации изображений на мобильных
-function optimizeImagesForMobile() {
-    if (window.innerWidth > 768) return; // Только для мобильных
-    
-    const images = document.querySelectorAll('img');
-    images.forEach(img => {
-        // Принудительно устанавливаем обработчик ошибок
-        if (!img.dataset.errorHandled) {
-            img.onerror = () => {
-                if (window.fixBrokenImage) {
-                    window.fixBrokenImage(img);
-                }
-            };
-        }
-        
-        // Проверяем проблемные изображения
-        if (!img.src || img.src === '' || img.src.includes('undefined') || img.src.includes('null')) {
-            if (window.fixBrokenImage) {
-                window.fixBrokenImage(img);
-            }
-        }
-    });
-}
-
-// Функция для исправления всех сломанных изображений
-function fixBrokenImages() {
-    const images = document.querySelectorAll('img');
-    images.forEach(img => {
-        // Проверяем изображения без src или с проблемными src
-        if (!img.src || img.src === '' || img.src.includes('undefined') || img.src.includes('null')) {
-            if (window.fixBrokenImage) {
-                window.fixBrokenImage(img);
-            }
-        }
-        
-        // Добавляем обработчик ошибок если его нет
-        if (!img.onerror && !img.dataset.errorHandled) {
-            img.onerror = () => {
-                if (window.fixBrokenImage) {
-                    window.fixBrokenImage(img);
-                }
-            };
-        }
-    });
-}
-
-// Улучшенная функция для кэширования постеров с fallback
-async function getCachedPosterWithFallback(title) {
-    try {
-        // Сначала проверяем быстрый кеш
-        const cachedPoster = posterCache.get(title);
-        if (cachedPoster) {
-            return cachedPoster;
-        }
-        
-        // Пытаемся получить из Shikimori
-        const poster = await getShikimoriPoster(title);
-        if (poster) {
-            return poster;
-        }
-    } catch (error) {
-        console.warn('Error getting cached poster:', error);
-    }
-    
-    // Если не удалось получить постер, возвращаем placeholder
-    return '/resources/anime-placeholder.svg';
-}
-
-// Функция для предзагрузки критических постеров
-async function preloadCriticalPosters(animeList) {
-    if (!animeList || animeList.length === 0) return new Map();
-    
-    // Берем первые 5 аниме для предзагрузки постеров
-    const criticalAnime = animeList.slice(0, 5);
-    const posterMap = new Map();
-    
-    try {
-        const posterPromises = criticalAnime.map(async (anime) => {
-            try {
-                const poster = await getCachedPosterWithFallback(anime.title);
-                return { title: anime.title, poster };
-            } catch (error) {
-                console.warn(`Failed to preload poster for ${anime.title}:`, error);
-                return { title: anime.title, poster: '/resources/anime-placeholder.svg' };
-            }
-        });
-        
-        const results = await Promise.allSettled(posterPromises);
-        
-        results.forEach((result) => {
-            if (result.status === 'fulfilled' && result.value) {
-                posterMap.set(result.value.title, result.value.poster);
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error preloading critical posters:', error);
-    }
-    
-    return posterMap;
-}

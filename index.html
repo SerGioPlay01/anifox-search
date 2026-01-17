@@ -49,7 +49,7 @@
     
     <!-- Кодировка и совместимость -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
     <!-- =========================================== -->
@@ -57,21 +57,13 @@
     <!-- =========================================== -->
     <!-- Прелоадер и анимации загрузки - загружаются сразу для быстрого отображения -->
     <style>
-        :root {
-            --primary: #6c5ce7;
-            --background: #1a1625;
-            --text-primary: #ffffff;
-            --text-secondary: #b2bec3;
-            --blur: blur(20px);
-        }
-
         #preloader-site-full {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #1a1625 0%, #2d2438 100%);
+            background: var(--black);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -80,36 +72,6 @@
             opacity: 1;
             visibility: visible;
             transition: opacity 0.5s ease, visibility 0.5s ease;
-            /* КРИТИЧЕСКИ ВАЖНО: НЕ блокируем скролл на мобильных */
-            pointer-events: auto;
-        }
-
-        /* На мобильных устройствах прелоадер НЕ должен блокировать скролл */
-        @media (max-width: 768px) {
-            html.preloader-active,
-            body.preloader-active {
-                overflow: auto !important;
-                overflow-y: auto !important;
-                overflow-x: hidden !important;
-                height: auto !important;
-                min-height: 100vh !important;
-                position: static !important;
-                -webkit-overflow-scrolling: touch !important;
-                touch-action: manipulation !important;
-            }
-        }
-
-        #preloader-site-full::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(108, 92, 231, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(162, 155, 254, 0.15) 0%, transparent 50%);
-            pointer-events: none;
         }
 
         #preloader-site-full.hidden {
@@ -121,13 +83,11 @@
         .loader-site {
             width: 48px;
             height: 48px;
-            border: 4px solid rgba(108, 92, 231, 0.3);
-            border-top-color: var(--primary);
+            border: 4px solid rgba(145, 21, 234, 0.3);
+            border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 1rem;
-            position: relative;
-            z-index: 1;
         }
 
         @keyframes spin {
@@ -138,10 +98,8 @@
 
         #preloader-site-full p {
             font-size: 1rem;
-            color: var(--text-secondary);
+            color: var(--gray);
             letter-spacing: 1px;
-            position: relative;
-            z-index: 1;
         }
     </style>
 
@@ -254,19 +212,15 @@
     <link rel="preload" href="/style.css" as="style">
     <link rel="preconnect" href="https://mc.yandex.ru">
 
-    <!-- Стили -->
+    <!-- Отложенная загрузка некритических CSS -->
     <link rel="stylesheet" href="/style.css" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/mobile-critical-fixes.css">
-    <link rel="stylesheet" href="/privacy-consent.css">
-    <link rel="stylesheet" href="/adblock-banner.css">
-    <link rel="stylesheet" href="/mobile-enhancements.css" media="(max-width: 1024px)">
+    <link rel="stylesheet" href="/cookie-banner.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/adblock-banner.css" media="print" onload="this.media='all'">
     <!-- Резервная загрузка для браузеров без JavaScript -->
     <noscript>
         <link rel="stylesheet" href="/style.css">
-        <link rel="stylesheet" href="/mobile-critical-fixes.css">
-        <link rel="stylesheet" href="/privacy-consent.css">
+        <link rel="stylesheet" href="/cookie-banner.css">
         <link rel="stylesheet" href="/adblock-banner.css">
-        <link rel="stylesheet" href="/mobile-enhancements.css">
     </noscript>
 
     <!-- =========================================== -->
@@ -368,17 +322,6 @@
             </svg>
             <span class="logo-text">AniFox</span>
         </a>
-        <nav class="header-nav">
-            <a href="/" class="nav-btn">
-                <i class="fas fa-home"></i> Главная
-            </a>
-            <a href="/?page=favorites" class="nav-btn">
-                <i class="fas fa-heart"></i> Избранное
-            </a>
-            <a href="/announcements.html" class="nav-btn">
-                <i class="fas fa-calendar-alt"></i> Анонсы
-            </a>
-        </nav>
     </header>
 
     <!-- =========================================== -->
@@ -388,17 +331,7 @@
     <section class="search-section">
         <form id="searchForm" action="/" method="get" autocomplete="off">
             <label class="visually-hidden" for="searchInput">Название аниме</label>
-            <input id="searchInput" 
-                   name="q" 
-                   type="search" 
-                   placeholder="Название аниме…" 
-                   aria-label="Поиск аниме"
-                   autocomplete="off"
-                   autocorrect="off"
-                   autocapitalize="off"
-                   spellcheck="false"
-                   inputmode="search"
-                   enterkeyhint="search">
+            <input id="searchInput" name="q" type="search" placeholder="Название аниме…" aria-label="Поиск аниме">
             <button type="submit">Найти</button>
         </form>
     </section>
@@ -424,7 +357,6 @@
                     <p>Смотреть аниме онлайн бесплатно в HD качестве на AniFox. Более 3000 аниме с русской озвучкой и субтитрами. Популярные аниме: Наруто, Атака титанов, Демон Слейер, Ван Пис. Без регистрации.</p>
                     <div class="footer-links">
                         <a href="/privacy-policy.html">Политика конфиденциальности</a>
-                        <a href="/terms-of-service.html">Условия использования</a>
                         <a href="/license.html">Лицензия</a>
                     </div>
                 </div>
@@ -437,18 +369,6 @@
                         <li><a href="/search/naruto">Наруто онлайн</a></li>
                         <li><a href="/search/attack-on-titan">Атака титанов</a></li>
                         <li><a href="/search/demon-slayer">Демон Слейер</a></li>
-                    </ul>
-                </div>
-                <!-- Правовая информация -->
-                <div class="footer-section">
-                    <h4>Правовая информация</h4>
-                    <ul>
-                        <li><a href="/privacy-policy.html">Политика конфиденциальности</a></li>
-                        <li><a href="/terms-of-service.html">Условия использования</a></li>
-                        <li><a href="/cookie-policy.html">Политика cookies</a></li>
-                        <li><a href="/user-rights.html">Права пользователей</a></li>
-                        <li><a href="/disclaimer.html">Отказ от ответственности</a></li>
-                        <li><a href="/license.html">Лицензия</a></li>
                     </ul>
                 </div>
                 <!-- Информация о разработчике -->
@@ -512,26 +432,6 @@
             const preloader = document.getElementById('preloader-site-full');
             if (!preloader) return;
 
-            // Определяем мобильное устройство
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-
-            // КРИТИЧЕСКИ ВАЖНО: На мобильных НЕ блокируем скролл
-            if (isMobile) {
-                function forceEnableScroll() {
-                    document.documentElement.style.overflow = 'auto';
-                    document.documentElement.style.overflowY = 'auto';
-                    document.documentElement.style.overflowX = 'hidden';
-                    document.body.style.overflow = 'auto';
-                    document.body.style.overflowY = 'auto';
-                    document.body.style.overflowX = 'hidden';
-                }
-                
-                // Принудительно включаем скролл сразу и через интервалы
-                forceEnableScroll();
-                setTimeout(forceEnableScroll, 10);
-                setTimeout(forceEnableScroll, 100);
-            }
-
             let resourcesLoaded = false;
             let domReady = false;
 
@@ -558,16 +458,6 @@
                     setTimeout(() => {
                         preloader.classList.add('hidden');
                         document.documentElement.classList.remove('preloader-active');
-                        
-                        // Дополнительно принудительно включаем скролл на мобильных
-                        if (isMobile) {
-                            setTimeout(() => {
-                                document.documentElement.style.overflow = 'auto';
-                                document.documentElement.style.overflowY = 'auto';
-                                document.body.style.overflow = 'auto';
-                                document.body.style.overflowY = 'auto';
-                            }, 100);
-                        }
                     }, 300);
                 }
             }
@@ -591,37 +481,29 @@
                 resourcesLoaded = true;
             }
 
-            // Фолбек: скрыть через 2 секунды максимум (уменьшено для мобильных)
+            // Фолбек: скрыть через 3 секунды максимум
             setTimeout(() => {
                 if (!preloader.classList.contains('hidden')) {
                     preloader.classList.add('hidden');
                     document.documentElement.classList.remove('preloader-active');
-                    
-                    // Принудительно включаем скролл
-                    if (isMobile) {
-                        document.documentElement.style.overflow = 'auto';
-                        document.documentElement.style.overflowY = 'auto';
-                        document.body.style.overflow = 'auto';
-                        document.body.style.overflowY = 'auto';
-                    }
                 }
-            }, isMobile ? 1500 : 3000);
+            }, 3000);
 
             // Запускаем проверку сразу
             checkHidePreloader();
         })();
     </script>
 
-    <!-- Отложенные скрипты -->
+    <!-- =========================================== -->
+    <!-- ОТЛОЖЕННЫЕ СКРИПТЫ -->
+    <!-- =========================================== -->
     <!-- Некритические скрипты загружаются после основного контента -->
-    <script src="/mobile-fixes.js"></script>
     <script src="/api.js" defer></script>
     <script src="/seo.js" defer></script>
-    <script src="/mobile-enhancements.js" defer></script>
-    <script src="/privacy-consent.js" defer onerror="console.warn('Cookie banner failed to load'); window.cookieBannerFailed = true;"></script>
+    <script src="/cookie-banner.js" defer></script>
     <script src="/adblock-banner.js" defer></script>
     <script src="/sw-register.js" defer></script>
-    
+
     <!-- =========================================== -->
     <!-- YANDEX.METRIKA -->
     <!-- =========================================== -->

@@ -95,7 +95,7 @@
     border-radius: var(--radius);
     padding: .65rem 1.25rem;
     font-weight: 600;
-    cursor: pointer;
+    cursor: poRubik;
     transition: var(--transition);
     user-select: none;
 }

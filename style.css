@@ -63,31 +63,16 @@ html {
 }
 
 :root {
-  --primary: #6c5ce7;
-  --primary-dark: #5f3dc4;
-  --primary-light: #a29bfe;
-  --secondary: #fd79a8;
-  --accent: #e17055;
-  --background: #0d0b14;
-  --background-light: #1a1625;
-  --surface: rgba(108, 92, 231, 0.08);
-  --surface-hover: rgba(108, 92, 231, 0.15);
-  --white: #ffffff;
-  --text-primary: #ffffff;
-  --text-secondary: #b2bec3;
-  --text-muted: #74b9ff;
+  --red: #5b0a99;
+  --black: #0a0a0a;
+  --white: #f2f2f2;
+  --gray: #666;
+  --dark-gray: #333;
   --radius: 16px;
-  --radius-small: 8px;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --glow: 0 0 0 2px rgba(108, 92, 231, 0.5);
-  --glow-hover: 0 0 0 3px rgba(108, 92, 231, 0.8);
-  --poster-shadow: 0 15px 40px rgba(108, 92, 231, 0.3);
-  --poster-shadow-hover: 0 25px 80px rgba(108, 92, 231, 0.6), 0 0 0 1px rgba(108, 92, 231, 0.3);
-  --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  --gradient-secondary: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
-  --gradient-bg: linear-gradient(135deg, #0d0b14 0%, #1a1625 50%, #2d1b3d 100%);
-  --blur: blur(20px);
-  --element-height: 40px;
+  --transition: 0.3s;
+  --accent: #9115ea;
+  --shadow: 0 8px 32px rgba(101, 19, 178, 0.4);
+  --gradient: linear-gradient(135deg, var(--red) 0%, #a31aff 100%);
 }
 
 * {
@@ -98,175 +83,106 @@ html {
 
 body {
   font-family: "Rubik", system-ui, -apple-system, sans-serif;
-  background: #0d0b14;
-  color: var(--text-primary);
+  background-color: #0D1117;
+  color: var(--white);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   line-height: 1.6;
-  position: relative;
-  overflow-x: hidden;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: 
-    radial-gradient(circle at 15% 25%, rgba(108, 92, 231, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 85% 75%, rgba(162, 155, 254, 0.12) 0%, transparent 45%),
-    radial-gradient(circle at 50% 10%, rgba(253, 121, 168, 0.08) 0%, transparent 35%),
-    radial-gradient(circle at 20% 80%, rgba(95, 61, 196, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(108, 92, 231, 0.08) 0%, transparent 60%),
-    radial-gradient(circle at 40% 60%, rgba(162, 155, 254, 0.06) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: -1;
-  filter: blur(40px);
-  animation: backgroundFloat 20s ease-in-out infinite;
-}
-
-@keyframes backgroundFloat {
-  0%, 100% {
-    transform: translateY(0px) scale(1);
-    opacity: 0.8;
-  }
-  25% {
-    transform: translateY(-10px) scale(1.02);
-    opacity: 0.9;
-  }
-  50% {
-    transform: translateY(-5px) scale(0.98);
-    opacity: 0.85;
-  }
-  75% {
-    transform: translateY(-15px) scale(1.01);
-    opacity: 0.95;
-  }
-}
-
-/* Header Navigation Styles */
-.top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  background: rgba(13, 11, 20, 0.85);
-  border-bottom: 1px solid rgba(108, 92, 231, 0.3);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: var(--blur);
-  height: 80px;
-}
-
-.logo-link {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  text-decoration: none;
-  color: var(--text-primary);
-  font-weight: 700;
-  font-size: 1.5rem;
-  transition: var(--transition);
-  height: var(--element-height);
-  cursor: pointer;
-}
-
-.logo-link:hover {
-  transform: translateY(-2px);
-  color: var(--primary-light);
-}
-
-.logo-text {
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.header-nav {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0 1.5rem;
-  height: var(--element-height);
-  border: none;
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-  text-decoration: none;
-  backdrop-filter: var(--blur);
-  border: 2px solid transparent;
-}
-
-.nav-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: var(--gradient-primary);
-  transition: left 0.5s ease;
-  opacity: 0.1;
-}
-
-.nav-btn:hover::before {
-  left: 100%;
-}
-
-.nav-btn:hover {
-  color: var(--text-primary);
-  background: var(--surface-hover);
-  transform: translateY(-2px);
-  border-color: var(--primary);
-  box-shadow: var(--glow-hover);
-}
-
-.nav-btn:active {
-  transform: translateY(0);
-}
-
-.nav-btn.active {
-  background: var(--gradient-primary);
-  color: var(--white);
-  border-color: var(--primary-light);
-  box-shadow: var(--glow);
-}
-
-.nav-btn.active:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--glow-hover);
-}
-
-.nav-btn i {
-  font-size: 1rem;
-}
+ /* Header Navigation Styles */
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: #26034292;
+      border-bottom: 1px solid rgba(145, 21, 234, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(40px);
+    }
     
-    /* Tablet styles */
-    @media (max-width: 1024px) {
-      .top {
-        padding: 1rem 1.5rem;
-      }
-      
-      .nav-btn {
-        padding: 0 1.25rem;
-        font-size: 0.95rem;
-      }
+    .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--white);
+      font-weight: 700;
+      font-size: 1.5rem;
+      transition: all var(--transition);
+    }
+    
+    .logo-link:hover {
+      transform: translateY(-2px);
+    }
+    
+    .logo-text {
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .header-nav {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--gray);
+      font-weight: 600;
+      cursor: poRubik;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .nav-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(145, 21, 234, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .nav-btn:hover::before {
+      left: 100%;
+    }
+    
+    .nav-btn:hover {
+      color: var(--white);
+      background: rgba(145, 21, 234, 0.1);
+      transform: translateY(-2px);
+    }
+    
+    .nav-btn.active {
+      background: var(--gradient);
+      color: var(--white);
+      box-shadow: var(--shadow);
+    }
+    
+    .nav-btn.active:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(145, 21, 234, 0.5);
+    }
+    
+    .nav-btn i {
+      font-size: 1rem;
     }
     
     /* Mobile styles */
@@ -275,19 +191,15 @@ body::before {
         padding: 1rem;
         flex-direction: column;
         gap: 1rem;
-        height: auto;
-        min-height: 80px;
       }
       
       .header-nav {
         width: 100%;
         justify-content: center;
-        flex-wrap: wrap;
       }
       
       .nav-btn {
         flex: 1;
-        min-width: 120px;
         justify-content: center;
         padding: 0.875rem 1rem;
         font-size: 0.9rem;
@@ -295,49 +207,17 @@ body::before {
     }
     
     @media (max-width: 480px) {
-      .top {
-        padding: 0.75rem;
-      }
-      
       .logo-link {
-        font-size: 1.2rem;
-        gap: 0.5rem;
-      }
-      
-      .logo-link svg {
-        width: 28px;
-        height: 28px;
-      }
-      
-      .header-nav {
-        gap: 0.5rem;
+        font-size: 1.3rem;
       }
       
       .nav-btn {
         padding: 0.75rem 0.5rem;
-        font-size: 0.8rem;
-        min-width: 100px;
+        font-size: 0.85rem;
       }
       
       .nav-btn i {
-        font-size: 0.85rem;
-      }
-    }
-    
-    /* Extra small devices */
-    @media (max-width: 360px) {
-      .top {
-        padding: 0.5rem;
-      }
-      
-      .logo-link {
-        font-size: 1.1rem;
-      }
-      
-      .nav-btn {
-        padding: 0.625rem 0.25rem;
-        font-size: 0.75rem;
-        min-width: 80px;
+        font-size: 0.9rem;
       }
     }
 
@@ -358,39 +238,39 @@ body::before {
 
 #searchInput {
   flex: 1;
-  height: var(--element-height);
+  min-height: 64px;
   border-radius: var(--radius);
-  border: 2px solid rgba(108, 92, 231, 0.3);
-  background: rgba(26, 22, 37, 0.7);
-  color: var(--text-primary);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--white);
   padding: 0 2rem;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   outline: none;
   transition: var(--transition);
-  backdrop-filter: var(--blur);
+  backdrop-filter: blur(10px);
 }
 
 #searchInput::placeholder {
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 #searchInput:focus {
-  border-color: var(--primary);
-  background: rgba(26, 22, 37, 0.9);
-  box-shadow: var(--glow-hover);
+  border-color: var(--red);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 30px rgba(150, 6, 227, 0.3);
   transform: translateY(-2px);
 }
 
 #searchForm button {
   flex: 0 0 160px;
-  height: var(--element-height);
+  height: 64px;
   border-radius: var(--radius);
   border: none;
-  background: var(--gradient-primary);
+  background: var(--gradient);
   color: var(--white);
   font-weight: 700;
-  font-size: 1.1rem;
-  cursor: pointer;
+  font-size: 1.2rem;
+  cursor: poRubik;
   transition: var(--transition);
   position: relative;
   overflow: hidden;
@@ -414,93 +294,11 @@ body::before {
 
 #searchForm button:hover {
   transform: translateY(-3px);
-  box-shadow: var(--glow-hover);
+  box-shadow: 0 10px 25px rgba(105, 6, 227, 0.4);
 }
 
 #searchForm button:hover::before {
   left: 100%;
-}
-
-/* Tablet search adaptations */
-@media (max-width: 1024px) {
-  .search-section {
-    padding: 2.5rem 1rem;
-  }
-  
-  #searchInput {
-    font-size: 1rem;
-    padding: 0 1.5rem;
-  }
-  
-  #searchForm button {
-    flex: 0 0 140px;
-    font-size: 1rem;
-  }
-}
-
-/* Mobile search adaptations */
-@media (max-width: 768px) {
-  .search-section {
-    padding: 2rem 1rem;
-  }
-
-  #searchForm {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  #searchInput {
-    height: 60px;
-    font-size: 1.1rem;
-    padding: 0 1.5rem;
-    border-radius: 16px;
-  }
-
-  #searchForm button {
-    flex: none;
-    width: 100%;
-    height: 60px;
-    font-size: 1.1rem;
-    border-radius: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .search-section {
-    padding: 1.5rem 0.75rem;
-  }
-  
-  #searchInput {
-    height: 56px;
-    font-size: 1rem;
-    padding: 0 1.25rem;
-    border-radius: 14px;
-  }
-  
-  #searchForm button {
-    height: 56px;
-    font-size: 1rem;
-    border-radius: 14px;
-  }
-}
-
-@media (max-width: 360px) {
-  .search-section {
-    padding: 1.25rem 0.5rem;
-  }
-  
-  #searchInput {
-    height: 52px;
-    font-size: 0.95rem;
-    padding: 0 1rem;
-    border-radius: 12px;
-  }
-  
-  #searchForm button {
-    height: 52px;
-    font-size: 0.95rem;
-    border-radius: 12px;
-  }
 }
 
 /* Results */
@@ -522,234 +320,14 @@ body::before {
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
-/* Сетка результатов */
+/* Увеличенные карточки с большими плеерами */
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
   gap: 2rem;
   margin-top: 1.5rem;
 }
 
-/* Карточки аниме */
-.anime-card {
-  background: rgba(26, 22, 37, 0.6);
-  border: 2px solid rgba(108, 92, 231, 0.2);
-  border-radius: var(--radius);
-  overflow: hidden;
-  transition: var(--transition);
-  position: relative;
-  cursor: pointer;
-  backdrop-filter: var(--blur);
-}
-
-.anime-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--gradient-primary);
-  transition: var(--transition);
-  opacity: 0;
-}
-
-.anime-card:hover {
-  transform: translateY(-8px);
-  border-color: var(--primary);
-  background: rgba(26, 22, 37, 0.8);
-  box-shadow: var(--glow-hover);
-}
-
-.anime-card:hover::before {
-  opacity: 1;
-}
-
-/* Постер аниме */
-.anime-poster {
-  position: relative;
-  width: 100%;
-  height: 300px;
-  overflow: hidden;
-}
-
-.anime-poster img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: var(--transition);
-}
-
-.anime-card:hover .anime-poster img {
-  transform: scale(1.05);
-}
-
-/* Оверлей на постере */
-.anime-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    transparent 60%,
-    rgba(45, 52, 54, 0.9) 100%
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.anime-card:hover .anime-overlay {
-  opacity: 1;
-}
-
-/* Кнопка воспроизведения */
-.play-button {
-  width: 60px;
-  height: 60px;
-  background: var(--gradient-primary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--white);
-  font-size: 1.5rem;
-  transform: scale(0.8);
-  transition: var(--transition);
-  box-shadow: var(--glow);
-}
-
-.anime-card:hover .play-button {
-  transform: scale(1);
-}
-
-/* Рейтинг на постере */
-.anime-rating {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(45, 52, 54, 0.9);
-  color: #ffd700;
-  padding: 0.25rem 0.5rem;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  backdrop-filter: var(--blur);
-  border: 1px solid rgba(255, 215, 0, 0.3);
-}
-
-/* Информация об аниме */
-.anime-info {
-  padding: 1.5rem;
-}
-
-.anime-title {
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  margin: 0 0 1rem 0;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-weight: 600;
-  transition: var(--transition);
-}
-
-.anime-card:hover .anime-title {
-  color: var(--primary-light);
-}
-
-/* Мета-информация */
-.anime-meta {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-.anime-year,
-.anime-episodes {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  height: 20px;
-}
-
-.anime-year i,
-.anime-episodes i {
-  font-size: 0.75rem;
-  opacity: 0.7;
-}
-
-/* Действия */
-.anime-actions {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 0 1rem 1rem;
-  gap: 0.5rem;
-}
-
-.action-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: var(--transition);
-  text-decoration: none;
-  font-size: 0.8rem;
-  border: 2px solid rgba(108, 92, 231, 0.2);
-  backdrop-filter: var(--blur);
-}
-
-.action-btn:hover {
-  background: var(--primary);
-  transform: scale(1.1);
-  border-color: var(--primary-light);
-  box-shadow: var(--glow);
-}
-
-.favorite-btn.active {
-  background: var(--gradient-secondary);
-  color: var(--white);
-  border-color: var(--secondary);
-}
-
-.favorite-btn.active:hover {
-  background: var(--secondary);
-  box-shadow: 0 0 0 3px rgba(253, 121, 168, 0.5);
-}
-
-.share-btn:hover {
-  background: #74b9ff;
-  border-color: #74b9ff;
-  box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.5);
-}
-
-.external-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(225, 112, 85, 0.5);
-}
-
-/* Старые стили для совместимости */
 .card {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -775,7 +353,7 @@ body::before {
 .card:hover {
   transform: translateY(-8px);
   border-color: var(--red);
-  box-shadow: var(--glow-hover);
+  box-shadow: var(--shadow);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -897,6 +475,38 @@ body::before {
   font-size: 1.1rem;
 }
 
+/* Scroll to Top */
+#scrollToTop {
+  position: fixed;
+  bottom: 2.5rem;
+  right: 2.5rem;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--gradient);
+  border: none;
+  color: #fff;
+  cursor: poRubik;
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+  transition: var(--transition);
+  poRubik-events: none;
+  font-size: 1.4rem;
+  z-index: 1000;
+  box-shadow: 0 6px 20px rgba(227, 6, 19, 0.4);
+}
+
+#scrollToTop.show {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  poRubik-events: auto;
+}
+
+#scrollToTop:hover {
+  transform: scale(1.15);
+  box-shadow: 0 8px 25px rgba(227, 6, 19, 0.6);
+}
+
 /* Accessibility */
 .visually-hidden {
   position: absolute;
@@ -962,32 +572,14 @@ body::before {
 }
 
 /* Responsive */
-@media (max-width: 1400px) {
-  .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.75rem;
-  }
-}
-
 @media (max-width: 1200px) {
   .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
     gap: 1.5rem;
   }
 
   .player-lane {
     max-width: 1200px;
-  }
-}
-
-@media (max-width: 1024px) {
-  .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1.25rem;
-  }
-  
-  .section-title {
-    font-size: 2rem;
   }
 }
 
@@ -1018,8 +610,8 @@ body::before {
   }
 
   .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1rem;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 
   .player-lane {
@@ -1048,46 +640,6 @@ body::before {
     height: 50px;
     font-size: 1.2rem;
   }
-  
-  /* Anime card mobile optimizations */
-  .anime-card {
-    border-radius: 12px;
-  }
-  
-  .anime-poster {
-    height: 240px;
-  }
-  
-  .anime-info {
-    padding: 1rem;
-  }
-  
-  .anime-title {
-    font-size: 1rem;
-    line-height: 1.2;
-  }
-  
-  .anime-stats {
-    gap: 0.5rem;
-    margin: 0.75rem 0;
-  }
-  
-  .stat-item {
-    padding: 0.375rem 0.625rem;
-    font-size: 0.75rem;
-    height: 28px;
-  }
-  
-  .anime-actions {
-    padding: 0 0.75rem 0.75rem;
-    gap: 0.375rem;
-  }
-  
-  .action-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.75rem;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1101,8 +653,7 @@ body::before {
   }
 
   .results-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+    gap: 1.25rem;
   }
 
   .no-results {
@@ -1120,79 +671,6 @@ body::before {
   .logo-link {
     font-size: 1.3rem;
   }
-  
-  /* Ultra-compact anime cards for small screens */
-  .anime-poster {
-    height: 200px;
-  }
-  
-  .anime-info {
-    padding: 0.75rem;
-  }
-  
-  .anime-title {
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .anime-stats {
-    gap: 0.25rem;
-    margin: 0.5rem 0;
-  }
-  
-  .stat-item {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
-    height: 24px;
-  }
-  
-  .anime-actions {
-    padding: 0 0.5rem 0.5rem;
-    gap: 0.25rem;
-  }
-  
-  .action-btn {
-    width: 24px;
-    height: 24px;
-    font-size: 0.7rem;
-  }
-}
-
-@media (max-width: 360px) {
-  .results-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-  }
-  
-  .section-title {
-    font-size: 1.4rem;
-    margin: 1rem 0 0.75rem;
-    padding-left: 0.75rem;
-  }
-  
-  .anime-poster {
-    height: 180px;
-  }
-  
-  .anime-info {
-    padding: 0.5rem;
-  }
-  
-  .anime-title {
-    font-size: 0.8rem;
-    margin-bottom: 0.375rem;
-  }
-  
-  .anime-stats {
-    gap: 0.125rem;
-    margin: 0.375rem 0;
-  }
-  
-  .stat-item {
-    padding: 0.125rem 0.375rem;
-    font-size: 0.65rem;
-    height: 20px;
-  }
 }
 
 /* Темная тема дополнительно */
@@ -1209,56 +687,6 @@ body::before {
 /* Плавная прокрутка */
 html {
   scroll-behavior: smooth;
-  /* Оптимизация прокрутки */
-  scroll-padding-top: 80px;
-}
-
-/* Оптимизация производительности */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-/* Улучшение производительности анимаций */
-*,
-*::before,
-*::after {
-  will-change: auto;
-}
-
-/* Оптимизация для элементов с анимациями */
-.anime-card,
-.nav-btn,
-.action-btn,
-.logo-link,
-.breadcrumb a {
-  will-change: transform, opacity;
-  transform: translateZ(0); /* Включаем аппаратное ускорение */
-  backface-visibility: hidden;
-}
-
-/* Оптимизация изображений */
-img {
-  will-change: auto;
-  transform: translateZ(0);
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-}
-
-/* Оптимизация скроллинга */
-body {
-  -webkit-overflow-scrolling: touch; /* Плавная прокрутка на iOS */
-  overscroll-behavior: contain; /* Предотвращаем bounce эффект */
-}
-
-/* Оптимизация для больших списков */
-.results-grid {
-  contain: layout style paint;
-}
-
-.anime-card {
-  contain: layout style paint;
 }
 
 /* Выделение текста */
@@ -1303,7 +731,7 @@ body {
   border: 1px solid var(--red);
   padding: 0.75rem 1.5rem;
   border-radius: var(--radius);
-  cursor: pointer;
+  cursor: poRubik;
   transition: var(--transition);
   font-size: 0.9rem;
 }
@@ -1361,7 +789,7 @@ body {
   color: var(--white);
   padding: 0.75rem 1rem;
   border-radius: 50px;
-  cursor: pointer;
+  cursor: poRubik;
   transition: var(--transition);
   font-size: 0.9rem;
   position: relative;
@@ -1401,7 +829,7 @@ body {
   color: var(--white);
   padding: 0.5rem;
   border-radius: var(--radius);
-  cursor: pointer;
+  cursor: poRubik;
   transition: var(--transition);
   flex-shrink: 0;
 }
@@ -1456,7 +884,7 @@ body {
   color: var(--white);
   padding: 0.5rem;
   border-radius: var(--radius);
-  cursor: pointer;
+  cursor: poRubik;
   transition: var(--transition);
   width: 36px;
   height: 36px;
@@ -1470,126 +898,65 @@ body {
   transform: scale(1.1);
 }
 
-/* Улучшенные уведомления */
+/* Уведомления */
 .notification {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  background: rgba(26, 22, 37, 0.98);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(108, 92, 231, 0.3);
-  border-left: 4px solid #74b9ff;
-  border-radius: 16px;
+  top: 100px;
+  right: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--black);
   padding: 1rem 1.5rem;
-  color: #ffffff;
-  box-shadow: 0 15px 40px rgba(108, 92, 231, 0.3);
-  z-index: 2147483647;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
-  gap: 1rem;
-  max-width: 400px;
-  min-width: 300px;
-  opacity: 0;
-  transform: translateX(100%);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: 'Rubik', system-ui, -apple-system, sans-serif;
-}
-
-.notification.persistent {
-  position: relative;
-  opacity: 1;
-  transform: translateX(0);
+  gap: 0.75rem;
+  box-shadow: var(--shadow);
+  z-index: 10000;
+  border-left: 4px solid var(--red);
+  animation: slideInRight 0.3s ease-out;
 }
 
 .notification-success {
-  border-left-color: #00b894;
-}
-
-.notification-success i:first-child {
-  color: #00b894;
+  border-left-color: #4caf50;
 }
 
 .notification-info {
-  border-left-color: #74b9ff;
+  border-left-color: #2196f3;
 }
 
-.notification-info i:first-child {
-  color: #74b9ff;
-}
-
-.notification-error {
-  border-left-color: #e84393;
-}
-
-.notification-error i:first-child {
-  color: #e84393;
-}
-
-.notification-warning {
-  border-left-color: #fdcb6e;
-}
-
-.notification-warning i:first-child {
-  color: #fdcb6e;
-}
-
-.notification i:first-child {
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
-.notification span {
-  flex: 1;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.notification-copy-btn,
-.notification-close-btn {
+.notification button {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
+  cursor: poRubik;
+  opacity: 0.7;
   padding: 0.25rem;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  font-size: 0.9rem;
 }
 
-.notification-copy-btn:hover,
-.notification-close-btn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
-  transform: scale(1.1);
+.notification button:hover {
+  opacity: 1;
 }
 
-.notification-copy-btn {
-  background: #6c5ce7;
+.notification button[title="Копировать код защиты"] {
+  background: var(--blue);
   color: white;
-  border-radius: 6px;
-  padding: 0.4rem 0.6rem;
-  font-size: 0.8rem;
-  width: auto;
-  height: auto;
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-left: 0.5rem;
+  transition: all 0.2s ease;
 }
 
-.notification-copy-btn:hover {
-  background: #5f3dc4;
+.notification button[title="Копировать код защиты"]:hover {
+  background: #1976d2;
   transform: scale(1.05);
 }
 
-.notification-copy-btn.copied {
-  background: #00b894 !important;
+.notification button[title="Копировать код защиты"].copied {
+  background: #28a745 !important;
   animation: copySuccess 0.3s ease;
 }
 
-.notification-copy-btn.copy-failed {
-  background: #e84393 !important;
+.notification button[title="Копировать код защиты"].copy-failed {
+  background: #dc3545 !important;
   animation: copyFailed 0.3s ease;
 }
 
@@ -1624,36 +991,7 @@ body {
 }
 
 /* Адаптивность */
-@media (max-width: 1024px) {
-  .search-history-buttons {
-    gap: 0.625rem;
-  }
-
-  .history-query-btn {
-    padding: 0.625rem 0.875rem;
-    font-size: 0.85rem;
-  }
-
-  .notification {
-    right: 1.5rem;
-    left: 1.5rem;
-    top: 90px;
-    max-width: none;
-    min-width: auto;
-  }
-}
-
 @media (max-width: 768px) {
-  .search-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .history-section {
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-  }
-  
   .search-history-buttons {
     gap: 0.5rem;
   }
@@ -1671,67 +1009,6 @@ body {
     right: 1rem;
     left: 1rem;
     top: 80px;
-    padding: 0.875rem 1.25rem;
-    font-size: 0.85rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .history-section {
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .search-history-buttons {
-    gap: 0.375rem;
-  }
-
-  .history-query-btn {
-    padding: 0.375rem 0.625rem;
-    font-size: 0.75rem;
-  }
-
-  .notification {
-    right: 0.75rem;
-    left: 0.75rem;
-    top: 70px;
-    padding: 0.75rem 1rem;
-    font-size: 0.8rem;
-    border-radius: 12px;
-  }
-  
-  .notification i:first-child {
-    font-size: 1rem;
-  }
-  
-  .notification-copy-btn,
-  .notification-close-btn {
-    width: 20px;
-    height: 20px;
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 360px) {
-  .history-section {
-    padding: 0.75rem;
-  }
-  
-  .search-history-buttons {
-    gap: 0.25rem;
-  }
-
-  .history-query-btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
-  }
-
-  .notification {
-    right: 0.5rem;
-    left: 0.5rem;
-    top: 60px;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.75rem;
   }
 }
 
@@ -1741,239 +1018,529 @@ body {
   justify-content: center;
   margin: 3rem 0;
   padding: 2rem 0;
-  border-top: 1px solid rgba(108, 92, 231, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .load-more-btn {
-  background: var(--gradient-primary);
+  background: var(--red);
   color: var(--white);
-  border: 2px solid transparent;
-  padding: 0 2rem;
-  height: var(--element-height);
+  border: none;
+  padding: 1rem 2rem;
   border-radius: var(--radius);
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: poRubik;
+  transition: var(--transition);
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  backdrop-filter: var(--blur);
-  position: relative;
-  overflow: hidden;
-}
-
-.load-more-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.6s ease;
-}
-
-.load-more-btn:hover::before {
-  left: 100%;
 }
 
 .load-more-btn:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: var(--glow-hover);
-}
-
-.load-more-btn:active:not(:disabled) {
-  transform: translateY(-1px) scale(0.98);
-  transition: all 0.1s ease;
+  background: #ff1a2e;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(227, 6, 19, 0.3);
 }
 
 .load-more-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-  transform: none;
 }
 
-.load-more-btn i {
-  transition: transform 0.3s ease;
+/* Ссылки на базы данных */
+.databases-info {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(45px);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  border-left: 4px solid var(--red);
 }
 
-.load-more-btn:hover:not(:disabled) i {
-  transform: translateY(2px);
-  animation: bounce 0.6s ease-in-out;
+.databases-info h3 {
+  margin: 0 0 1rem 0;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
 }
 
-@keyframes bounce {
-  0%, 20%, 60%, 100% {
-    transform: translateY(2px);
+.database-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.database-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: var(--transition);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.database-link:hover {
+  background: var(--red);
+  transform: translateY(-2px);
+  border-color: var(--red);
+}
+
+/* Ссылки на информацию в карточках */
+.info-links {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.info-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: var(--transition);
+  font-size: 0.8rem;
+}
+
+.info-link:hover {
+  background: var(--red);
+  transform: scale(1.1);
+}
+
+/* Маленький индикатор загрузки */
+.loading-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--white);
+  animation: spin 1s ease-in-out infinite;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .load-more-btn {
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
   }
-  40% {
-    transform: translateY(-2px);
+
+  .database-links {
+    gap: 0.5rem;
   }
-  80% {
-    transform: translateY(1px);
+
+  .database-link {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .databases-info {
+    padding: 1.25rem;
+    margin: 1rem 0;
+  }
+
+  .info-links {
+    gap: 0.25rem;
+  }
+
+  .info-link {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
   }
 }
 
-/* Анимация загрузки для кнопки */
-.load-more-btn.loading {
-  pointer-events: none;
+@media (max-width: 480px) {
+  .database-links {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .database-link {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
-.load-more-btn.loading i {
+/* Навигация в хедере */
+.header-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--white);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  cursor: poRubik;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.nav-btn:hover {
+  background: var(--red);
+  border-color: var(--red);
+  transform: translateY(-2px);
+}
+
+/* Страница избранного */
+.favorites-section {
+  margin-bottom: 3rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.favorites-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.clear-history-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.clear-history-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Адаптивность для модалки */
+@media (max-width: 768px) {
+  .modal-content {
+    margin: 1rem;
+    max-height: 95vh;
+  }
+
+  .modal-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .anime-info {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .anime-poster {
+    text-align: center;
+  }
+
+  .anime-poster img {
+    max-width: 200px;
+  }
+
+  .modal-footer {
+    padding: 1rem 1.5rem;
+    flex-direction: column;
+  }
+
+  .header-nav {
+    gap: 0.5rem;
+  }
+
+  .nav-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .anime-poster img {
+    max-width: 150px;
+  }
+
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* Главный прелоадер */
+.preloader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+}
+
+.preloader-content {
+  text-align: center;
+  color: var(--white);
+}
+
+.preloader-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid var(--red);
+  border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
 }
 
+.preloader-spinner.small {
+  width: 30px;
+  height: 30px;
+  border-width: 3px;
+  margin-bottom: 0.75rem;
+}
+
+.preloader-text {
+  font-size: 1.1rem;
+  color: var(--gray);
+  margin: 0;
+}
+
+/* Прелоадер для секций */
+.section-preloader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+/* Анимация спиннера */
 @keyframes spin {
-  from {
+  0% {
     transform: rotate(0deg);
   }
-  to {
+  100% {
     transform: rotate(360deg);
   }
 }
 
-/* Пульсирующий эффект при загрузке */
-.load-more-btn.loading::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.1);
-  animation: pulse 1.5s ease-in-out infinite;
+/* Улучшенные стили для кнопки загрузки */
+.load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.load-more-btn:disabled:hover {
+  background: var(--red);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* PWA Install Button */
+.install-pwa-btn {
+  background: linear-gradient(135deg, #e30613, #ff1a2e);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  cursor: poRubik;
+  font-size: 0.9rem;
+  display: none; /* Сначала скрываем */
+  align-items: center;
+  gap: 0.5rem;
+  transition: var(--transition);
+  animation: pulse 2s infinite;
+  margin-left: 1rem;
+}
+
+.install-pwa-btn.show {
+  display: flex !important;
+}
+
+.install-pwa-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(227, 6, 19, 0.4);
+}
+
+.install-pwa-btn:active {
+  transform: translateY(0);
 }
 
 @keyframes pulse {
   0% {
-    opacity: 0;
+    transform: scale(1);
   }
   50% {
-    opacity: 1;
+    transform: scale(1.05);
   }
   100% {
-    opacity: 0;
+    transform: scale(1);
   }
 }
 
-/* Scroll to Top */
-#scrollToTop {
+/* Install Notifications */
+.install-notification {
   position: fixed;
-  bottom: 2.5rem;
-  right: 2.5rem;
-  width: var(--element-height);
-  height: var(--element-height);
-  border-radius: 50%;
-  background: var(--gradient-primary);
-  border: none;
-  color: var(--white);
-  cursor: pointer;
-  opacity: 0;
-  transform: scale(0.8) translateY(20px);
-  transition: var(--transition);
-  pointer-events: none;
-  font-size: 1.2rem;
-  z-index: 1000;
-  box-shadow: var(--glow);
-  backdrop-filter: var(--blur);
-}
-
-#scrollToTop.show {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-  pointer-events: auto;
-}
-
-#scrollToTop:hover {
-  transform: scale(1.15);
-  box-shadow: var(--glow-hover);
-}
-
-/* Уведомления */
-.notification {
-  position: fixed;
-  top: 100px;
-  right: 2rem;
-  background: var(--surface);
-  color: var(--text-primary);
-  padding: 1rem 1.5rem;
+  bottom: 20px;
+  right: 20px;
+  background: var(--black);
   border-radius: var(--radius);
+  padding: 1rem;
+  z-index: 10000;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+  animation: slideInUp 0.3s ease-out;
+  max-width: 300px;
+}
+
+.install-notification.success {
+  border: 2px solid #4caf50;
+}
+
+.install-notification.error {
+  border: 2px solid #f44336;
+}
+
+.notification-content {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  box-shadow: var(--glow-hover);
-  z-index: 10000;
-  border-left: 4px solid var(--primary);
-  animation: slideInRight 0.3s ease-out;
-  backdrop-filter: var(--blur);
-  border: 1px solid rgba(108, 92, 231, 0.2);
+  color: var(--white);
 }
 
-.notification-success {
-  border-left-color: #00b894;
-}
-
-.notification-info {
-  border-left-color: #74b9ff;
-}
-
-.notification-error {
-  border-left-color: var(--secondary);
-}
-
-.notification button {
+.notification-close {
   background: none;
   border: none;
-  cursor: pointer;
-  opacity: 0.7;
+  color: var(--white);
+  cursor: poRubik;
   padding: 0.25rem;
-  color: var(--text-primary);
-  border-radius: var(--radius-small);
-  transition: var(--transition);
-}
-
-.notification button:hover {
-  opacity: 1;
-  background: var(--surface-hover);
-}
-
-/* Состояние загрузки */
-.loading {
-  display: inline-block;
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(108, 92, 231, 0.3);
   border-radius: 50%;
-  border-top-color: var(--primary);
-  animation: spin 1s ease-in-out infinite;
+  transition: var(--transition);
+  margin-left: auto;
 }
 
-@keyframes spin {
+.notification-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Update Notification */
+.update-notification {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: var(--black);
+  border: 2px solid var(--red);
+  border-radius: var(--radius);
+  padding: 1rem;
+  z-index: 10000;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+  animation: slideInUp 0.3s ease-out;
+  max-width: 300px;
+}
+
+.update-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--white);
+}
+
+.update-btn {
+  background: var(--red);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  cursor: poRubik;
+  font-size: 0.9rem;
+  transition: var(--transition);
+  margin-right: 0.5rem;
+}
+
+.update-btn:hover {
+  background: #ff1a2e;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.loading-container {
-  text-align: center;
-  padding: 4rem;
+/* Адаптивность для кнопки установки */
+@media (max-width: 768px) {
+  .install-pwa-btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    margin-left: 0.5rem;
+  }
+
+  .install-notification,
+  .update-notification {
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
 }
 
-.loading-text {
-  margin-top: 1.5rem;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
+@media (max-width: 480px) {
+  .install-pwa-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    margin-left: 0;
+    z-index: 999;
+  }
+
+  .top .install-pwa-btn {
+    display: none !important;
+  }
+}
+
+/* Стиль для уже установленного приложения */
+.pwa-installed .install-pwa-btn {
+  display: none !important;
 }
 
 /* Футер */
 .site-footer {
-  background: rgba(13, 11, 20, 0.9);
-  border-top: 1px solid rgba(108, 92, 231, 0.3);
+  background: rgba(10, 10, 10, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin-top: auto;
-  backdrop-filter: var(--blur);
-  box-shadow: var(--glow);
+  backdrop-filter: blur(10px);
 }
 
 .footer-content {
@@ -1990,21 +1557,21 @@ body {
 }
 
 .footer-section h3 {
-  color: var(--primary-light);
+  color: var(--red);
   font-size: 1.5rem;
   margin-bottom: 1rem;
   font-weight: 700;
 }
 
 .footer-section h4 {
-  color: var(--text-primary);
+  color: var(--white);
   font-size: 1.1rem;
   margin-bottom: 1rem;
   font-weight: 600;
 }
 
 .footer-section p {
-  color: var(--text-secondary);
+  color: var(--gray);
   line-height: 1.6;
   margin-bottom: 1.5rem;
 }
@@ -2016,17 +1583,14 @@ body {
 }
 
 .footer-links a {
-  color: var(--text-secondary);
+  color: var(--gray);
   text-decoration: none;
   transition: var(--transition);
   font-size: 0.9rem;
-  padding: 0.25rem 0;
-  border-radius: var(--radius-small);
 }
 
 .footer-links a:hover {
-  color: var(--primary-light);
-  padding-left: 0.5rem;
+  color: var(--red);
 }
 
 .footer-section ul {
@@ -2040,18 +1604,36 @@ body {
 }
 
 .footer-section ul li a {
-  color: var(--text-secondary);
+  color: var(--gray);
   text-decoration: none;
   transition: var(--transition);
   font-size: 0.9rem;
-  padding: 0.25rem 0;
-  display: block;
-  border-radius: var(--radius-small);
 }
 
 .footer-section ul li a:hover {
-  color: var(--primary-light);
-  padding-left: 0.5rem;
+  color: var(--red);
+  padding-left: 5px;
+}
+
+/* Невидимая SEO часть */
+.footer-seo {
+  opacity: 0.01;
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.seo-keywords {
+  display: none;
+}
+
+.seo-content {
+  display: none;
+}
+
+.structured-data {
+  display: none !important;
 }
 
 /* Нижняя часть футера */
@@ -2060,13 +1642,13 @@ body {
   justify-content: space-between;
   align-items: center;
   padding-top: 2rem;
-  border-top: 1px solid rgba(108, 92, 231, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   flex-wrap: wrap;
   gap: 1rem;
 }
 
 .footer-copyright p {
-  color: var(--text-secondary);
+  color: var(--gray);
   font-size: 0.8rem;
   margin: 0;
   line-height: 1.4;
@@ -2085,40 +1667,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--element-height);
-  height: var(--element-height);
-  background: var(--surface);
-  color: var(--text-primary);
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
   border-radius: 50%;
   text-decoration: none;
   transition: var(--transition);
   font-size: 1.1rem;
-  border: 1px solid rgba(108, 92, 231, 0.2);
-  backdrop-filter: var(--blur);
 }
 
 .footer-social a:hover {
-  background: var(--primary);
+  background: var(--red);
   transform: translateY(-2px);
-  box-shadow: var(--glow);
 }
 
 /* Адаптивность */
-@media (max-width: 1200px) {
-  .footer-main {
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 1.75rem;
-  }
-}
-
 @media (max-width: 1024px) {
   .footer-main {
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
-  }
-  
-  .footer-content {
-    padding: 2.5rem 1rem 1rem;
   }
 }
 
@@ -2141,107 +1709,27 @@ body {
   .footer-social {
     justify-content: center;
   }
-  
-  .footer-section h3 {
-    font-size: 1.3rem;
-  }
-  
-  .footer-section h4 {
-    font-size: 1rem;
-  }
-  
-  .footer-links {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
 }
 
 @media (max-width: 480px) {
-  .footer-content {
-    padding: 1.5rem 0.75rem 0.75rem;
-  }
-  
-  .footer-main {
-    gap: 1.25rem;
-  }
-  
   .footer-section h3 {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
   }
 
   .footer-section h4 {
-    font-size: 0.95rem;
-  }
-  
-  .footer-section p {
-    font-size: 0.85rem;
-    line-height: 1.5;
+    font-size: 1rem;
   }
 
   .footer-links {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .footer-links a,
-  .footer-section ul li a {
-    font-size: 0.8rem;
-    padding: 0.125rem 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
   .footer-social a {
     width: 35px;
     height: 35px;
     font-size: 1rem;
-  }
-  
-  .footer-copyright p {
-    font-size: 0.75rem;
-  }
-  
-  .developer-links {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .developer-links a {
-    font-size: 0.8rem;
-    padding: 0.25rem 0;
-  }
-}
-
-@media (max-width: 360px) {
-  .footer-content {
-    padding: 1.25rem 0.5rem 0.5rem;
-  }
-  
-  .footer-section h3 {
-    font-size: 1.1rem;
-  }
-
-  .footer-section h4 {
-    font-size: 0.9rem;
-  }
-  
-  .footer-section p {
-    font-size: 0.8rem;
-  }
-  
-  .footer-links a,
-  .footer-section ul li a {
-    font-size: 0.75rem;
-  }
-
-  .footer-social a {
-    width: 32px;
-    height: 32px;
-    font-size: 0.9rem;
-  }
-  
-  .footer-copyright p {
-    font-size: 0.7rem;
   }
 }
 
@@ -3707,18 +3195,6 @@ body.screenshot-viewer-open {
     transform: translateY(-0.5px);
 }
 
-.action-btn.success-state {
-    background: #00b894 !important;
-    color: white !important;
-    border-color: #00b894 !important;
-}
-
-.action-btn.success-state:hover {
-    background: #00a085 !important;
-    transform: translateY(-0.5px);
-    box-shadow: 0 6px 24px rgba(0, 184, 148, 0.4);
-}
-
 /* Модальное окно импорта */
 .import-modal {
     max-width: 600px;
@@ -3963,613 +3439,4 @@ body.screenshot-viewer-open {
         flex-direction: row;
         flex-wrap: wrap;
     }
-}
-
-/* Адаптивность для новых карточек аниме */
-@media (max-width: 1200px) {
-  .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1.5rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-  
-  .anime-poster {
-    height: 250px;
-  }
-  
-  .anime-info {
-    padding: 1rem;
-  }
-  
-  .anime-actions {
-    padding: 0 1rem 1rem;
-    gap: 0.4rem;
-  }
-  
-  .play-button {
-    width: 50px;
-    height: 50px;
-    font-size: 1.2rem;
-  }
-  
-  .action-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 0.75rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .results-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-  
-  .anime-poster {
-    height: 200px;
-  }
-  
-  .anime-info {
-    padding: 0.75rem;
-  }
-  
-  .anime-title {
-    font-size: 1rem;
-    -webkit-line-clamp: 1;
-  }
-  
-  .anime-meta {
-    gap: 0.4rem;
-  }
-  
-  .anime-year,
-  .anime-episodes {
-    font-size: 0.75rem;
-  }
-  
-  .anime-actions {
-    padding: 0 0.75rem 0.75rem;
-    gap: 0.4rem;
-  }
-  
-  .action-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.7rem;
-  }
-}
-
-/* Placeholder для изображений */
-.anime-poster img[src*="placeholder"] {
-  background: var(--gradient);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--white);
-  font-size: 2rem;
-}
-
-.anime-poster img[src*="placeholder"]::before {
-  content: "🎬";
-  font-size: 3rem;
-}
-
-/* =========================================== */
-/* УЛУЧШЕНИЯ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ */
-/* =========================================== */
-
-/* Улучшенное поле поиска для мобильных */
-@media (max-width: 768px) {
-  #searchInput {
-    /* Увеличиваем высоту для удобства набора */
-    min-height: 60px;
-    /* Улучшаем отступы */
-    padding: 1rem 1.5rem;
-    /* Увеличиваем размер шрифта для предотвращения зума на iOS */
-    font-size: 16px;
-    /* Улучшаем border-radius */
-    border-radius: 16px;
-    /* Добавляем тень для лучшего восприятия */
-    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.15);
-  }
-  
-  #searchForm button {
-    min-height: 60px;
-    padding: 1rem 2rem;
-    font-size: 16px;
-    border-radius: 16px;
-    font-weight: 600;
-  }
-}
-
-@media (max-width: 480px) {
-  #searchInput {
-    min-height: 56px;
-    padding: 0.875rem 1.25rem;
-    font-size: 16px; /* Важно: 16px предотвращает зум на iOS */
-    border-radius: 14px;
-  }
-  
-  #searchForm button {
-    min-height: 56px;
-    font-size: 16px;
-    border-radius: 14px;
-  }
-}
-
-@media (max-width: 360px) {
-  #searchInput {
-    min-height: 52px;
-    padding: 0.75rem 1rem;
-    font-size: 16px;
-    border-radius: 12px;
-  }
-  
-  #searchForm button {
-    min-height: 52px;
-    font-size: 16px;
-    border-radius: 12px;
-  }
-}
-
-/* Улучшенные тач-интерфейсы */
-@media (hover: none) and (pointer: coarse) {
-  /* Увеличиваем области касания для мобильных устройств */
-  .nav-btn,
-  .action-btn,
-  .favorite-btn,
-  .share-btn,
-  .external-btn {
-    min-height: 44px;
-    min-width: 44px;
-  }
-  
-  /* Убираем hover эффекты на мобильных */
-  .anime-card:hover,
-  .nav-btn:hover,
-  .action-btn:hover {
-    transform: none;
-  }
-  
-  /* Активные состояния для тач-устройств */
-  .anime-card:active {
-    transform: scale(0.98);
-    transition: transform 0.1s ease;
-  }
-  
-  .nav-btn:active,
-  .action-btn:active {
-    transform: scale(0.95);
-    transition: transform 0.1s ease;
-  }
-}
-
-/* Оптимизация для iOS Safari */
-@supports (-webkit-touch-callout: none) {
-  /* Убираем выделение текста на iOS */
-  .anime-card,
-  .nav-btn,
-  .action-btn {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  
-  /* Фиксируем проблемы с viewport на iOS */
-  body {
-    -webkit-text-size-adjust: 100%;
-  }
-  
-  /* Улучшаем прокрутку на iOS */
-  .modal-content,
-  .anime-description {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* Ландшафтная ориентация на мобильных */
-@media screen and (max-width: 768px) and (orientation: landscape) {
-  .top {
-    padding: 0.5rem 1rem;
-    height: auto;
-    min-height: 60px;
-  }
-  
-  .search-section {
-    padding: 1.5rem 1rem;
-  }
-  
-  .anime-header {
-    grid-template-columns: 200px 1fr;
-    gap: 1rem;
-  }
-  
-  .anime-poster {
-    max-width: 200px;
-  }
-  
-  .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.75rem;
-  }
-  
-  .anime-poster {
-    height: 180px;
-  }
-}
-
-/* Высокие DPI экраны */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  /* Улучшаем качество изображений на Retina */
-  .anime-poster img,
-  .similar-anime-card img {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-  }
-}
-
-/* Темная тема для мобильных */
-@media (prefers-color-scheme: dark) and (max-width: 768px) {
-  :root {
-    --background: #0a0a0a;
-    --background-light: #151515;
-    --surface: rgba(108, 92, 231, 0.12);
-  }
-  
-  .anime-card {
-    background: rgba(15, 15, 15, 0.8);
-    border-color: rgba(108, 92, 231, 0.25);
-  }
-}
-
-/* Уменьшенная анимация для экономии батареи */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  
-  .anime-card:hover,
-  .nav-btn:hover,
-  .action-btn:hover {
-    transform: none;
-  }
-}
-
-/* Улучшения для маленьких экранов */
-@media (max-width: 320px) {
-  :root {
-    --element-height: 48px; /* Увеличиваем минимальную высоту */
-    --radius: 12px;
-    --radius-small: 6px;
-  }
-  
-  .top {
-    padding: 0.5rem;
-  }
-  
-  .logo-link {
-    font-size: 1rem;
-  }
-  
-  .logo-link svg {
-    width: 24px;
-    height: 24px;
-  }
-  
-  .nav-btn {
-    padding: 0.5rem 0.25rem;
-    font-size: 0.7rem;
-    min-width: 70px;
-    height: 44px; /* Увеличиваем высоту кнопок */
-  }
-  
-  .search-section {
-    padding: 1rem 0.5rem;
-  }
-  
-  #searchInput,
-  #searchForm button {
-    height: 50px; /* Увеличиваем высоту поля поиска */
-    font-size: 0.9rem;
-    border-radius: 12px;
-  }
-  
-  #searchInput {
-    padding: 0 1rem;
-  }
-  
-  .results-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-  
-  .anime-poster {
-    height: 160px;
-  }
-  
-  .anime-info {
-    padding: 0.5rem;
-  }
-  
-  .anime-title {
-    font-size: 0.75rem;
-    margin-bottom: 0.25rem;
-  }
-  
-  .section-title {
-    font-size: 1.2rem;
-    margin: 1rem 0 0.5rem;
-    padding-left: 0.5rem;
-  }
-}
-
-/* Улучшения для планшетов */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.25rem;
-  }
-  
-  .anime-poster {
-    height: 260px;
-  }
-  
-  .anime-info {
-    padding: 1.25rem;
-  }
-  
-  .anime-title {
-    font-size: 1rem;
-  }
-  
-  .top {
-    padding: 1rem 1.5rem;
-  }
-  
-  .search-section {
-    padding: 2.5rem 1.5rem;
-  }
-}
-
-/* Улучшения для больших планшетов */
-@media (min-width: 1024px) and (max-width: 1200px) {
-  .results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1.5rem;
-  }
-  
-  .anime-poster {
-    height: 280px;
-  }
-}
-
-/* Оптимизация для складных устройств */
-@media (max-width: 540px) and (max-height: 720px) {
-  .top {
-    padding: 0.75rem;
-    flex-direction: row;
-    height: 60px;
-  }
-  
-  .header-nav {
-    width: auto;
-    gap: 0.5rem;
-  }
-  
-  .nav-btn {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
-    min-width: 80px;
-  }
-  
-  .search-section {
-    padding: 1.5rem 0.75rem;
-  }
-}
-
-/* Улучшения доступности для мобильных */
-@media (max-width: 768px) {
-  /* Увеличиваем контрастность для лучшей читаемости */
-  .anime-title,
-  .section-title {
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  }
-  
-  /* Улучшаем фокус для клавиатурной навигации */
-  .nav-btn:focus,
-  .action-btn:focus,
-  #searchInput:focus {
-    outline: 3px solid var(--primary);
-    outline-offset: 2px;
-  }
-  
-  /* Увеличиваем размер текста для лучшей читаемости */
-  .anime-description p,
-  .footer-section p {
-    font-size: 0.95rem;
-    line-height: 1.6;
-  }
-}
-
-/* Оптимизация производительности для мобильных */
-@media (max-width: 768px) {
-  /* Отключаем сложные эффекты на мобильных */
-  .anime-card::before,
-  .nav-btn::before,
-  #searchForm button::before {
-    display: none;
-  }
-  
-  /* Упрощаем градиенты */
-  body::before {
-    background: radial-gradient(circle at 50% 50%, rgba(108, 92, 231, 0.1) 0%, transparent 70%);
-  }
-  
-  /* Оптимизируем backdrop-filter */
-  .top,
-  .anime-card,
-  .nav-btn {
-    backdrop-filter: none;
-  }
-}
-
-/* Поддержка notch (вырез экрана) на iPhone X и новее */
-@supports (padding: max(0px)) {
-  .top {
-    padding-left: max(1rem, env(safe-area-inset-left));
-    padding-right: max(1rem, env(safe-area-inset-right));
-  }
-  
-  .search-section,
-  .player-lane {
-    padding-left: max(1rem, env(safe-area-inset-left));
-    padding-right: max(1rem, env(safe-area-inset-right));
-  }
-  
-  .site-footer {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
-}
-
-/* Водяной знак для мобильных */
-@media (max-width: 768px) {
-  .watermark {
-    bottom: max(15px, env(safe-area-inset-bottom));
-    right: max(15px, env(safe-area-inset-right));
-    font-size: 0.7rem;
-    padding: 0.375rem 0.75rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .watermark {
-    bottom: max(10px, env(safe-area-inset-bottom));
-    right: max(10px, env(safe-area-inset-right));
-    font-size: 0.65rem;
-    padding: 0.25rem 0.5rem;
-  }
-}
-
-/* Кнопка "Наверх" для мобильных */
-@media (max-width: 768px) {
-  #scrollToTop {
-    bottom: max(80px, calc(env(safe-area-inset-bottom) + 80px));
-    right: max(20px, env(safe-area-inset-right));
-    width: 48px;
-    height: 48px;
-    font-size: 1.1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  #scrollToTop {
-    bottom: max(70px, calc(env(safe-area-inset-bottom) + 70px));
-    right: max(15px, env(safe-area-inset-right));
-    width: 44px;
-    height: 44px;
-    font-size: 1rem;
-  }
-}
-/* =========================================== */
-/* УЛУЧШЕНИЯ ЗАГРУЗКИ ИЗОБРАЖЕНИЙ */
-/* =========================================== */
-
-/* Стили для загружающихся изображений */
-.anime-poster img {
-  transition: opacity 0.3s ease;
-}
-
-.anime-poster img.lazy {
-  opacity: 0.7;
-  background: var(--gradient-primary);
-  background-size: 200% 200%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-.anime-poster img.loaded {
-  opacity: 1;
-}
-
-.anime-poster img.preloaded {
-  opacity: 1;
-}
-
-/* Анимация загрузки */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* Placeholder для изображений */
-.anime-poster {
-  position: relative;
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.anime-poster::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--gradient-primary);
-  opacity: 0.1;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.anime-poster img {
-  position: relative;
-  z-index: 2;
-}
-
-/* Улучшения для мобильных устройств */
-@media (max-width: 768px) {
-  .anime-poster img.lazy {
-    background: linear-gradient(90deg, 
-      var(--surface) 25%, 
-      rgba(108, 92, 231, 0.1) 50%, 
-      var(--surface) 75%);
-    background-size: 200% 100%;
-    animation: mobileShimmer 1.2s ease-in-out infinite;
-  }
-}
-
-@keyframes mobileShimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* Обработка ошибок загрузки */
-.anime-poster img[src*="placeholder"] {
-  opacity: 0.8;
-  filter: grayscale(20%);
-}
-
-/* Оптимизация для Retina дисплеев */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .anime-poster img {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-  }
 }
