@@ -399,20 +399,205 @@ function debounceSearch(func, delay = 500) {
     };
 }
 
+// Оптимизированная ленивая загрузка изображений
 function lazyLoadImages() {
     const images = document.querySelectorAll('img[data-src]');
-    const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.removeAttribute('data-src');
-                imageObserver.unobserve(img);
+    
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    
+                    // Добавляем обработчик ошибок перед загрузкой
+                    img.onerror = function() {
+                        console.log('Failed to load image:', this.dataset.src || this.src);
+                        this.src = '/resources/anime-placeholder.svg';
+                        this.onerror = null;
+                    };
+                    
+                    // Загружаем изображение
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    img.classList.remove('lazy');
+                    img.classList.add('loaded');
+                    
+                    imageObserver.unobserve(img);
+                }
+            });
+        }, {
+            // Увеличиваем область предзагрузки для мобильных
+            rootMargin: window.innerWidth <= 768 ? '100px 0px' : '50px 0px',
+            threshold: 0.01
+        });
+
+        images.forEach(img => {
+            // Добавляем класс для стилизации загружающихся изображений
+            img.classList.add('lazy');
+            imageObserver.observe(img);
+        });
+    } else {
+        // Fallback для старых браузеров
+        images.forEach(img => {
+            img.onerror = function() {
+                this.src = '/resources/anime-placeholder.svg';
+                this.onerror = null;
+            };
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+            img.classList.add('loaded');
+        });
+    }
+}
+
+// Оптимизированный скроллинг с throttling
+let scrollTimeout = null;
+let isScrolling = false;
+
+function optimizeScrollPerformance() {
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    
+    function handleScroll() {
+        if (!isScrolling) {
+            window.requestAnimationFrame(() => {
+                if (scrollToTopBtn) {
+                    scrollToTopBtn.classList.toggle("show", window.scrollY > 300);
+                }
+                isScrolling = false;
+            });
+            isScrolling = true;
+        }
+    }
+    
+    // Throttled scroll handler
+    window.addEventListener('scroll', handleScroll, { passive: true });
+}
+
+// Виртуализация для больших списков
+class VirtualScroller {
+    constructor(container, itemHeight = 400, buffer = 5) {
+        this.container = container;
+        this.itemHeight = itemHeight;
+        this.buffer = buffer;
+        this.items = [];
+        this.visibleItems = new Map();
+        this.scrollTop = 0;
+        this.containerHeight = 0;
+        
+        this.init();
+    }
+    
+    init() {
+        this.container.style.position = 'relative';
+        this.container.addEventListener('scroll', this.handleScroll.bind(this), { passive: true });
+        this.updateContainerHeight();
+    }
+    
+    setItems(items) {
+        this.items = items;
+        this.updateVirtualHeight();
+        this.render();
+    }
+    
+    updateContainerHeight() {
+        this.containerHeight = this.container.clientHeight;
+    }
+    
+    updateVirtualHeight() {
+        const totalHeight = this.items.length * this.itemHeight;
+        let spacer = this.container.querySelector('.virtual-spacer');
+        
+        if (!spacer) {
+            spacer = document.createElement('div');
+            spacer.className = 'virtual-spacer';
+            spacer.style.position = 'absolute';
+            spacer.style.top = '0';
+            spacer.style.left = '0';
+            spacer.style.right = '0';
+            spacer.style.pointerEvents = 'none';
+            this.container.appendChild(spacer);
+        }
+        
+        spacer.style.height = `${totalHeight}px`;
+    }
+    
+    handleScroll() {
+        this.scrollTop = this.container.scrollTop;
+        this.render();
+    }
+    
+    render() {
+        const startIndex = Math.max(0, Math.floor(this.scrollTop / this.itemHeight) - this.buffer);
+        const endIndex = Math.min(
+            this.items.length - 1,
+            Math.ceil((this.scrollTop + this.containerHeight) / this.itemHeight) + this.buffer
+        );
+        
+        // Удаляем элементы, которые больше не видны
+        this.visibleItems.forEach((element, index) => {
+            if (index < startIndex || index > endIndex) {
+                element.remove();
+                this.visibleItems.delete(index);
             }
         });
-    });
+        
+        // Добавляем новые видимые элементы
+        for (let i = startIndex; i <= endIndex; i++) {
+            if (!this.visibleItems.has(i) && this.items[i]) {
+                const element = this.createItemElement(this.items[i], i);
+                this.visibleItems.set(i, element);
+                this.container.appendChild(element);
+            }
+        }
+    }
+    
+    createItemElement(item, index) {
+        const element = document.createElement('div');
+        element.style.position = 'absolute';
+        element.style.top = `${index * this.itemHeight}px`;
+        element.style.left = '0';
+        element.style.right = '0';
+        element.style.height = `${this.itemHeight}px`;
+        element.innerHTML = item;
+        return element;
+    }
+}
 
-    images.forEach(img => imageObserver.observe(img));
+// Оптимизация анимаций с requestAnimationFrame
+function smoothTransition(element, property, from, to, duration = 300) {
+    return new Promise(resolve => {
+        const start = performance.now();
+        const change = to - from;
+        
+        function animate(currentTime) {
+            const elapsed = currentTime - start;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing function (ease-out)
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const currentValue = from + (change * easeOut);
+            
+            element.style[property] = `${currentValue}px`;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                resolve();
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    });
+}
+
+// Оптимизация DOM операций
+function batchDOMUpdates(updates) {
+    return new Promise(resolve => {
+        requestAnimationFrame(() => {
+            updates.forEach(update => update());
+            resolve();
+        });
+    });
 }
 
 const fetchCache = new Map();
@@ -473,7 +658,8 @@ function removeLoadingIndicator() {
 
 function createLoadMoreButton(text, onClick, id = 'loadMoreBtn') {
     return `<button class="load-more-btn" id="${id}" onclick="${onClick}">
-        <i class="fas fa-arrow-down"></i> ${text}
+        <i class="fas fa-arrow-down"></i> 
+        <span class="btn-text">${text}</span>
     </button>`;
 }
 
@@ -493,20 +679,39 @@ async function safeCreateAnimeCard(item) {
 }
 
 function createFallbackCard(item) {
+    // Создаем короткий ID для аниме
+    const animeId = generateAnimeId(item.link);
+    const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(item.title)}`;
+    
     return `
-    <div class="card fade-in">
-        <div class="card-header">
-            <h3 class="h2_name">${escapeHtml(item.title)}</h3>
-            <div class="info-links">
-                <a href="https://shikimori.one/animes?search=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="Shikimori"><i class="fas fa-external-link-alt"></i></a>
-                <a href="https://anilist.co/search/anime?search=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="AniList"><i class="fas fa-external-link-alt"></i></a>
-                <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(item.title)}" target="_blank" class="info-link" title="MyAnimeList"><i class="fas fa-external-link-alt"></i></a>
+    <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(item.title)}', '${item.link}')" style="cursor: pointer;">
+        <div class="anime-poster">
+            <img src="/resources/anime-placeholder.svg" alt="Постер ${escapeHtml(item.title)}" loading="lazy">
+            <div class="anime-overlay">
+                <div class="play-button">
+                    <i class="fas fa-play"></i>
+                </div>
             </div>
         </div>
-        <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${escapeHtml(item.title)}"></iframe>
-        <div class="card-actions">
-            <button class="action-btn favorite-btn" data-link="${item.link}" onclick="toggleFavorite('${escapeHtml(item.title).replace(/'/g, "\\'")}','${item.link}')" title="Удалить из избранного">
-                <i class="fas fa-heart"></i>
+        
+        <div class="anime-info">
+            <h3 class="anime-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
+            
+            <div class="anime-meta">
+                <span class="anime-year">
+                    <i class="fas fa-calendar"></i>
+                    ${item.year || 'Неизвестно'}
+                </span>
+            </div>
+        </div>
+
+        <div class="anime-actions" onclick="event.stopPropagation();">
+            <button class="action-btn favorite-btn" data-link="${item.link}" onclick="toggleFavorite('${escapeHtml(item.title).replace(/'/g, "\\'")}','${item.link}')" title="Добавить в избранное">
+                <i class="far fa-heart"></i>
+            </button>
+
+            <button class="action-btn share-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
+                <i class="fas fa-share"></i>
             </button>
         </div>
     </div>`;
@@ -520,6 +725,78 @@ function escapeHtml(unsafe) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+// Проверка доступности изображения
+async function isImageAccessible(url) {
+    try {
+        // Для локальных изображений всегда возвращаем true
+        if (url.startsWith('/') || url.startsWith('./')) {
+            return true;
+        }
+        
+        // Для Kodik изображений всегда возвращаем true - они надежные
+        if (url.includes('kodikapi.com') || url.includes('kodik-storage') || url.includes('kodik.cc')) {
+            return true;
+        }
+        
+        // Проверяем известные проблемные домены
+        const problematicDomains = [
+            'st.kp.yandex.net',  // Кинопоиск блокирует внешние запросы
+            'avatars.mds.yandex.net'
+        ];
+        
+        for (const domain of problematicDomains) {
+            if (url.includes(domain)) {
+                return false; // Сразу используем плейсхолдер для проблемных доменов
+            }
+        }
+        
+        // Для остальных доменов возвращаем true
+        // Браузер сам обработает CORS ошибки через onerror
+        return true;
+        
+    } catch (error) {
+        return false;
+    }
+}
+
+// Оптимизация URL изображений для лучшей производительности
+function optimizeImageUrl(url, width = 312) {
+    if (!url || url.startsWith('/')) return url;
+    
+    // Обеспечиваем HTTPS
+    url = url.replace('http://', 'https://');
+    
+    // Оптимизация для Shikimori
+    if (url.includes('shikimori.one')) {
+        return url.replace('/original/', `/x${width}/`);
+    }
+    
+    // Для Kodik изображений оставляем как есть - они уже оптимизированы
+    if (url.includes('kodikapi.com') || url.includes('kodik-storage') || url.includes('kodik.cc')) {
+        return url;
+    }
+    
+    return url;
+}
+
+// Глобальная функция для обработки ошибок изображений
+function handleImageError(img) {
+    if (img.src !== '/resources/anime-placeholder.svg') {
+        console.log('Image failed to load, using placeholder:', img.src);
+        img.src = '/resources/anime-placeholder.svg';
+        img.onerror = null; // Предотвращаем бесконечный цикл
+    }
+}
+
+// Инициализация обработчиков изображений для существующих элементов
+function initImageHandlers() {
+    document.querySelectorAll('img[src*="shikimori.one"], img[src*="kp.yandex.net"]').forEach(img => {
+        if (!img.onerror) {
+            img.onerror = () => handleImageError(img);
+        }
+    });
 }
 
 // Функция для безопасного парсинга JSON
@@ -801,7 +1078,7 @@ async function apiWeekly() {
         if (cached && Date.now() - cached.t < TTL) return cached.data;
     } catch {}
     
-    const url = `${BASE.replace("/search", "/list")}?token=${TOKEN}&year=2025&updated_at=1&types=anime,anime-serial&with_material_data=true`;
+    const url = `${BASE.replace("/search", "/list")}?token=${TOKEN}&year=2026&updated_at=1&types=anime,anime-serial&with_material_data=true`;
     const data = await optimizedFetch(url);
     
     dbPut(STORE_SEARCH_RESULTS, { 
@@ -853,15 +1130,18 @@ async function copyToClipboard(text) {
     }
 }
 
-function showNote(msg, type = "info", copyText = null) {
-    document.querySelectorAll('.notification').forEach(n => n.remove());
+function showNote(msg, type = "info", copyText = null, persistent = false) {
+    // Если не постоянное уведомление, удаляем существующие
+    if (!persistent) {
+        document.querySelectorAll('.notification:not(.persistent)').forEach(n => n.remove());
+    }
     
     const n = document.createElement("div");
-    n.className = `notification notification-${type}`;
+    n.className = `notification notification-${type}${persistent ? ' persistent' : ''}`;
     
     // Создаем иконку
     const icon = document.createElement("i");
-    icon.className = `fas fa-${type === "success" ? "check" : type === "error" ? "exclamation-triangle" : "info"}`;
+    icon.className = `fas fa-${type === "success" ? "check" : type === "error" ? "exclamation-triangle" : type === "warning" ? "exclamation" : "info"}`;
     
     // Создаем текст сообщения
     const messageSpan = document.createElement("span");
@@ -871,6 +1151,7 @@ function showNote(msg, type = "info", copyText = null) {
     let copyButton = null;
     if (copyText) {
         copyButton = document.createElement("button");
+        copyButton.className = "notification-copy-btn";
         copyButton.title = "Копировать код защиты";
         copyButton.innerHTML = '<i class="fas fa-copy"></i>';
         copyButton.addEventListener('click', async () => {
@@ -895,8 +1176,13 @@ function showNote(msg, type = "info", copyText = null) {
     
     // Создаем кнопку закрытия
     const closeButton = document.createElement("button");
+    closeButton.className = "notification-close-btn";
     closeButton.innerHTML = '<i class="fas fa-times"></i>';
-    closeButton.addEventListener('click', () => n.remove());
+    closeButton.addEventListener('click', () => {
+        n.style.opacity = '0';
+        n.style.transform = 'translateX(100%)';
+        setTimeout(() => n.remove(), 300);
+    });
     
     // Добавляем все элементы
     n.appendChild(icon);
@@ -907,21 +1193,106 @@ function showNote(msg, type = "info", copyText = null) {
     n.appendChild(closeButton);
     
     document.body.appendChild(n);
-    setTimeout(() => n.remove(), 5000); // Увеличиваем время показа для уведомлений с кнопкой копирования
+    
+    // Анимация появления
+    setTimeout(() => {
+        n.style.opacity = '1';
+        n.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Автоматическое удаление для непостоянных уведомлений
+    if (!persistent) {
+        const timeout = copyText ? 8000 : 5000; // Больше времени для уведомлений с кнопкой копирования
+        setTimeout(() => {
+            if (n.parentNode) {
+                n.style.opacity = '0';
+                n.style.transform = 'translateX(100%)';
+                setTimeout(() => n.remove(), 300);
+            }
+        }, timeout);
+    }
+    
+    return n; // Возвращаем элемент для возможности управления им
 }
 
+// Функция для скрытия конкретного уведомления
+function hideNote(noteElement) {
+    if (noteElement && noteElement.parentNode) {
+        noteElement.style.opacity = '0';
+        noteElement.style.transform = 'translateX(100%)';
+        setTimeout(() => noteElement.remove(), 300);
+    }
+}
+
+/* ---------- URL OPTIMIZATION ---------- */
+// Создание красивого slug для аниме
+function createAnimeSlug(title) {
+    return title
+        .toLowerCase()
+        .replace(/[«»"']/g, '') // Убираем кавычки
+        .replace(/[^\w\s-]/g, '') // Убираем специальные символы кроме букв, цифр, пробелов и дефисов
+        .replace(/\s+/g, '-') // Заменяем пробелы на дефисы
+        .replace(/-+/g, '-') // Убираем множественные дефисы
+        .replace(/^-|-$/g, '') // Убираем дефисы в начале и конце
+        .substring(0, 100); // Ограничиваем длину
+}
+
+// Навигация к странице аниме с красивым URL
+window.navigateToAnime = function(title, link) {
+    const slug = createAnimeSlug(title);
+    const url = `/anime/${slug}`;
+    
+    // Сохраняем данные аниме в sessionStorage для быстрого доступа
+    const animeData = {
+        title: title,
+        link: link,
+        timestamp: Date.now()
+    };
+    
+    try {
+        sessionStorage.setItem(`anime_${slug}`, JSON.stringify(animeData));
+    } catch (e) {
+        console.warn('SessionStorage недоступен:', e);
+    }
+    
+    // Переходим на страницу
+    window.location.href = url;
+};
+
+// Получение данных аниме из slug
+function getAnimeFromSlug(slug) {
+    try {
+        const data = sessionStorage.getItem(`anime_${slug}`);
+        if (data) {
+            const animeData = JSON.parse(data);
+            // Проверяем, что данные не старше 1 часа
+            if (Date.now() - animeData.timestamp < 3600000) {
+                return animeData;
+            }
+        }
+    } catch (e) {
+        console.warn('Ошибка получения данных из sessionStorage:', e);
+    }
+    return null;
+}
+
+// Улучшенная функция для создания slug (более универсальная)
 function toSlug(str) {
     const map = {
-        а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "sch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya", " ": "-", _: "-",
+        а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "c", ч: "ch", ш: "sh", щ: "sch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
+        А: "A", Б: "B", В: "V", Г: "G", Д: "D", Е: "E", Ё: "E", Ж: "ZH", З: "Z", И: "I", Й: "Y", К: "K", Л: "L", М: "M", Н: "N", О: "O", П: "P", Р: "R", С: "S", Т: "T", У: "U", Ф: "F", Х: "H", Ц: "C", Ч: "CH", Ш: "SH", Щ: "SCH", Ъ: "", Ы: "Y", Ь: "", Э: "E", Ю: "YU", Я: "YA",
+        " ": "-", _: "-", "«": "", "»": "", '"': "", "'": "", "!": "", "?": "", ".": "", ",": "", ":": "", ";": "", "(": "", ")": "", "[": "", "]": "", "{": "", "}": ""
     };
+    
     return str
-        .toLowerCase()
         .split("")
         .map((ch) => map[ch] || ch)
         .join("")
+        .toLowerCase()
         .replace(/[^a-z0-9\-]/g, "")
         .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
+        .replace(/^-|-$/g, "")
+        .substring(0, 100);
 }
 
 function clearOldDynamicMeta() {
@@ -1186,54 +1557,146 @@ function addStructuredData(query, results, canonical) {
     document.head.appendChild(searchScript);
 }
 
+/* ---------- UTILS FOR CARDS ---------- */
+// Функция для генерации короткого ID аниме
+function generateAnimeId(link) {
+    // Создаем короткий хеш из ссылки
+    let hash = 0;
+    for (let i = 0; i < link.length; i++) {
+        const char = link.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Конвертируем в 32-битное число
+    }
+    // Конвертируем в base36 и берем первые 6 символов
+    return Math.abs(hash).toString(36).substring(0, 6);
+}
+
+// Функция для навигации к аниме
+window.navigateToAnime = function(animeId, title, link) {
+    // Сохраняем данные аниме в sessionStorage для быстрого доступа
+    const animeData = {
+        id: animeId,
+        title: title,
+        link: link,
+        timestamp: Date.now()
+    };
+    
+    sessionStorage.setItem(`anime_${animeId}`, JSON.stringify(animeData));
+    
+    // Переходим на страницу деталей
+    const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(title)}`;
+    window.location.href = detailUrl;
+};
+
+// Функция для получения данных аниме по ID
+function getAnimeDataById(animeId) {
+    try {
+        const data = sessionStorage.getItem(`anime_${animeId}`);
+        if (data) {
+            const animeData = JSON.parse(data);
+            // Проверяем, что данные не старше 1 часа
+            if (Date.now() - animeData.timestamp < 3600000) {
+                return animeData;
+            }
+        }
+    } catch (error) {
+        console.warn('Error getting anime data from sessionStorage:', error);
+    }
+    return null;
+}
+
 /* ---------- CARD ---------- */
 async function createAnimeCard(item) {
     const t = item.title;
     const favs = await getFavorites();
     const isFav = favs.some(f => f.link === item.link);
 
-    const hasInfoData = checkSimpleInfoData(item);
-    const hasShareData = !!(item.link && t);
-    const hasFavData = !!(item.link && t);
+    // Создаем короткий ID для аниме (используем хеш от ссылки)
+    const animeId = generateAnimeId(item.link);
+    
+    // Создаем ссылку на страницу деталей в новом формате
+    const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(t)}`;
+
+    // Получаем постер приоритетно с Kodik API
+    let posterUrl = '/resources/anime-placeholder.svg';
+    
+    // Приоритет источников постеров:
+    // 1. Kodik API - material_data.poster_url (основной источник)
+    // 2. Kodik API - screenshots[0] (резервный)
+    // 3. Локальный placeholder
+    
+    if (item.material_data?.poster_url) {
+        posterUrl = item.material_data.poster_url;
+    } else if (item.screenshots && item.screenshots.length > 0) {
+        posterUrl = item.screenshots[0];
+    }
+    
+    // Оптимизируем URL изображения
+    if (posterUrl && posterUrl !== '/resources/anime-placeholder.svg') {
+        posterUrl = optimizeImageUrl(posterUrl);
+        
+        // Проверяем доступность только для внешних источников (не Kodik)
+        if (!posterUrl.includes('kodikapi.com') && !posterUrl.includes('kodik-storage') && 
+            !posterUrl.includes('kodik.cc') && !await isImageAccessible(posterUrl)) {
+            posterUrl = '/resources/anime-placeholder.svg';
+        }
+    }
+
+    // Получаем базовую информацию
+    const year = item.year || 'Неизвестно';
+    const rating = item.material_data?.rating || null;
+    const episodes = item.episodes_count || null;
 
     return `
-    <div class="card fade-in">
-        <div class="card-header">
-            <h3 class="h2_name">${t}</h3>
-            <div class="info-links">
-                <a href="https://shikimori.one/animes?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="Shikimori">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
-                <a href="https://anilist.co/search/anime?search=${encodeURIComponent(t)}" target="_blank" class="info-link" title="AniList">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
-                <a href="https://myanimelist.net/search/all?q=${encodeURIComponent(t)}" target="_blank" class="info-link" title="MyAnimeList">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
+    <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(t)}', '${item.link}')" style="cursor: pointer;">
+        <div class="anime-poster">
+            <img src="${posterUrl}" 
+                 alt="Постер ${escapeHtml(t)}" 
+                 loading="lazy" 
+                 decoding="async"
+                 onerror="this.onerror=null; this.src='/resources/anime-placeholder.svg';"
+                 onload="this.style.opacity='1';"
+                 style="opacity: 0; transition: opacity 0.3s ease;">
+            <div class="anime-overlay">
+                <div class="play-button">
+                    <i class="fas fa-play"></i>
+                </div>
+                ${rating ? `
+                <div class="anime-rating">
+                    <i class="fas fa-star"></i>
+                    <span>${rating}</span>
+                </div>
+                ` : ''}
             </div>
         </div>
-        <iframe class="single-player" src="${item.link}" allowfullscreen loading="lazy" title="Плеер: ${t}"></iframe>
+        
+        <div class="anime-info">
+            <h3 class="anime-title" title="${escapeHtml(t)}">${escapeHtml(t)}</h3>
+            
+            <div class="anime-meta">
+                <span class="anime-year">
+                    <i class="fas fa-calendar"></i>
+                    ${year}
+                </span>
+                ${episodes ? `
+                <span class="anime-episodes">
+                    <i class="fas fa-film"></i>
+                    ${episodes} эп.
+                </span>
+                ` : ''}
+            </div>
+        </div>
 
-        <div class="card-actions">
-            ${hasFavData ? `
-            <button class="action-btn favorite-btn" data-link="${item.link}"
-                    onclick="toggleFavorite('${t.replace(/'/g, "\\'")}','${item.link}')"
+        <div class="anime-actions" onclick="event.stopPropagation();">
+            <button class="action-btn favorite-btn ${isFav ? 'active' : ''}" data-link="${item.link}"
+                    onclick="toggleFavorite('${escapeHtml(t).replace(/'/g, "\\'")}','${item.link}')"
                     title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
                 <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
             </button>
-            ` : ''}
 
-            ${hasShareData ? `
-            <button class="action-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
+            <button class="action-btn share-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
                 <i class="fas fa-share"></i>
             </button>
-            ` : ''}
-
-            ${hasInfoData ? `
-            <button class="action-btn" onclick="showAnimeInfo('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Информация">
-                <i class="fas fa-info-circle"></i>
-            </button>
-            ` : ''}
         </div>
     </div>`;
 }
@@ -1978,10 +2441,15 @@ window.loadMoreFavorites = async function() {
     
     if (!btn || !grid) return;
 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+    // Добавляем класс загрузки с анимацией
+    btn.classList.add('loading');
+    btn.innerHTML = '<i class="fas fa-spinner"></i> <span class="btn-text">Загрузка...</span>';
     btn.disabled = true;
 
     try {
+        // Небольшая задержка для визуального эффекта
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         currentDisplayCount.favorites += ITEMS_PER_PAGE.favorites;
         const newFavorites = currentFavorites.slice(
             currentDisplayCount.favorites - ITEMS_PER_PAGE.favorites,
@@ -1990,8 +2458,24 @@ window.loadMoreFavorites = async function() {
 
         const newCards = await Promise.all(newFavorites.map(safeCreateAnimeCard));
         
-        newCards.forEach(card => {
-            grid.insertAdjacentHTML('beforeend', card);
+        // Добавляем карточки с анимацией появления
+        newCards.forEach((card, index) => {
+            setTimeout(() => {
+                const cardElement = document.createElement('div');
+                cardElement.innerHTML = card;
+                const actualCard = cardElement.firstElementChild;
+                actualCard.style.opacity = '0';
+                actualCard.style.transform = 'translateY(30px)';
+                
+                grid.appendChild(actualCard);
+                
+                // Анимация появления
+                setTimeout(() => {
+                    actualCard.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                    actualCard.style.opacity = '1';
+                    actualCard.style.transform = 'translateY(0)';
+                }, 50);
+            }, index * 100); // Задержка между карточками
         });
 
         // Обновляем статистику
@@ -2006,44 +2490,135 @@ window.loadMoreFavorites = async function() {
         }
 
         // Обновляем или удаляем кнопку
-        if (currentDisplayCount.favorites >= currentFavorites.length) {
-            btn.remove();
-        } else {
-            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще (${currentFavorites.length - currentDisplayCount.favorites})`;
-            btn.disabled = false;
-        }
+        setTimeout(() => {
+            btn.classList.remove('loading');
+            
+            if (currentDisplayCount.favorites >= currentFavorites.length) {
+                // Анимация исчезновения кнопки
+                btn.style.transition = 'all 0.3s ease';
+                btn.style.opacity = '0';
+                btn.style.transform = 'scale(0.8)';
+                setTimeout(() => btn.remove(), 300);
+            } else {
+                btn.innerHTML = `<i class="fas fa-arrow-down"></i> <span class="btn-text">Показать еще (${currentFavorites.length - currentDisplayCount.favorites})</span>`;
+                btn.disabled = false;
+            }
+        }, newCards.length * 100 + 200);
 
         await refreshAllFavoriteButtons();
-
     } catch (error) {
         console.error('Error loading more favorites:', error);
-        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Ошибка загрузки';
+        btn.classList.remove('loading');
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span class="btn-text">Ошибка загрузки</span>';
+        btn.disabled = false;
+        
         setTimeout(() => {
-            btn.innerHTML = `<i class="fas fa-arrow-down"></i> Показать еще (${currentFavorites.length - currentDisplayCount.favorites + ITEMS_PER_PAGE.favorites})`;
-            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-arrow-down"></i> <span class="btn-text">Показать еще</span>`;
         }, 2000);
     }
+};
+
+// Улучшенная функция показа модального окна очистки
+function showClearFavoritesModal() {
+    // Создаем модальное окно динамически для лучшего контроля
+    const modalHTML = `
+    <div class="modal-overlay" id="clearFavoritesModal" onclick="handleClearModalOverlayClick(event)">
+        <div class="modal-content clear-favorites-modal" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeClearFavoritesModal()">&times;</button>
+            <div class="modal-header">
+                <div class="modal-icon danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h2 class="modal-title">Очистить избранное?</h2>
+                <p class="modal-subtitle">Это действие нельзя отменить</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="warning-info">
+                    <div class="warning-item">
+                        <i class="fas fa-trash"></i>
+                        <span>Все избранные аниме будут удалены</span>
+                    </div>
+                    <div class="warning-item">
+                        <i class="fas fa-undo-alt"></i>
+                        <span>Восстановить данные будет невозможно</span>
+                    </div>
+                    <div class="warning-item">
+                        <i class="fas fa-download"></i>
+                        <span>Рекомендуем сначала создать экспорт</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeClearFavoritesModal()">
+                    <i class="fas fa-times"></i> Отмена
+                </button>
+                <button class="modal-btn primary" onclick="exportBeforeClear()">
+                    <i class="fas fa-download"></i> Экспорт и очистка
+                </button>
+                <button class="modal-btn danger" onclick="confirmClearFavorites()">
+                    <i class="fas fa-trash"></i> Очистить
+                </button>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+    document.body.classList.add("modal-open");
+    
+    // Добавляем обработчики
+    document.addEventListener('keydown', handleClearModalEscapeKey);
 }
 
-// Функции для работы с модальным окном очистки избранного
-function showClearFavoritesModal() {
-    const modal = document.getElementById('clearFavoritesModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        document.body.classList.add('modal-open');
+// Новая функция для экспорта перед очисткой
+window.exportBeforeClear = async () => {
+    try {
+        const exportResult = await exportFavorites();
+        if (!exportResult) {
+            showNote("Нет данных для экспорта", "info");
+            return;
+        }
+
+        // Автоматически скачиваем файл
+        const blob = new Blob([exportResult.data], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `anifox-favorites-backup-${new Date().toISOString().split('T')[0]}.txt`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        // Копируем код в буфер обмена
+        await copyToClipboard(exportResult.code);
         
-        // Добавляем обработчики
-        modal.addEventListener('click', handleClearModalOverlayClick);
-        document.addEventListener('keydown', handleClearModalEscapeKey);
+        showNote(`📁 Резервная копия создана (${exportResult.count} аниме). Код: ${exportResult.code}`, "success");
+        
+        // Небольшая задержка перед очисткой
+        setTimeout(() => {
+            confirmClearFavorites();
+        }, 1000);
+        
+    } catch (error) {
+        console.error("Export before clear error:", error);
+        showNote(`❌ Ошибка при создании резервной копии: ${error.message}`, "error");
     }
-}
+};
 
 function closeClearFavoritesModal() {
     const modal = document.getElementById('clearFavoritesModal');
     if (modal) {
-        modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-        modal.removeEventListener('click', handleClearModalOverlayClick);
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            modal.remove();
+            document.body.classList.remove('modal-open');
+        }, 200);
+        
         document.removeEventListener('keydown', handleClearModalEscapeKey);
     }
 }
@@ -2068,21 +2643,28 @@ async function confirmClearFavorites() {
         confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Очистка...';
         confirmBtn.disabled = true;
         
+        // Очищаем базу данных
         await dbClear(STORE_FAVORITES);
         clearFavoritesCache();
+        
+        // Обновляем глобальные переменные
         currentFavorites = [];
         currentDisplayCount.favorites = ITEMS_PER_PAGE.favorites;
-        await refreshAllFavoriteButtons();
-
+        
+        // Мгновенно обновляем интерфейс без перезагрузки
         if (location.search.includes("page=favorites")) {
-            renderFavoritesPage();
+            await renderFavoritesPage();
         }
         
+        // Обновляем все кнопки избранного на сайте
+        await refreshAllFavoriteButtons();
+        
         closeClearFavoritesModal();
-        showNote("Избранное очищено", "success");
+        showNote("✅ Избранное полностью очищено", "success");
+        
     } catch (e) {
         console.error("Clear favorites error:", e);
-        showNote("Ошибка при очистке избранного", "error");
+        showNote(`❌ Ошибка при очистке избранного: ${e.message}`, "error");
     } finally {
         // Восстанавливаем кнопку
         const confirmBtn = document.querySelector('#clearFavoritesModal .modal-btn.danger');
@@ -2092,6 +2674,8 @@ async function confirmClearFavorites() {
         }
     }
 }
+
+window.clearFavorites = showClearFavoritesModal;
 
 window.clearFavorites = showClearFavoritesModal;
 
@@ -2212,13 +2796,18 @@ async function confirmCodeInput() {
 // Глобальные функции для экспорта/импорта
 window.exportFavoritesToFile = async () => {
     try {
+        // Показываем индикатор загрузки
+        const loadingNote = showNote("Подготовка экспорта...", "info", null, true);
+        
         const exportResult = await exportFavorites();
         if (!exportResult) {
+            hideNote(loadingNote);
             showNote("Нет данных для экспорта", "info");
             return;
         }
 
         if (!exportResult.data || !exportResult.code) {
+            hideNote(loadingNote);
             throw new Error("Неверные данные экспорта");
         }
 
@@ -2236,42 +2825,131 @@ window.exportFavoritesToFile = async () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        // Показываем уведомление с информацией об автоматическом копировании с небольшой задержкой
-        setTimeout(() => {
-            if (copySuccess) {
-                showNote(`Избранное экспортировано (${exportResult.count} аниме). Код защиты автоматически скопирован в буфер обмена!`, "success", exportResult.code);
-            } else {
-                showNote(`Избранное экспортировано (${exportResult.count} аниме). Код защиты: ${exportResult.code}`, "success", exportResult.code);
-            }
-        }, 500);
+        hideNote(loadingNote);
+
+        // Показываем уведомление с информацией об автоматическом копировании
+        if (copySuccess) {
+            showNote(`✅ Избранное экспортировано (${exportResult.count} аниме). Код защиты скопирован в буфер обмена!`, "success", exportResult.code);
+        } else {
+            showNote(`✅ Избранное экспортировано (${exportResult.count} аниме). Код защиты: ${exportResult.code}`, "success", exportResult.code);
+        }
+
+        // Обновляем кнопку экспорта с анимацией успеха
+        const exportBtn = document.querySelector('button[onclick="exportFavoritesToFile()"]');
+        if (exportBtn) {
+            const originalHTML = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-check"></i> Экспортировано';
+            exportBtn.classList.add('success-state');
+            
+            setTimeout(() => {
+                exportBtn.innerHTML = originalHTML;
+                exportBtn.classList.remove('success-state');
+            }, 2000);
+        }
     } catch (error) {
         console.error("Export to file error:", error);
-        showNote(`Ошибка при экспорте в файл: ${error.message}`, "error");
+        showNote(`❌ Ошибка при экспорте в файл: ${error.message}`, "error");
     }
 };
 
-// Функция для показа модального окна импорта
+// Улучшенная функция для показа модального окна импорта
 window.showImportModal = () => {
     const modalHTML = `
-    <div class="modal-overlay" onclick="closeImportModal(event)">
+    <div class="modal-overlay import-modal-overlay" onclick="closeImportModal(event)">
         <div class="modal-content import-modal" onclick="event.stopPropagation()">
             <button class="modal-close" onclick="closeImportModal()">&times;</button>
-            <h2 class="modal-title">Импорт избранного</h2>
-            <div class="import-option-single">
-                <h3><i class="fas fa-file-upload"></i> Из файла</h3>
-                <p>Выберите файл с экспортированным избранным</p>
-                <button class="modal-btn primary" onclick="selectImportFile();">
-                    <i class="fas fa-upload"></i> Выбрать файл
-                </button>
+            <div class="import-modal-header">
+                <h2 class="modal-title">
+                    <i class="fas fa-file-import"></i> Импорт избранного
+                </h2>
+                <p class="modal-subtitle">Восстановите свою коллекцию избранных аниме</p>
             </div>
+            
+            <div class="import-methods">
+                <div class="import-method">
+                    <div class="import-method-icon">
+                        <i class="fas fa-file-upload"></i>
+                    </div>
+                    <div class="import-method-content">
+                        <h3>Из файла</h3>
+                        <p>Выберите файл с экспортированным избранным (.txt)</p>
+                        <button class="modal-btn primary" onclick="selectImportFile()">
+                            <i class="fas fa-upload"></i> Выбрать файл
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="import-method">
+                    <div class="import-method-icon">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    <div class="import-method-content">
+                        <h3>По ссылке</h3>
+                        <p>Вставьте ссылку для импорта избранного</p>
+                        <div class="import-url-input">
+                            <input type="url" id="importUrlInput" placeholder="https://anifox-search.vercel.app/?import=..." />
+                            <button class="modal-btn secondary" onclick="importFromUrl()">
+                                <i class="fas fa-download"></i> Импорт
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="import-info">
-                <p><i class="fas fa-info-circle"></i> Для импорта требуется код защиты, который был создан при экспорте</p>
+                <div class="info-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Для импорта требуется код защиты, который был создан при экспорте</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Дубликаты автоматически исключаются при импорте</span>
+                </div>
             </div>
         </div>
     </div>`;
     
     document.body.insertAdjacentHTML("beforeend", modalHTML);
     document.body.classList.add("modal-open");
+    
+    // Фокус на поле ввода URL
+    setTimeout(() => {
+        const urlInput = document.getElementById('importUrlInput');
+        if (urlInput) {
+            urlInput.focus();
+            
+            // Обработчик Enter для быстрого импорта
+            urlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    importFromUrl();
+                }
+            });
+        }
+    }, 100);
+};
+
+// Новая функция для импорта по URL
+window.importFromUrl = () => {
+    const urlInput = document.getElementById('importUrlInput');
+    if (!urlInput || !urlInput.value.trim()) {
+        showNote("Введите ссылку для импорта", "warning");
+        return;
+    }
+    
+    try {
+        const url = new URL(urlInput.value.trim());
+        const importData = url.searchParams.get('import');
+        const code = url.searchParams.get('code');
+        
+        if (!importData || !code) {
+            throw new Error("Неверная ссылка для импорта");
+        }
+        
+        closeImportModal();
+        processImport(importData, code);
+    } catch (error) {
+        showNote("Неверная ссылка для импорта", "error");
+    }
 };
 
 // Функция для выбора файла импорта
@@ -2279,21 +2957,53 @@ window.selectImportFile = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.txt';
+    input.multiple = false;
+    
     input.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         try {
+            // Показываем индикатор загрузки
+            const loadingNote = showNote("Чтение файла...", "info", null, true);
+            
             const text = await file.text();
+            hideNote(loadingNote);
+            
             closeImportModal();
             showCodeInputModal(text.trim());
         } catch (error) {
             console.error("Import from file error:", error);
-            showNote(`Ошибка при чтении файла: ${error.message}`, "error");
+            showNote(`❌ Ошибка при чтении файла: ${error.message}`, "error");
         }
     };
+    
     input.click();
 };
+
+// Улучшенная функция обработки импорта
+async function processImport(importData, code) {
+    try {
+        const loadingNote = showNote("Импорт избранного...", "info", null, true);
+        
+        const result = await importFavorites(importData, code);
+        hideNote(loadingNote);
+        
+        if (result.imported > 0) {
+            showNote(`✅ Импортировано ${result.imported} из ${result.total} аниме${result.duplicates > 0 ? ` (${result.duplicates} дубликатов пропущено)` : ''}`, "success");
+            
+            // Мгновенное обновление страницы избранного без перезагрузки
+            if (location.search.includes("page=favorites")) {
+                await renderFavoritesPage();
+            }
+        } else {
+            showNote(`ℹ️ Все аниме из файла уже есть в избранном (${result.total} проверено)`, "info");
+        }
+    } catch (error) {
+        console.error("Process import error:", error);
+        showNote(`❌ Ошибка импорта: ${error.message}`, "error");
+    }
+}
 
 window.importFavoritesFromFile = () => {
     const input = document.createElement('input');
@@ -2316,32 +3026,54 @@ window.importFavoritesFromFile = () => {
 
 window.shareFavoritesLink = async () => {
     try {
+        const loadingNote = showNote("Создание ссылки...", "info", null, true);
+        
         const shareResult = await shareFavorites();
+        hideNote(loadingNote);
+        
         if (!shareResult) return;
 
         if (navigator.share) {
             await navigator.share({
-                title: 'Мое избранное аниме',
+                title: 'Мое избранное аниме - AniFox',
                 text: `Поделиться избранным (${shareResult.count} аниме)`,
                 url: shareResult.url
             });
         } else {
             await navigator.clipboard.writeText(shareResult.url);
-            showNote(`Ссылка скопирована! Код защиты: ${shareResult.code}`, "success", shareResult.code);
+            showNote(`🔗 Ссылка скопирована! Код защиты: ${shareResult.code}`, "success", shareResult.code);
+        }
+        
+        // Обновляем кнопку с анимацией успеха
+        const shareBtn = document.querySelector('button[onclick="shareFavoritesLink()"]');
+        if (shareBtn) {
+            const originalHTML = shareBtn.innerHTML;
+            shareBtn.innerHTML = '<i class="fas fa-check"></i> Ссылка создана';
+            shareBtn.classList.add('success-state');
+            
+            setTimeout(() => {
+                shareBtn.innerHTML = originalHTML;
+                shareBtn.classList.remove('success-state');
+            }, 2000);
         }
     } catch (error) {
         console.error("Share link error:", error);
-        showNote("Ошибка при создании ссылки", "error");
+        showNote("❌ Ошибка при создании ссылки", "error");
     }
 };
 
 window.closeImportModal = (e) => {
-    if (e && e.target !== document.querySelector(".modal-overlay")) return;
-    // Ищем модальное окно импорта (то, которое было создано динамически)
-    const modal = document.querySelector(".modal-overlay:not(#codeInputModal):not(#clearFavoritesModal)");
+    if (e && e.target !== e.currentTarget) return;
+    
+    const modal = document.querySelector(".import-modal-overlay");
     if (modal) {
-        modal.remove();
-        document.body.classList.remove("modal-open");
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            modal.remove();
+            document.body.classList.remove("modal-open");
+        }, 200);
     }
 };
 
@@ -2559,8 +3291,11 @@ async function search(queryParam = null) {
 
         await renderSearchResults(q, currentSearchResults, data);
         
+        // Создаем красивый URL для поиска
         const slug = toSlug(q);
-        history.replaceState(null, null, `/search/${slug}`);
+        const cleanUrl = `/search/${slug}`;
+        history.replaceState({ query: q, type: 'search' }, null, cleanUrl);
+        
         if (input) input.value = "";
         updateSEOMeta(data);
         
@@ -2733,7 +3468,7 @@ function updateHeader() {
 
 window.navigateToHome = (e) => {
     if (e) e.preventDefault();
-    history.replaceState(null, null, "/");
+    history.replaceState({ type: 'home' }, null, "/");
     updateHeader();
     renderWeekly();
     
@@ -2743,11 +3478,8 @@ window.navigateToHome = (e) => {
 
 window.navigateToFavorites = () => {
     // Всегда используем корневой путь для избранного
-    const basePath = "/";
-    const url = location.search
-        ? `${basePath}${location.search}${location.search.includes("?") ? "&" : "?"}page=favorites`
-        : `${basePath}?page=favorites`;
-    history.replaceState(null, null, url);
+    const url = "/favorites";
+    history.replaceState({ type: 'favorites' }, null, url);
     updateHeader();
     renderFavoritesPage();
     
@@ -2947,10 +3679,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const importData = urlParams.get('import');
                 const code = urlParams.get('code');
                 
+                // Показываем индикатор загрузки
+                const loadingNote = showNote("🔄 Автоматический импорт избранного...", "info", null, true);
+                
                 try {
                     const result = await importFavorites(importData, code);
-                    if (result) {
-                        let message = `Импортировано ${result.imported} из ${result.total} аниме`;
+                    hideNote(loadingNote);
+                    
+                    if (result && result.imported > 0) {
+                        let message = `✅ Импортировано ${result.imported} из ${result.total} аниме`;
                         if (result.duplicates > 0) {
                             message += ` (${result.duplicates} дубликатов пропущено)`;
                         }
@@ -2960,15 +3697,28 @@ document.addEventListener("DOMContentLoaded", async () => {
                         const cleanUrl = location.origin + "/";
                         history.replaceState(null, null, cleanUrl);
                         
-                        // Переходим на страницу избранного
-                        navigateToFavorites();
+                        // Переходим на страницу избранного с небольшой задержкой
+                        setTimeout(() => {
+                            navigateToFavorites();
+                        }, 1500);
+                        return;
+                    } else if (result && result.imported === 0) {
+                        showNote(`ℹ️ Все аниме из ссылки уже есть в избранном (${result.total} проверено)`, "info");
+                        
+                        // Очищаем URL и переходим на избранное
+                        const cleanUrl = location.origin + "/";
+                        history.replaceState(null, null, cleanUrl);
+                        setTimeout(() => {
+                            navigateToFavorites();
+                        }, 2000);
                         return;
                     }
                 } catch (error) {
-                    console.error("Auto-import error:", error);
-                    showNote(`Ошибка импорта: ${error.message}`, "error");
+                    hideNote(loadingNote);
+                    console.error("Auto import error:", error);
+                    showNote(`❌ Ошибка автоматического импорта: ${error.message}`, "error");
                     
-                    // Очищаем URL от параметров импорта
+                    // Очищаем URL от неверных параметров
                     const cleanUrl = location.origin + "/";
                     history.replaceState(null, null, cleanUrl);
                 }
@@ -2987,12 +3737,45 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (btn) {
-            window.addEventListener("scroll", () =>
-                btn.classList.toggle("show", window.scrollY > 300)
-            );
+            optimizeScrollPerformance(); // Используем оптимизированный скроллинг
             btn.addEventListener("click", () =>
                 window.scrollTo({ top: 0, behavior: "smooth" })
             );
+        }
+        
+        // Оптимизация производительности
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => {
+                // Предзагрузка критических ресурсов
+                preloadCriticalResources();
+                // Оптимизация изображений
+                optimizeImages();
+                // Мобильные оптимизации
+                if (window.innerWidth <= 768) {
+                    forceLoadImagesOnMobile();
+                    optimizeImagesForMobile();
+                }
+            });
+        } else {
+            setTimeout(() => {
+                preloadCriticalResources();
+                optimizeImages();
+                if (window.innerWidth <= 768) {
+                    forceLoadImagesOnMobile();
+                    optimizeImagesForMobile();
+                }
+            }, 1000);
+        }
+        
+        // Проверяем сломанные изображения через 2 секунды
+        setTimeout(fixBrokenImages, 2000);
+        
+        // Повторная проверка для мобильных через 5 секунд
+        if (window.innerWidth <= 768) {
+            setTimeout(() => {
+                fixBrokenImages();
+                forceLoadImagesOnMobile();
+            }, 5000);
         }
     } catch (e) {
         console.error("Initialization error:", e);
@@ -3021,6 +3804,179 @@ setInterval(() => {
     }
 }, 60000);
 
+// Функции оптимизации производительности
+function preloadCriticalResources() {
+    // Предзагрузка критических изображений
+    const criticalImages = [
+        '/resources/anime-placeholder.svg',
+        '/resources/obl_web.jpg'
+    ];
+    
+    criticalImages.forEach(src => {
+        const img = new Image();
+        img.src = src;
+    });
+}
+
+function optimizeImages() {
+    // Оптимизация всех изображений на странице
+    const images = document.querySelectorAll('img');
+    images.forEach(img => {
+        // Добавляем декодирование изображений
+        if ('decode' in img) {
+            img.decode().catch(() => {
+                // Игнорируем ошибки декодирования
+            });
+        }
+        
+        // Оптимизация загрузки
+        if (!img.loading) {
+            img.loading = 'lazy';
+        }
+    });
+}
+
+// Оптимизация анимаций карточек
+function optimizeCardAnimations() {
+    const cards = document.querySelectorAll('.anime-card');
+    
+    if ('IntersectionObserver' in window) {
+        const animationObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                } else {
+                    entry.target.style.animationPlayState = 'paused';
+                }
+            });
+        }, {
+            rootMargin: '100px 0px'
+        });
+        
+        cards.forEach(card => {
+            animationObserver.observe(card);
+        });
+    }
+}
+
+// Оптимизация прокрутки для мобильных устройств
+function optimizeMobileScrolling() {
+    if ('ontouchstart' in window) {
+        document.body.style.webkitOverflowScrolling = 'touch';
+        document.body.style.overflowScrolling = 'touch';
+        
+        // Предотвращение bounce эффекта
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.target === document.body) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
+}
+
+// Инициализация оптимизаций
+document.addEventListener('DOMContentLoaded', () => {
+    optimizeMobileScrolling();
+    
+    // Отложенная инициализация тяжелых операций
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+            optimizeCardAnimations();
+        });
+    } else {
+        setTimeout(optimizeCardAnimations, 2000);
+    }
+});
+
 console.log(`🚀 AniFox ${CACHE_VERSION} loaded with button-based loading system`);
 console.log(`💻 Разработано SerGio Play - https://sergioplay-dev.vercel.app/`);
 console.log(`📁 GitHub: https://github.com/SerGioPlay01/anifox-search`);
+// Функция для принудительной загрузки изображений на мобильных
+function forceLoadImagesOnMobile() {
+    if (window.innerWidth <= 768) {
+        const images = document.querySelectorAll('.anime-poster img');
+        
+        images.forEach((img, index) => {
+            // Добавляем задержку для поэтапной загрузки
+            setTimeout(() => {
+                if (!img.complete && img.src) {
+                    // Создаем новое изображение для проверки загрузки
+                    const testImg = new Image();
+                    
+                    testImg.onload = function() {
+                        img.src = this.src;
+                        img.classList.add('loaded');
+                    };
+                    
+                    testImg.onerror = function() {
+                        console.log('Failed to load image on mobile:', img.src);
+                        img.src = '/resources/anime-placeholder.svg';
+                        img.classList.add('loaded');
+                    };
+                    
+                    // Добавляем параметры для мобильной оптимизации
+                    let mobileSrc = img.src;
+                    if (mobileSrc.includes('shikimori.one')) {
+                        mobileSrc = mobileSrc.replace('http://', 'https://');
+                        if (!mobileSrc.includes('?')) {
+                            mobileSrc += '?mobile=1&quality=80';
+                        }
+                    }
+                    
+                    testImg.src = mobileSrc;
+                }
+            }, index * 100); // Поэтапная загрузка с интервалом 100мс
+        });
+    }
+}
+
+// Функция для проверки и исправления сломанных изображений
+function fixBrokenImages() {
+    const images = document.querySelectorAll('.anime-poster img');
+    
+    images.forEach(img => {
+        // Проверяем, загружено ли изображение
+        if (img.complete && img.naturalHeight === 0) {
+            console.log('Broken image detected:', img.src);
+            img.src = '/resources/anime-placeholder.svg';
+            img.classList.add('loaded');
+        }
+        
+        // Добавляем обработчик ошибок, если его нет
+        if (!img.onerror) {
+            img.onerror = function() {
+                console.log('Image load error:', this.src);
+                this.src = '/resources/anime-placeholder.svg';
+                this.classList.add('loaded');
+                this.onerror = null;
+            };
+        }
+    });
+}
+
+// Функция для оптимизации изображений на мобильных
+function optimizeImagesForMobile() {
+    if (window.innerWidth <= 768) {
+        const images = document.querySelectorAll('.anime-poster img');
+        
+        images.forEach(img => {
+            // Добавляем атрибуты для лучшей производительности
+            img.setAttribute('decoding', 'async');
+            img.setAttribute('loading', 'lazy');
+            
+            // Оптимизируем URL для мобильных
+            if (img.src && img.src.includes('shikimori.one')) {
+                let optimizedSrc = img.src.replace('http://', 'https://');
+                
+                // Добавляем параметры оптимизации
+                if (!optimizedSrc.includes('?')) {
+                    optimizedSrc += '?w=300&h=400&fit=crop&quality=80';
+                }
+                
+                if (img.src !== optimizedSrc) {
+                    img.src = optimizedSrc;
+                }
+            }
+        });
+    }
+}

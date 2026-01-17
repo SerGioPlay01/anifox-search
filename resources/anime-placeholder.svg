@@ -1,0 +1,13 @@
+<svg width="300" height="400" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="400" fill="url(#paint0_linear)"/>
+  <circle cx="150" cy="160" r="40" fill="white" fill-opacity="0.2"/>
+  <path d="M135 145L175 165L135 185V145Z" fill="white" fill-opacity="0.7"/>
+  <text x="150" y="250" text-anchor="middle" fill="white" fill-opacity="0.7" font-family="Arial, sans-serif" font-size="16" font-weight="600">АНИМЕ</text>
+  <text x="150" y="270" text-anchor="middle" fill="white" fill-opacity="0.5" font-family="Arial, sans-serif" font-size="12">Постер недоступен</text>
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="300" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5b0a99"/>
+      <stop offset="1" stop-color="#9115ea"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -37,14 +37,15 @@
 // ===========================================
 
 /**
- * Улучшенная проверка блокировщиков рекламы без внешних скриптов
- * Использует несколько методов обнаружения для повышения точности
+ * Улучшенная проверка блокировщиков рекламы без ложных срабатываний
+ * Использует более консервативный подход для точного обнаружения
  * @param {Function} callback - Функция обратного вызова с результатом
  */
 function detectAdblockHard(callback) {
   let blockedSignals = 0;      // Счетчик сигналов блокировки
-  const totalTests = 4;        // Общее количество тестов
+  const totalTests = 4;        // Общее количество тестов (уменьшено для точности)
   let testsCompleted = 0;      // Количество завершенных тестов
+  let testResults = [];        // Результаты тестов для анализа
 
   /**
    * Проверка завершения всех тестов
@@ -53,104 +54,147 @@ function detectAdblockHard(callback) {
   function checkCompletion() {
     testsCompleted++;
     if (testsCompleted >= totalTests) {
-      // Если 2 или более теста показали блокировку
-      const blocked = blockedSignals >= 2;
+      // Более консервативная логика обнаружения - требуем больше доказательств
+      const reliableBlockedTests = testResults.filter(r => r.reliable && r.blocked).length;
+      const anyBlockedTests = testResults.filter(r => r.blocked).length;
       
-      // Дополнительная проверка для мобильных браузеров с блокировкой
-      const isMobileBlocked =
-        /Opera Mini|Chrome Lite|Yandex Turbo|Firefox Focus/.test(
-          navigator.userAgent
-        );
+      // Блокировщик обнаружен только если:
+      // 1. Хотя бы 2 надежных теста показали блокировку
+      // 2. ИЛИ 3+ любых теста показали блокировку
+      // 3. И общий счетчик сигналов >= 3
+      const blocked = (reliableBlockedTests >= 2 || anyBlockedTests >= 3) && blockedSignals >= 3;
       
-      callback(blocked || isMobileBlocked);
+      // Отладочная информация (только для localhost)
+      if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+        console.log('AniFox AdBlock Detection:', {
+          blockedSignals,
+          totalTests,
+          testResults,
+          reliableBlockedTests,
+          anyBlockedTests,
+          finalResult: blocked
+        });
+      }
+      
+      callback(blocked);
     }
   }
 
   // ===========================================
-  // ТЕСТ 1: BAIT ЭЛЕМЕНТЫ
+  // ТЕСТ 1: BAIT ЭЛЕМЕНТЫ (КОНСЕРВАТИВНЫЙ)
   // ===========================================
-  // Создаем элемент с классами, которые блокируют адблоки
-  
   const bait = document.createElement("div");
-  bait.className = "ads ad-unit ad-banner advertisement";
-  bait.style.cssText =
-    "position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px;";
-  bait.innerHTML = '<div class="ad-text">Advertisement</div>';
+  bait.className = "ads ad-unit ad-banner advertisement google-ads adsense";
+  bait.style.cssText = "position: absolute !important; left: -9999px !important; top: -9999px !important; width: 300px !important; height: 250px !important; display: block !important; visibility: visible !important;";
+  bait.innerHTML = '<div class="ad-text">Advertisement</div><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="ad" width="300" height="250">';
   document.body.appendChild(bait);
 
-  // Проверяем, был ли элемент заблокирован
   setTimeout(() => {
     const style = window.getComputedStyle(bait);
-    if (
-      style.display === "none" ||
-      style.visibility === "hidden" ||
-      style.height === "0px"
-    ) {
-      blockedSignals++;
+    // Более строгая проверка - элемент должен быть полностью скрыт
+    const isBlocked = (style.display === "none" || 
+                      style.visibility === "hidden" || 
+                      style.height === "0px" || 
+                      style.width === "0px") &&
+                     (bait.offsetHeight === 0 || bait.offsetWidth === 0);
+    
+    if (isBlocked) blockedSignals += 2; // Увеличиваем вес надежного теста
+    testResults.push({ test: 'bait-element', blocked: isBlocked, reliable: true });
+    
+    if (document.body.contains(bait)) {
+      bait.remove();
     }
-    bait.remove();
     checkCompletion();
   }, 300);
 
-    // Тест 2: Fake скрипт с триггерными атрибутами
-    const fakeScript = document.createElement("script");
-    fakeScript.innerHTML = "window._adTest = true;";
-    fakeScript.setAttribute("data-ad-client", "ca-pub-123456789");
-    fakeScript.setAttribute("type", "text/javascript");
+  // ===========================================
+  // ТЕСТ 2: БРАУЗЕРНЫЕ БЛОКИРОВЩИКИ
+  // ===========================================
+  Promise.all([isBrave(), isGhostery()]).then(([brave, ghostery]) => {
+    const hasBrowserBlocker = brave || ghostery;
+    if (hasBrowserBlocker) blockedSignals += 2; // Увеличиваем вес надежного теста
+    testResults.push({ test: 'browser-blocker', blocked: hasBrowserBlocker, reliable: true });
+    checkCompletion();
+  });
 
-    fakeScript.onerror = () => {
-      blockedSignals++;
-      checkCompletion();
-    };
+  // ===========================================
+  // ТЕСТ 3: FAKE СКРИПТ (УЛУЧШЕННЫЙ)
+  // ===========================================
+  window._adTest = false;
+  const fakeScript = document.createElement("script");
+  fakeScript.innerHTML = "window._adTest = true;";
+  fakeScript.setAttribute("data-ad-client", "ca-pub-123456789");
+  fakeScript.setAttribute("async", "");
+  fakeScript.className = "adsbygoogle";
 
-    document.head.appendChild(fakeScript);
+  let scriptBlocked = false;
+  fakeScript.onerror = () => {
+    scriptBlocked = true;
+  };
 
-    setTimeout(() => {
-      if (!window._adTest) {
-        blockedSignals++;
-      }
+  document.head.appendChild(fakeScript);
+
+  setTimeout(() => {
+    const isBlocked = !window._adTest || scriptBlocked;
+    if (isBlocked) blockedSignals++;
+    testResults.push({ test: 'fake-script', blocked: isBlocked, reliable: false });
+    
+    if (document.head.contains(fakeScript)) {
       fakeScript.remove();
-      delete window._adTest;
-      checkCompletion();
-    }, 400);
+    }
+    delete window._adTest;
+    checkCompletion();
+  }, 400);
 
-    // Тест 3: Проверка браузерных блокировщиков
-    Promise.all([isBrave(), isGhostery()]).then(([brave, ghostery]) => {
-      if (brave || ghostery) {
-        blockedSignals++;
+  // ===========================================
+  // ТЕСТ 4: ВНЕШНИЕ ЗАПРОСЫ (КОНСЕРВАТИВНЫЙ)
+  // ===========================================
+  // Проверяем блокировку только известных рекламных доменов
+  const testUrls = [
+    'https://googleads.g.doubleclick.net/pagead/ads?test=1'
+  ];
+  
+  let externalBlocked = 0;
+  let externalTestsCompleted = 0;
+  
+  // Добавляем таймаут для внешних запросов
+  const timeoutId = setTimeout(() => {
+    if (externalTestsCompleted === 0) {
+      // Если запросы не завершились за 2 секунды, считаем что блокировщика нет
+      testResults.push({ test: 'external-requests', blocked: false, reliable: true });
+      checkCompletion();
+    }
+  }, 2000);
+  
+  testUrls.forEach(url => {
+    fetch(url, { 
+      method: 'HEAD', 
+      mode: 'no-cors',
+      cache: 'no-cache'
+    }).then(() => {
+      // Запрос прошел
+      externalTestsCompleted++;
+      clearTimeout(timeoutId);
+      if (externalTestsCompleted >= testUrls.length) {
+        const isBlocked = externalBlocked >= 1;
+        if (isBlocked) blockedSignals++;
+        testResults.push({ test: 'external-requests', blocked: isBlocked, reliable: true });
+        checkCompletion();
       }
-      checkCompletion();
-    });
-
-    // Тест 4: MutationObserver для отслеживания удаления элементов
-    const testAd = document.createElement("div");
-    testAd.className = "banner-ad textads";
-    testAd.style.cssText =
-      "position: absolute; left: -9999px; width: 1px; height: 1px;";
-    document.body.appendChild(testAd);
-
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.removedNodes) {
-          if (node === testAd) {
-            blockedSignals++;
-            observer.disconnect();
-            testAd.remove();
-            checkCompletion();
-            return;
-          }
-        }
+    }).catch(() => {
+      // Запрос заблокирован
+      externalBlocked++;
+      externalTestsCompleted++;
+      clearTimeout(timeoutId);
+      if (externalTestsCompleted >= testUrls.length) {
+        const isBlocked = externalBlocked >= 1;
+        if (isBlocked) blockedSignals++;
+        testResults.push({ test: 'external-requests', blocked: isBlocked, reliable: true });
+        checkCompletion();
       }
     });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    setTimeout(() => {
-      observer.disconnect();
-      testAd.remove();
-      checkCompletion();
-    }, 500);
-  }
+  });
+}
 
   async function isBrave() {
     if (navigator.brave) {
@@ -448,44 +492,165 @@ function showInstructions() {
     };
   }
 
-/* ---------- запуск (жёсткий детект) ---------- */
+/* ---------- запуск (консервативный детект) ---------- */
 function run() {
-  const choice = localStorage.getItem(STORAGE_KEY);
+  // Добавляем задержку для полной загрузки страницы и всех ресурсов
+  setTimeout(() => {
+    const choice = localStorage.getItem(STORAGE_KEY);
 
-  /* 1.  Ранее выбрали «с блокировщиком» – проверим, не разблокировали ли рекламу */
-  if (choice === 'with-adblock') {
+    /* 1.  Ранее выбрали «с блокировщиком» – проверим, не разблокировали ли рекламу */
+    if (choice === 'with-adblock') {
+      detectAdblockHard(blocked => {
+        if (!blocked) {                // пользователь выключил блокировщик
+          localStorage.setItem(STORAGE_KEY, 'disable-adblock');
+          localStorage.removeItem(STORAGE_KEY_WANT);
+          removeMiniBanner();
+        } else {
+          insertMiniBanner();          // всё ещё блокирует – показываем
+        }
+      });
+      return;
+    }
+
+    /* 2.  Ранее выбрали «отключил блокировщик» – проверим, не включил ли обратно */
+    if (choice === 'disable-adblock') {
+      detectAdblockHard(blocked => {
+        if (blocked) {                 // включил обратно → сбрасываем выбор
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(STORAGE_KEY_WANT);
+          buildBanner();               // показываем полный баннер
+        } else {
+          removeMiniBanner();          // всё хорошо, реклама не блокируется
+        }
+      });
+      return;
+    }
+
+    /* 3.  Первый заход или сброшен выбор – консервативная логика */
+    // Дополнительная проверка: не показываем баннер на localhost/127.0.0.1
+    if (window.location.hostname === '127.0.0.1' || 
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '') {
+      console.log('AniFox AdBlock: Development environment detected, skipping banner');
+      return;
+    }
+
     detectAdblockHard(blocked => {
-      if (!blocked) {                // пользователь выключил блокировщик
-        localStorage.setItem(STORAGE_KEY, 'disable-adblock');
-        localStorage.removeItem(STORAGE_KEY_WANT);
-        removeMiniBanner();
+      if (blocked) {
+        // Дополнительная проверка перед показом баннера
+        setTimeout(() => {
+          // Повторная проверка через 1 секунду для уверенности
+          detectAdblockHard(stillBlocked => {
+            if (stillBlocked) {
+              buildBanner();
+            } else {
+              console.log('AniFox AdBlock: Second check showed no blocker, banner not shown');
+            }
+          });
+        }, 1000);
       } else {
-        insertMiniBanner();          // всё ещё блокирует – показываем
+        // Отладочная информация для localhost
+        if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+          console.log('AniFox AdBlock: No blocker detected, banner not shown');
+        }
       }
     });
-    return;
-  }
-
-  /* 2.  Ранее выбрали «отключил блокировщик» – проверим, не включил ли обратно */
-  if (choice === 'disable-adblock') {
-    detectAdblockHard(blocked => {
-      if (blocked) {                 // включил обратно → сбрасываем выбор
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(STORAGE_KEY_WANT);
-        buildBanner();               // показываем полный баннер
-      } else {
-        removeMiniBanner();          // всё хорошо, реклама не блокируется
-      }
-    });
-    return;
-  }
-
-  /* 3.  Первый заход или сброшен выбор – обычная логика */
-  detectAdblockHard(blocked => {
-    if (blocked) buildBanner();
-  });
+  }, 1000); // Увеличиваем задержку до 1 секунды
 }
 
 document.addEventListener('DOMContentLoaded', run);
+
+// Публичный API для тестирования
+window.AniFoxAdblock = {
+  // Показать баннер принудительно
+  showBanner: function() {
+    const existingBanner = document.querySelector('.ab-banner');
+    if (existingBanner) {
+      existingBanner.remove();
+    }
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_WANT);
+    buildBanner();
+  },
+
+  // Скрыть баннер
+  hideBanner: function() {
+    const banner = document.querySelector('.ab-banner');
+    if (banner) {
+      hideBanner(banner);
+    }
+    removeMiniBanner();
+  },
+
+  // Сбросить все настройки
+  reset: function() {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_WANT);
+    const banner = document.querySelector('.ab-banner');
+    if (banner) {
+      hideBanner(banner);
+    }
+    removeMiniBanner();
+  },
+
+  // Проверить блокировщик вручную
+  testDetection: function() {
+    console.log('AniFox AdBlock: Manual detection test started...');
+    detectAdblockHard(blocked => {
+      console.log('AniFox AdBlock: Manual test result:', blocked);
+      if (blocked) {
+        console.log('AniFox AdBlock: Blocker detected, showing banner');
+        this.showBanner();
+      } else {
+        console.log('AniFox AdBlock: No blocker detected');
+      }
+    });
+  },
+
+  // Принудительный тест с подробным выводом
+  forceTest: function() {
+    console.log('AniFox AdBlock: Force test started - ignoring cache...');
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_WANT);
+    
+    // Удаляем существующие баннеры
+    const existingBanner = document.querySelector('.ab-banner');
+    if (existingBanner) existingBanner.remove();
+    removeMiniBanner();
+    
+    // Запускаем тест
+    detectAdblockHard(blocked => {
+      console.log('AniFox AdBlock: Force test completed');
+      console.log('AniFox AdBlock: Result:', blocked ? 'BLOCKER DETECTED' : 'NO BLOCKER');
+      
+      if (blocked) {
+        console.log('AniFox AdBlock: Showing banner due to detected blocker');
+        buildBanner();
+      } else {
+        console.log('AniFox AdBlock: No banner shown - no blocker detected');
+      }
+    });
+  },
+
+  // Тест только определения без показа баннера
+  testOnly: function() {
+    console.log('AniFox AdBlock: Detection test only (no banner)...');
+    detectAdblockHard(blocked => {
+      console.log('AniFox AdBlock: Detection result:', blocked ? 'BLOCKER DETECTED' : 'NO BLOCKER');
+      console.log('AniFox AdBlock: Banner would be', blocked ? 'SHOWN' : 'HIDDEN');
+    });
+  },
+
+  // Получить статистику
+  getStats: function() {
+    return {
+      hasChoice: !!localStorage.getItem(STORAGE_KEY),
+      choice: localStorage.getItem(STORAGE_KEY),
+      wantDisable: !!localStorage.getItem(STORAGE_KEY_WANT),
+      bannerVisible: !!document.querySelector('.ab-banner'),
+      miniBannerVisible: !!document.querySelector('.ab-mini-banner')
+    };
+  }
+};
 
 })();

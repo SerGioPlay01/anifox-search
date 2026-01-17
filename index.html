@@ -49,7 +49,7 @@
     
     <!-- Кодировка и совместимость -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
     <!-- =========================================== -->
@@ -57,13 +57,21 @@
     <!-- =========================================== -->
     <!-- Прелоадер и анимации загрузки - загружаются сразу для быстрого отображения -->
     <style>
+        :root {
+            --primary: #6c5ce7;
+            --background: #1a1625;
+            --text-primary: #ffffff;
+            --text-secondary: #b2bec3;
+            --blur: blur(20px);
+        }
+
         #preloader-site-full {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: var(--black);
+            background: linear-gradient(135deg, #1a1625 0%, #2d2438 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -72,6 +80,19 @@
             opacity: 1;
             visibility: visible;
             transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        #preloader-site-full::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(108, 92, 231, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(162, 155, 254, 0.15) 0%, transparent 50%);
+            pointer-events: none;
         }
 
         #preloader-site-full.hidden {
@@ -83,11 +104,13 @@
         .loader-site {
             width: 48px;
             height: 48px;
-            border: 4px solid rgba(145, 21, 234, 0.3);
-            border-top-color: var(--accent);
+            border: 4px solid rgba(108, 92, 231, 0.3);
+            border-top-color: var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
         }
 
         @keyframes spin {
@@ -98,8 +121,10 @@
 
         #preloader-site-full p {
             font-size: 1rem;
-            color: var(--gray);
+            color: var(--text-secondary);
             letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
         }
     </style>
 
@@ -212,15 +237,17 @@
     <link rel="preload" href="/style.css" as="style">
     <link rel="preconnect" href="https://mc.yandex.ru">
 
-    <!-- Отложенная загрузка некритических CSS -->
+    <!-- Стили -->
     <link rel="stylesheet" href="/style.css" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/cookie-banner.css" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/adblock-banner.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/privacy-consent.css">
+    <link rel="stylesheet" href="/adblock-banner.css">
+    <link rel="stylesheet" href="/mobile-enhancements.css" media="(max-width: 1024px)">
     <!-- Резервная загрузка для браузеров без JavaScript -->
     <noscript>
         <link rel="stylesheet" href="/style.css">
-        <link rel="stylesheet" href="/cookie-banner.css">
+        <link rel="stylesheet" href="/privacy-consent.css">
         <link rel="stylesheet" href="/adblock-banner.css">
+        <link rel="stylesheet" href="/mobile-enhancements.css">
     </noscript>
 
     <!-- =========================================== -->
@@ -322,6 +349,17 @@
             </svg>
             <span class="logo-text">AniFox</span>
         </a>
+        <nav class="header-nav">
+            <a href="/" class="nav-btn">
+                <i class="fas fa-home"></i> Главная
+            </a>
+            <a href="/?page=favorites" class="nav-btn">
+                <i class="fas fa-heart"></i> Избранное
+            </a>
+            <a href="/announcements.html" class="nav-btn">
+                <i class="fas fa-calendar-alt"></i> Анонсы
+            </a>
+        </nav>
     </header>
 
     <!-- =========================================== -->
@@ -331,7 +369,17 @@
     <section class="search-section">
         <form id="searchForm" action="/" method="get" autocomplete="off">
             <label class="visually-hidden" for="searchInput">Название аниме</label>
-            <input id="searchInput" name="q" type="search" placeholder="Название аниме…" aria-label="Поиск аниме">
+            <input id="searchInput" 
+                   name="q" 
+                   type="search" 
+                   placeholder="Название аниме…" 
+                   aria-label="Поиск аниме"
+                   autocomplete="off"
+                   autocorrect="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   inputmode="search"
+                   enterkeyhint="search">
             <button type="submit">Найти</button>
         </form>
     </section>
@@ -357,6 +405,7 @@
                     <p>Смотреть аниме онлайн бесплатно в HD качестве на AniFox. Более 3000 аниме с русской озвучкой и субтитрами. Популярные аниме: Наруто, Атака титанов, Демон Слейер, Ван Пис. Без регистрации.</p>
                     <div class="footer-links">
                         <a href="/privacy-policy.html">Политика конфиденциальности</a>
+                        <a href="/terms-of-service.html">Условия использования</a>
                         <a href="/license.html">Лицензия</a>
                     </div>
                 </div>
@@ -369,6 +418,18 @@
                         <li><a href="/search/naruto">Наруто онлайн</a></li>
                         <li><a href="/search/attack-on-titan">Атака титанов</a></li>
                         <li><a href="/search/demon-slayer">Демон Слейер</a></li>
+                    </ul>
+                </div>
+                <!-- Правовая информация -->
+                <div class="footer-section">
+                    <h4>Правовая информация</h4>
+                    <ul>
+                        <li><a href="/privacy-policy.html">Политика конфиденциальности</a></li>
+                        <li><a href="/terms-of-service.html">Условия использования</a></li>
+                        <li><a href="/cookie-policy.html">Политика cookies</a></li>
+                        <li><a href="/user-rights.html">Права пользователей</a></li>
+                        <li><a href="/disclaimer.html">Отказ от ответственности</a></li>
+                        <li><a href="/license.html">Лицензия</a></li>
                     </ul>
                 </div>
                 <!-- Информация о разработчике -->
@@ -494,16 +555,15 @@
         })();
     </script>
 
-    <!-- =========================================== -->
-    <!-- ОТЛОЖЕННЫЕ СКРИПТЫ -->
-    <!-- =========================================== -->
+    <!-- Отложенные скрипты -->
     <!-- Некритические скрипты загружаются после основного контента -->
     <script src="/api.js" defer></script>
     <script src="/seo.js" defer></script>
-    <script src="/cookie-banner.js" defer></script>
+    <script src="/mobile-enhancements.js" defer></script>
+    <script src="/privacy-consent.js" defer onerror="console.warn('Cookie banner failed to load'); window.cookieBannerFailed = true;"></script>
     <script src="/adblock-banner.js" defer></script>
     <script src="/sw-register.js" defer></script>
-
+    
     <!-- =========================================== -->
     <!-- YANDEX.METRIKA -->
     <!-- =========================================== -->

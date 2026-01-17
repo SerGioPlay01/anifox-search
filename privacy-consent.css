@@ -31,7 +31,7 @@
 /* =========================================== */
 
 /* Основной контейнер баннера cookies */
-.cookie-banner{
+.privacy-consent-banner {
     /* CSS переменные для цветов и размеров */
     --red: #5b0a99;           /* Основной цвет бренда */
     --white: #f2f2f2;         /* Цвет текста */
@@ -64,31 +64,44 @@
     
     /* Эффекты */
     box-shadow: 0 8px 32px rgba(101,19,178,.4);
-    animation: cookieFade .6s ease-out;
+    animation: consentFade .6s ease-out;
+    
+    /* Защита от блокировки */
+    contain: layout style paint;
+    isolation: isolate;
 }
-.cookie-banner.hidden{
-    display: none;
+
+.privacy-consent-banner.hidden {
+    opacity: 0;
+    transform: translateY(100%);
+    transition: all 0.3s ease-out;
 }
-.cookie-text{
+
+.consent-text {
     font-size: .95rem;
     line-height: 1.5;
     color: rgba(255,255,255,.85);
+    margin: 0;
 }
-.cookie-link{
+
+.consent-link {
     color: var(--red);
     font-weight: 600;
     text-decoration: none;
 }
-.cookie-link:hover{
+
+.consent-link:hover {
     text-decoration: underline;
 }
-.cookie-actions{
+
+.consent-actions {
     display: flex;
     align-items: center;
     gap: 1rem;
     flex-wrap: wrap;
 }
-.cookie-btn{
+
+.consent-btn {
     background: linear-gradient(135deg,var(--red) 0%,#a31aff 100%);
     color: var(--white);
     border: none;
@@ -99,12 +112,15 @@
     transition: var(--transition);
     user-select: none;
 }
-.cookie-btn:hover{
+
+.consent-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(150,6,227,.35);
 }
-@media(min-width:600px){
-    .cookie-banner{
+
+/* Адаптивность для больших экранов */
+@media(min-width:600px) {
+    .privacy-consent-banner {
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
@@ -112,11 +128,50 @@
         left: 50%;
         transform: translateX(-50%);
     }
-    .cookie-text{
+    
+    .consent-text {
         flex: 1 1 0%;
     }
 }
-@keyframes cookieFade{
-    from{opacity:0;transform:translateY(30px)}
-    to{opacity:1;transform:translateY(0)}
+
+/* Анимация появления */
+@keyframes consentFade {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================== */
+/* ЗАЩИТА ОТ БЛОКИРОВКИ */
+/* =========================================== */
+
+/* Дополнительные стили для защиты от блокировки расширениями */
+.privacy-consent-banner[data-privacy="consent"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Высокий приоритет для всех элементов */
+.privacy-consent-banner {
+    z-index: 9999 !important;
+    contain: layout style paint;
+    isolation: isolate;
+}
+
+/* Защита от скрытия через CSS */
+.privacy-consent-banner * {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Исключения для элементов, которые должны быть скрыты */
+.privacy-consent-banner.hidden {
+    display: none !important;
+    visibility: hidden !important;
 }

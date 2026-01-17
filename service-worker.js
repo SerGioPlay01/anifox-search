@@ -32,10 +32,7 @@ const STATIC_ASSETS = [
   '/manifest.json',                       // PWA манифест
   '/favicon/favicon.ico',                 // Иконка сайта
   '/favicon/apple-touch-icon.png',        // Иконка для iOS
-  '/favicon/site.webmanifest',            // Веб-манифест
-  '/resources/obl_web.jpg',               // Фоновое изображение
-  '/css/all.min.css',                     // Font Awesome стили
-  '/fonts/rubik/rubik-regular.ttf'        // Основной шрифт
+  '/css/all.min.css'                      // Font Awesome стили
 ];
 
 // Паттерны для стратегии Network First
@@ -53,13 +50,19 @@ self.addEventListener('install', (event) => {
       .then((cache) => {
         console.log('Service Worker: Caching static assets');
         // Используем cache.addAll с обработкой ошибок для каждого запроса
-        return Promise.all(
+        return Promise.allSettled(
           STATIC_ASSETS.map(url => {
             return cache.add(url).catch(error => {
               console.warn(`Service Worker: Failed to cache ${url}`, error);
+              // Не прерываем установку из-за одного файла
+              return Promise.resolve();
             });
           })
-        );
+        ).then(results => {
+          const failed = results.filter(r => r.status === 'rejected').length;
+          const success = results.length - failed;
+          console.log(`Service Worker: Cached ${success}/${results.length} assets`);
+        });
       })
       .then(() => {
         console.log('Service Worker: Installed');
@@ -153,12 +156,53 @@ function isStaticAsset(request) {
 // Стратегия: Cache First (только для GET запросов)
 async function cacheFirstStrategy(request) {
   try {
-    // Проверяем, что это запрос к нашему домену
+    // Для внешних ресурсов (Google Analytics, Яндекс.Метрика и т.д.)
     if (!request.url.startsWith(self.location.origin)) {
-      // Для внешних запросов просто делаем fetch без кэширования
-      return fetch(request);
+      // Список разрешенных внешних доменов
+      const allowedExternalDomains = [
+        'www.googletagmanager.com',
+        'mc.yandex.ru',
+        'googleads.g.doubleclick.net',
+        'fonts.googleapis.com',
+        'fonts.gstatic.com'
+      ];
+      
+      const requestUrl = new URL(request.url);
+      const isAllowedExternal = allowedExternalDomains.some(domain => 
+        requestUrl.hostname === domain || requestUrl.hostname.endsWith('.' + domain)
+      );
+      
+      if (isAllowedExternal) {
+        // Для разрешенных внешних ресурсов делаем простой fetch с таймаутом
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        try {
+          const response = await fetch(request, { 
+            signal: controller.signal,
+            mode: 'no-cors' // Для внешних ресурсов
+          });
+          clearTimeout(timeoutId);
+          return response;
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          // Возвращаем пустой ответ для заблокированных ресурсов
+          return new Response('', { 
+            status: 200, 
+            statusText: 'OK',
+            headers: { 'Content-Type': 'text/javascript' }
+          });
+        }
+      } else {
+        // Для неразрешенных внешних ресурсов возвращаем пустой ответ
+        return new Response('', { 
+          status: 200, 
+          statusText: 'OK' 
+        });
+      }
     }
 
+    // Для внутренних ресурсов используем обычную логику кэширования
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       return cachedResponse;
@@ -167,7 +211,7 @@ async function cacheFirstStrategy(request) {
     const networkResponse = await fetch(request);
     
     // Кэшируем только успешные ответы и только для нашего домена
-    if (networkResponse.status === 200 && request.url.startsWith(self.location.origin)) {
+    if (networkResponse.status === 200) {
       const cache = await caches.open(STATIC_CACHE);
       // Создаем копию response для кэширования
       cache.put(request, networkResponse.clone()).catch(error => {
@@ -177,13 +221,32 @@ async function cacheFirstStrategy(request) {
     
     return networkResponse;
   } catch (error) {
-    console.error('Service Worker: Cache First strategy failed', error);
+    console.warn('Service Worker: Cache First strategy failed', error);
+    
     // Возвращаем fallback для основных страниц
-    if (request.url === self.location.origin + '/') {
-      return caches.match('/index.html');
+    if (request.url === self.location.origin + '/' || request.url.endsWith('/index.html')) {
+      const fallback = await caches.match('/index.html');
+      if (fallback) return fallback;
     }
-    return new Response('Network error happened', {
-      status: 408,
+    
+    // Для JS/CSS файлов возвращаем пустой ответ
+    if (request.url.endsWith('.js')) {
+      return new Response('', {
+        status: 200,
+        headers: { 'Content-Type': 'text/javascript' },
+      });
+    }
+    
+    if (request.url.endsWith('.css')) {
+      return new Response('', {
+        status: 200,
+        headers: { 'Content-Type': 'text/css' },
+      });
+    }
+    
+    // Для остальных ресурсов
+    return new Response('Resource not available', {
+      status: 503,
       headers: { 'Content-Type': 'text/plain' },
     });
   }
@@ -244,6 +307,18 @@ async function staleWhileRevalidateStrategy(request) {
     return fetch(request);
   }
 }
+
+// Глобальный обработчик ошибок для Service Worker
+self.addEventListener('error', (event) => {
+  console.warn('Service Worker: Global error caught', event.error);
+});
+
+// Обработчик необработанных отклонений промисов
+self.addEventListener('unhandledrejection', (event) => {
+  console.warn('Service Worker: Unhandled promise rejection', event.reason);
+  // Предотвращаем вывод ошибки в консоль
+  event.preventDefault();
+});
 
 // Упрощенная фоновая синхронизация
 self.addEventListener('sync', (event) => {
