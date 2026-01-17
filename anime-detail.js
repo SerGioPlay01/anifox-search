@@ -798,7 +798,7 @@ async function loadSimilarAnime(anime) {
 function updateSEO(anime, extendedInfo) {
     const title = anime.title;
     const description = extendedInfo?.description || `Смотреть ${title} онлайн бесплатно в HD качестве на AniFox`;
-    const posterUrl = anime.material_data?.poster_url || anime.screenshots?.[0] || extendedInfo?.shikimoriData?.poster_url || '/resources/obl_web.jpg';
+    const posterUrl = extendedInfo?.shikimoriData?.poster_url || anime.material_data?.poster_url || anime.screenshots?.[0] || '/resources/obl_web.jpg';
     const currentUrl = window.location.href;
     
     // Обновляем title и мета-теги
@@ -841,7 +841,7 @@ function updateSEO(anime, extendedInfo) {
 function updateStructuredData(anime, extendedInfo) {
     const rating = extendedInfo?.rating || anime.material_data?.rating;
     const genres = extendedInfo?.shikimoriData?.genres || anime.genres || [];
-    const posterUrl = anime.material_data?.poster_url || anime.screenshots?.[0] || extendedInfo?.shikimoriData?.poster_url;
+    const posterUrl = extendedInfo?.shikimoriData?.poster_url || anime.material_data?.poster_url || anime.screenshots?.[0];
     
     const structuredData = {
         "@context": "https://schema.org",

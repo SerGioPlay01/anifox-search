@@ -717,6 +717,58 @@ function createFallbackCard(item) {
     </div>`;
 }
 
+// Быстрое получение постера из Shikimori без полной загрузки данных
+async function getShikimoriPoster(title) {
+    const cacheKey = `poster_${title.toLowerCase().trim()}`;
+    const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 дней для постеров
+
+    try {
+        // Проверяем кэш
+        const cached = await dbGet(STORE_SHIKIMORI_CACHE, cacheKey);
+        if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
+            return cached.data;
+        }
+    } catch (e) {}
+
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 5000);
+
+    try {
+        const searchUrl = `${SHIKIMORI_API_BASE}/animes?search=${encodeURIComponent(title)}&limit=1`;
+        const response = await fetch(searchUrl, {
+            signal: ctrl.signal,
+            headers: {
+                "User-Agent": "AniFox/2.4 (https://anifox-search.vercel.app)",
+                Accept: "application/json",
+            },
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (!data || data.length === 0) return null;
+
+        const anime = data[0];
+        const posterUrl = anime.image ? `https://shikimori.one${anime.image.x312 || anime.image.original}` : null;
+
+        // Кэшируем результат
+        try {
+            await dbPut(STORE_SHIKIMORI_CACHE, {
+                query: cacheKey,
+                data: posterUrl,
+                cachedAt: Date.now(),
+            });
+        } catch (e) {}
+
+        return posterUrl;
+    } catch (e) {
+        clearTimeout(timeout);
+        return null;
+    }
+}
+
 function escapeHtml(unsafe) {
     if (!unsafe) return '';
     return unsafe
@@ -894,7 +946,7 @@ async function fetchShikimoriInfo(title, attempt = 1) {
             status: getStatusFromShikimori(finalInfo.status),
             studios: finalInfo.studios ? finalInfo.studios.map((s) => s.name) : [],
             genres: finalInfo.genres ? finalInfo.genres.map((g) => g.russian || g.name) : [],
-            poster_url: finalInfo.image ? `https://shikimori.one${finalInfo.image.original}` : null,
+            poster_url: finalInfo.image ? `https://shikimori.one${finalInfo.image.x312 || finalInfo.image.original}` : null,
             shikimoriId: finalInfo.id,
             shikimoriUrl: `https://shikimori.one${finalInfo.url}`,
         };
@@ -1617,27 +1669,44 @@ async function createAnimeCard(item) {
     // Создаем ссылку на страницу деталей в новом формате
     const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(t)}`;
 
-    // Получаем постер приоритетно с Kodik API
+    // Получаем постер приоритетно из Shikimori API
     let posterUrl = '/resources/anime-placeholder.svg';
     
-    // Приоритет источников постеров:
-    // 1. Kodik API - material_data.poster_url (основной источник)
-    // 2. Kodik API - screenshots[0] (резервный)
-    // 3. Локальный placeholder
-    
-    if (item.material_data?.poster_url) {
-        posterUrl = item.material_data.poster_url;
-    } else if (item.screenshots && item.screenshots.length > 0) {
-        posterUrl = item.screenshots[0];
+    try {
+        // Быстрое получение постера из Shikimori
+        const shikimoriPoster = await getShikimoriPoster(t);
+        if (shikimoriPoster) {
+            posterUrl = shikimoriPoster;
+        } else {
+            // Резервные источники если Shikimori не дал постер:
+            // 1. Kodik API - material_data.poster_url
+            // 2. Kodik API - screenshots[0]
+            if (item.material_data?.poster_url) {
+                posterUrl = item.material_data.poster_url;
+            } else if (item.screenshots && item.screenshots.length > 0) {
+                posterUrl = item.screenshots[0];
+            }
+        }
+    } catch (error) {
+        console.warn('Ошибка получения постера из Shikimori:', error);
+        // Используем резервные источники
+        if (item.material_data?.poster_url) {
+            posterUrl = item.material_data.poster_url;
+        } else if (item.screenshots && item.screenshots.length > 0) {
+            posterUrl = item.screenshots[0];
+        }
     }
     
     // Оптимизируем URL изображения
     if (posterUrl && posterUrl !== '/resources/anime-placeholder.svg') {
         posterUrl = optimizeImageUrl(posterUrl);
         
-        // Проверяем доступность только для внешних источников (не Kodik)
-        if (!posterUrl.includes('kodikapi.com') && !posterUrl.includes('kodik-storage') && 
-            !posterUrl.includes('kodik.cc') && !await isImageAccessible(posterUrl)) {
+        // Проверяем доступность только для внешних источников (не Shikimori и не Kodik)
+        if (!posterUrl.includes('shikimori.one') && 
+            !posterUrl.includes('kodikapi.com') && 
+            !posterUrl.includes('kodik-storage') && 
+            !posterUrl.includes('kodik.cc') && 
+            !await isImageAccessible(posterUrl)) {
             posterUrl = '/resources/anime-placeholder.svg';
         }
     }
