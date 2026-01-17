@@ -1978,119 +1978,131 @@ async function createAnimeCardWithPoster(item, shikimoriPoster = null) {
 }
 
 async function createAnimeCard(item) {
-    const t = item.title;
-    const favs = await getFavorites();
-    const isFav = favs.some(f => f.link === item.link);
-
-    // Создаем короткий ID для аниме (используем хеш от ссылки)
-    const animeId = generateAnimeId(item.link);
-    
-    // Создаем ссылку на страницу деталей в новом формате
-    const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(t)}`;
-
-    // ИСПРАВЛЕНО: Получаем постер приоритетно из Kodik API
-    let posterUrl = '/resources/anime-placeholder.svg';
-    
     try {
-        // 1. Приоритет - Kodik API material_data.poster_url
-        if (item.material_data?.poster_url) {
-            posterUrl = item.material_data.poster_url;
-            console.log('Используем постер из Kodik material_data:', posterUrl);
-        }
-        // 2. Резерв - Kodik API screenshots[0]
-        else if (item.screenshots && item.screenshots.length > 0) {
-            posterUrl = item.screenshots[0];
-            console.log('Используем скриншот из Kodik:', posterUrl);
-        }
-        // 3. Последний резерв - Shikimori API (только если нет постеров из Kodik)
-        else {
-            try {
-                const shikimoriPoster = await posterBatcher.getPoster(t);
-                if (shikimoriPoster) {
-                    posterUrl = shikimoriPoster;
-                    console.log('Используем постер из Shikimori:', posterUrl);
-                }
-            } catch (shikimoriError) {
-                console.warn('Ошибка получения постера из Shikimori:', shikimoriError);
+        const t = item.title;
+        const favs = await getFavorites();
+        const isFav = favs.some(f => f.link === item.link);
+
+        // Создаем короткий ID для аниме (используем хеш от ссылки)
+        const animeId = generateAnimeId(item.link);
+        
+        // Создаем ссылку на страницу деталей в новом формате
+        const detailUrl = `/anime-detail.html?a=${animeId}&t=${encodeURIComponent(t)}`;
+
+        // ИСПРАВЛЕНО: Получаем постер с правильным приоритетом
+        let posterUrl = null;
+        
+        console.log('Создаем карточку для:', t);
+        console.log('Данные item:', item);
+        
+        try {
+            // 1. Приоритет - Kodik API material_data.poster_url
+            if (item.material_data?.poster_url) {
+                posterUrl = item.material_data.poster_url;
+                console.log('✅ Найден постер в material_data:', posterUrl);
             }
+            // 2. Резерв - прямое поле poster_url
+            else if (item.poster_url) {
+                posterUrl = item.poster_url;
+                console.log('✅ Найден постер в poster_url:', posterUrl);
+            }
+            // 3. Резерв - Kodik API screenshots[0]
+            else if (item.screenshots && item.screenshots.length > 0) {
+                posterUrl = item.screenshots[0];
+                console.log('✅ Используем скриншот из Kodik:', posterUrl);
+            }
+            // 4. Последний резерв - Shikimori API (только если нет постеров из Kodik)
+            else {
+                console.log('❌ Постер не найден в Kodik, пробуем Shikimori...');
+                try {
+                    const shikimoriPoster = await getShikimoriPoster(t);
+                    if (shikimoriPoster) {
+                        posterUrl = shikimoriPoster;
+                        console.log('✅ Получен постер из Shikimori:', posterUrl);
+                    } else {
+                        console.log('❌ Постер не найден в Shikimori');
+                    }
+                } catch (shikimoriError) {
+                    console.warn('❌ Ошибка получения постера из Shikimori:', shikimoriError);
+                }
+            }
+        } catch (error) {
+            console.warn('❌ Ошибка получения постера:', error);
         }
-    } catch (error) {
-        console.warn('Ошибка получения постера:', error);
-        // Используем placeholder
-        posterUrl = '/resources/anime-placeholder.svg';
-    }
-    
-    // Оптимизируем URL изображения
-    if (posterUrl && posterUrl !== '/resources/anime-placeholder.svg') {
-        posterUrl = optimizeImageUrl(posterUrl);
         
-        // Проверяем доступность только для внешних источников (не Shikimori и не Kodik)
-        if (!posterUrl.includes('shikimori.one') && 
-            !posterUrl.includes('kodikapi.com') && 
-            !posterUrl.includes('kodik-storage') && 
-            !posterUrl.includes('kodik.cc') && 
-            !await isImageAccessible(posterUrl)) {
+        // Если постер не найден, используем placeholder
+        if (!posterUrl) {
             posterUrl = '/resources/anime-placeholder.svg';
+            console.log('🔄 Используем placeholder для:', t);
+        } else {
+            // Оптимизируем URL изображения
+            posterUrl = optimizeImageUrl(posterUrl);
+            console.log('🖼️ Финальный URL постера:', posterUrl);
         }
-    }
 
-    // Получаем базовую информацию
-    const year = item.year || 'Неизвестно';
-    const rating = item.material_data?.rating || null;
-    const episodes = item.episodes_count || null;
+        // Получаем базовую информацию
+        const year = item.year || 'Неизвестно';
+        const rating = item.material_data?.rating || null;
+        const episodes = item.episodes_count || null;
 
-    return `
-    <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(t)}', '${item.link}')" style="cursor: pointer;">
-        <div class="anime-poster">
-            <img src="${posterUrl}" 
-                 alt="Постер ${escapeHtml(t)}" 
-                 loading="lazy" 
-                 decoding="async"
-                 onerror="this.onerror=null; this.src='/resources/anime-placeholder.svg';"
-                 onload="this.style.opacity='1';"
-                 style="opacity: 0; transition: opacity 0.3s ease;">
-            <div class="anime-overlay">
-                <div class="play-button">
-                    <i class="fas fa-play"></i>
+        return `
+        <div class="anime-card fade-in" onclick="navigateToAnime('${animeId}', '${escapeHtml(t)}', '${item.link}')" style="cursor: pointer;">
+            <div class="anime-poster">
+                <img src="${posterUrl}" 
+                     alt="Постер ${escapeHtml(t)}" 
+                     loading="eager"
+                     decoding="async"
+                     onerror="window.fixBrokenImage ? window.fixBrokenImage(this) : (this.onerror=null, this.src='/resources/anime-placeholder.svg');"
+                     onload="this.style.opacity='1';"
+                     style="opacity: 0; transition: opacity 0.3s ease;">
+                <div class="anime-overlay">
+                    <div class="play-button">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    ${rating ? `
+                    <div class="anime-rating">
+                        <i class="fas fa-star"></i>
+                        <span>${rating}</span>
+                    </div>
+                    ` : ''}
                 </div>
-                ${rating ? `
-                <div class="anime-rating">
-                    <i class="fas fa-star"></i>
-                    <span>${rating}</span>
-                </div>
-                ` : ''}
             </div>
-        </div>
-        
-        <div class="anime-info">
-            <h3 class="anime-title" title="${escapeHtml(t)}">${escapeHtml(t)}</h3>
             
-            <div class="anime-meta">
-                <span class="anime-year">
-                    <i class="fas fa-calendar"></i>
-                    ${year}
-                </span>
-                ${episodes ? `
-                <span class="anime-episodes">
-                    <i class="fas fa-film"></i>
-                    ${episodes} эп.
-                </span>
-                ` : ''}
+            <div class="anime-info">
+                <h3 class="anime-title" title="${escapeHtml(t)}">${escapeHtml(t)}</h3>
+                
+                <div class="anime-meta">
+                    <span class="anime-year">
+                        <i class="fas fa-calendar"></i>
+                        ${year}
+                    </span>
+                    ${episodes ? `
+                    <span class="anime-episodes">
+                        <i class="fas fa-film"></i>
+                        ${episodes} эп.
+                    </span>
+                    ` : ''}
+                </div>
             </div>
-        </div>
 
-        <div class="anime-actions" onclick="event.stopPropagation();">
-            <button class="action-btn favorite-btn ${isFav ? 'active' : ''}" data-link="${item.link}"
-                    onclick="toggleFavorite('${escapeHtml(t).replace(/'/g, "\\'")}','${item.link}')"
-                    title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
-                <i class="${isFav ? 'fas' : 'far'} fa-heart"></i>
-            </button>
+            <div class="anime-actions" onclick="event.stopPropagation();">
+                <button class="action-btn favorite-btn ${isFav ? 'active' : ''}" data-link="${item.link}" onclick="toggleFavorite('${escapeHtml(t).replace(/'/g, "\\'")}','${item.link}')" title="${isFav ? 'Удалить из избранного' : 'Добавить в избранное'}">
+                    <i class="fa${isFav ? 's' : 'r'} fa-heart"></i>
+                </button>
 
-            <button class="action-btn share-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
-                <i class="fas fa-share"></i>
-            </button>
-        </div>
-    </div>`;
+                <button class="action-btn share-btn" onclick="shareAnime('${JSON.stringify(item).replace(/"/g, '&quot;')}')" title="Поделиться">
+                    <i class="fas fa-share"></i>
+                </button>
+
+                <a class="action-btn external-btn" href="${detailUrl}" title="Подробнее" onclick="event.stopPropagation();">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            </div>
+        </div>`;
+    } catch (error) {
+        console.error('Ошибка создания карточки аниме:', error);
+        return createFallbackCard(item);
+    }
 }
 
 function checkSimpleInfoData(item) {
