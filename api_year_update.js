@@ -17,8 +17,8 @@
 // НАСТРОЙКИ API
 // ===========================================
 
-// URL для получения аниме за 2024 год с последними обновлениями
-const url = `https://kodikapi.com/list?token=a036c8a4c59b43e72e212e4d0388ef7d&year=2024&updated_at=updated_at&types=anime,anime-serial`;
+// URL для получения аниме за 2026 год с последними обновлениями
+const url = `https://kodikapi.com/list?token=a036c8a4c59b43e72e212e4d0388ef7d&year=2026&updated_at=updated_at&types=anime,anime-serial`;
 
 // ===========================================
 // ОСНОВНАЯ ЛОГИКА
